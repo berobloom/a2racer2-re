@@ -3451,7 +3451,13 @@ int main(int argc, char **argv)
                      * the same two ladders at 49x3, for 320x240.) */
                     static const int solid[11] = { 431, 129, 124, 126, 127, 128,
                                                    123, 130, 131, 132, 133 };
-                    static const int chevron[11] = { 14, 12, 11, 15, 16, 17, 18, 19, 20, 21, 13 };
+                    /* The turbo bar is sprite anim 21 (0x4961E8; HUD element 4's
+                     * hires art), the plain orange chevrons, not the gradient
+                     * set 11..21: matched against Wine captures with gamma
+                     * applied (session 15).  Its full frame is the gradient
+                     * strip 13, shown only at exactly 100%. */
+                    static const int chevron[11] = { 449, 433, 439, 445, 446, 447,
+                                                     448, 432, 450, 451, 13 };
                     /* The frame stretches to the element's size but the fill
                      * strip keeps its own 91x8 proportions, which is why the
                      * fill band looks taller than the frame's placeholder. */
@@ -3470,7 +3476,9 @@ int main(int argc, char **argv)
                             frac = 0.0f;
                         if (frac > 1.0f)
                             frac = 1.0f;
-                        int step = (int)(frac * 10.0f + 0.5f);
+                        /* frame = level * (frames - 1) / 100, truncated
+                         * (0x41aad1, _ftol 0x4700e0) */
+                        int step = (int)(frac * 10.0f);
                         float bx = right - 2.0f * s - bar_w, by = bot - bar_y[b] * s;
                         hud_bracket(hud, 426, 25, is_turbo ? 19 : 0, 55, 13, bx, by, bar_w, bar_h,
                                     s);

@@ -6680,3 +6680,31 @@ Completes open question 5 (session 9), which found the driver-name scan
 - Under Wine there is no 3Dfx device, so RESOLUTION=3 opens the primary
   display, which is what every capture so far has used.
 
+## The TURBO bar is the orange ladder (session 15; open question 46)
+
+- CONFIRMED (data): the HUD bars are sprite anims in the 0x4961E8 table
+  (12-byte `{count, ?, list}` records, pairs `(2, RC.IND + 1)`):
+
+  | anim | frames (0-based RC.IMG, step order) | what |
+  |---|---|---|
+  | 20 | 440, 435, 436, 437, 438, 434, 441, 442, 443, 444, 56 | turbo, lores |
+  | **21** | **449, 433, 439, 445, 446, 447, 448, 432, 450, 451, 13** | **turbo, hires** |
+  | 22 | 137, 125, 134, 135, 136, 122, 138, 139, 140, 141 | damage, lores |
+  | 23 | 431, 129, 124, 126, 127, 128, 123, 130, 131, 132, 133 | damage, hires |
+
+  Anim 23 is exactly the damage order measured in session 9. The gradient
+  chevrons **11, 12, 14..21 are in no anim at all**; only 13, the full
+  gradient strip, is used, as anim 21's 100% frame.
+- CONFIRMED (runtime, Wine, RESOLUTION=3): with Ctrl held, the bar at
+  (540, 388) matched, with gamma c*c/255 applied, 432 at 3 s, 447 at 5 s and
+  446 after release (mean abs error 4.4 / 3.3 / 3.4 against 11+ for every
+  other frame of either ladder), i.e. steps 7, 5 and 4. At the race start
+  the full bar matched 13 (3.3, against 11.0 for 451).
+- CONFIRMED (code): the damage bar's frame is `damage / (100 / (frames - 1))`
+  through _ftol (0x4700e0, truncating), at 0x41aad1. 13 is shown only at
+  exactly 100% (LIKELY the same rule for the turbo bar; its draw is not
+  traced).
+- This corrects session 9's "turbo: 14, 12, 11, 15..21, 13". That was read off
+  the art, not the game, and it called the orange ladder the unused third
+  set. The port now draws anim 21 and truncates both bars.
+

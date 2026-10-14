@@ -392,7 +392,18 @@
     *steering* model, not a HUD. So sprite 1 and the 19 needle frames at 32..50
     are finished art that nothing draws, most plausibly inherited from the
     predecessor the option is named after.
-46. **PARTLY RESOLVED (session 9).** Not a lores/hires pair -- those are
+46. **RESOLVED (session 15), the other way round: the orange ladder IS the
+    turbo bar, and the gradient chevrons 11..21 are the unused set.** Sprite
+    anim **21** (0x4961E8) lists the orange ladder in step order: 449, 433,
+    439, 445, 446, 447, 448, 432, 450, 451 (0-based), then **13** (the
+    gradient strip) as the 100% frame. It is HUD element 4's hires anim
+    (anim 20 is the lores one). Wine captures of the original with the turbo
+    draining match frames 432, 447 and 446 (mean error 3-4 against about 11
+    for every other frame, gradient included) once the game's gamma (c*c/255)
+    is applied, and the full bar at the start matches 13 (3.3). No anim lists
+    11, 12 or 14..21. See discoveries.md "The TURBO bar is the orange ladder".
+    Original text follows.
+    **PARTLY RESOLVED (session 9).** Not a lores/hires pair -- those are
     separate: RC.IMG holds **32 bar sprites at 91x8 and another 32 at 49x3**, a
     matched hires/lores set. Within each resolution there are **three**
     11-or-10 frame ladders, and the HUD draws only two of them (the gradient
