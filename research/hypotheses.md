@@ -59,8 +59,13 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   QUICK SERVICE is raised by the **trigger-2 service station** handler
   (0x42a51d), which refills the turbo tank, repairs the damage and plays
   `repair.wav`. See "Trigger 2 is the service station, in full" in
-  discoveries.md. INVINCIBLE (46) and COP MODE (47) remain SPECULATIVE as
-  player-selectable cheat/debug toggles gated by TWEAK_MODE.
+  discoveries.md. ~~INVINCIBLE (46) and COP MODE (47) remain SPECULATIVE as
+  player-selectable cheat/debug toggles gated by TWEAK_MODE.~~ **RESOLVED
+  (session 15), and not gated by TWEAK_MODE:** INVINCIBLE is the Ctrl + Space
+  + I cheat (0x424fbe, after the tweak-mode keys, outside their test).
+  COP MODE is Game.ini `copland`, which menu.dat sets when the player is
+  named COPLAND. It gives the player the police car, confirmed under Wine.
+  See discoveries.md "COP MODE".
 - SPECULATIVE: `lan_main.cpp` is dead code from a shared codebase (no network imports/strings anywhere).
 
 ## Misc

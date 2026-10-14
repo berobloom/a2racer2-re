@@ -493,6 +493,23 @@ mode:
 **Cheats**, the original's: **Ctrl + Space + I** gives INVINCIBLE (no more
 damage), and **Ctrl + Space + T** adds 180 s to the clock on a highway stage.
 
+**COP MODE**: naming the player **COPLAND** in a2menu sets Game.ini
+`[PLAYER] copland=1`. The race then gives you the police car: the
+Lambdaghini's handling under the MPOLIZEI body, with the COP MODE banner at the
+start (0x4256a0, 0x416ccd; checked under Wine). The player's car is otherwise
+Game.ini's `car=` (0-6), as in the original.
+
+**The police light bar** flashes while any police car has its siren on. As in
+the original (0x40c860), it is one texture stamp into CARS01.PCX every 200 ms,
+so every police car flashes together, yours too in COP MODE.
+
+**Banners** (EXTRA TIJD, INVINCIBLE, COP MODE, QUICK SERVICE, RADAR BONUS, the
+two police warnings, and on circuits NIEUW RONDE RECORD or LAATSTE RONDE at
+every lap) go through the original's one banner slot. The latest one is shown for
+2 s, blinking every 100 ms, centred at y = 80 of 480 in the label font
+(0x41a95b). The port's own checkpoint-split and lap-time banners are gone,
+because the original has neither.
+
 **There is no visible car damage, and that matches the game.** The original's
 loader tries to open a `<mesh>.DMG` file of per-vertex dents for every model,
 and no such file ships: all 2724 attempts in a real run's `debug.txt` fail.

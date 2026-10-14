@@ -3993,7 +3993,8 @@ comments answer things reached from the other direction.
   the game"), which is the unit the finish time is stored in.
 - **`copland` is commented "??" by the developers themselves.** The game's own
   configuration file does not know what it does. It is the ini key behind
-  language.ini 47 COPLAND, which remains a SPECULATIVE cheat toggle.
+  language.ini 47 COPLAND. ~~It remains a SPECULATIVE cheat toggle.~~ It is
+  answered in "COP MODE" (session 15).
 
 ## Skidmarks: the condition is a 0-10 skid intensity, and the threshold is 4 (session 10)
 
@@ -6553,3 +6554,79 @@ Port: all of it -- the cameras, M, F12, L and the tweak menu (src/tweak.c,
 its text in slider13 at the original's rows). How the per-gear and
 suspension lists leave their editors on Space is not traced (the port goes
 back to the list).
+
+## COP MODE, the police light and the banner slot (session 15)
+
+### COP MODE: name yourself COPLAND
+
+- CONFIRMED (code): Game.ini `[PLAYER] copland` is read into **0x4d9e0c**
+  (0x422944), next to `car` into 0x4d9e2c (0x42290c). menu.dat writes it as 1
+  when the player's name is "COPLAND" (0x4019ee; port a2menu mcareer.c).
+- CONFIRMED (code): it has exactly three readers.
+  - **0x4256a0**, the player's init. It sets the player's car type
+    [0x4d9e2c] = **6** and writes **0x85** into **0x4850ba**. That is
+    field 0 of type 6's record in the 0x484B18 table (0x484B18 + 6 x 238 +
+    14). Field 0 is each record's anim id, filled at load by 0x410b60 with
+    0x42b310(name). Anim 0x85 = 133 is **MPOLIZEI_ANIM** (anim name table
+    0x490430). So type 6 keeps the Lambdaghini's CARS.DAT and handling
+    record, and is drawn with the police body.
+  - **0x42570e**: the wheels are hung as **type 0's** (0x4136c0(obj, 0)), the
+    Brabant's wheel positions, not type 6's.
+  - **0x416cc1**: the start camera's end callback (0x416cb0: set_game_mode(0),
+    view preset 1) raises banner **47** (0x416ccd) when copland is set.
+- Nothing else reads it: the police, the AI and the menu's prizes treat the
+  player as type 6.
+- CONFIRMED (runtime, Wine): .work/menutest Game.ini with `copland=1`, then
+  spel.dat started on its own. The player's car on the grid is the police car,
+  and **COP MODE** appears at the race start, centred about (320, 80) of the
+  640x480 screen, in the white label font.
+- So language.ini 47 is "COP MODE" in Dutch and "COPLAND" in English and
+  German.
+
+### The police light bar is one texture stamp
+
+- CONFIRMED (code): **0x40c640** (a cop's siren on/off) keeps a count of
+  sirens on in **0x4a5d38**. When it falls to 0 it stamps slot 14 frame 0
+  (0x40c76c), and it publishes `count != 0` in **0x4a5d30** (0x40c855).
+  **0x40c860**, called from the AI update, stamps slot 14's current frame
+  (**0x4a5d3c**) while 0x4a5d30 is set, once every **200 ms** of GetTickCount
+  (0x4a5d40), and flips the frame.
+- CONFIRMED (code + data): slot 14 is CARS01.PCX at (99, 62). Its hires anim
+  is **41 = (326, 325)**, i.e. RC.IMG **325** (dark) and **324** (lit) once
+  the +1 is taken off (lores anim 40 = 322 / 340).
+- STRONGLY SUPPORTED: CARS01.PCX **ships with the lit frame**. The sheet's
+  (99, 62) region is a mean 7/7/11 off sprite 324 against 29/29/58 off 325;
+  the rest is colour-conversion noise. So a police car shows the lit light bar
+  until the first chase of the race. After that it alternates while any
+  siren is on, and goes dark when the last siren goes off.
+- Because it is one sheet, **every police car flashes together**, chasing or
+  parked, and so does the player's car in COP MODE. The Wine capture above
+  shows the player's light bar alternating between orange/red and blue
+  frames while racers were being chased.
+- 0x42ae90, the stamp itself, does nothing without Game.ini `texturecopy`
+  ([0x4d9aa4]).
+
+### How the banner slot is drawn
+
+- CONFIRMED (code), **0x41a95b** in the HUD:
+  - A pending id in 0x4882c0 (-1 = none) is latched into 0x4882c4, with
+    GetTickCount into 0x4a7d84, and 0x4882c0 is cleared.
+  - For **2000 ms** after the latch (`cmp eax, 0x7d0`), the id is drawn while
+    **(ticks / 100) is odd** (`mul 0x51eb851f; shr edx, 5; test dl, 1`): a
+    100 ms on / 100 ms off blink.
+  - It is drawn with **0x41bfc0(surface, element 0x4c, mode 1, text, font)**.
+    Mode 1 centres the text on the element's point.
+- Element 76 in the 12-byte layout table at 0x488510 (`{anim, x, y}`, 84
+  elements a resolution): the hires record is (-1, **160, 40**), a 320x240
+  layout. The lores record is all zeros. The Wine capture puts the centre at
+  (320, 80) of 640x480.
+- The font is **font 10** of the 148-byte font records at 0x486d08:
+  **olfnt01.fnt** (hires) / lo_fnt1.fnt (lores), the HUD's label font.
+- **0x429860** (Tr_finis.cpp, lap completion) raises **31 NIEUW RONDE
+  RECORD** when the lap beats LAP_RECORD (0x4298d5). **Otherwise it raises
+  45 LAATSTE RONDE** (0x429921). That happens on every lap, with no test for
+  the last one, so on a circuit every non-record lap says "last lap"
+  (CONFIRMED from the code; not seen at runtime).
+- The port draws all nine banner-slot ids this way now. It dropped its own
+  checkpoint-split and lap-time banners, which the original does not have.
+

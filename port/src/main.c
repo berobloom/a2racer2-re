@@ -1069,7 +1069,15 @@ int main(int argc, char **argv)
     ((finished && final_pos) ? final_pos                                                           \
                              : (final_pos = a2_racers_position(racers, player_progress)))
     float lap_start = 0.0f, last_lap = 0.0f, best_lap = 0.0f;
-    float lap_shown_at = -100.0f;
+    /* The banner slot: 0x4882c0 takes a pending language.ini id, the HUD
+     * (0x41a95b) latches it into 0x4882c4 with the GetTickCount, and for 2000
+     * ms draws it while (ticks / 100) is odd -- 100 ms on, 100 ms off -- as
+     * HUD element 76, centred on (160, 40) of the 320x240 layout, in the
+     * label font (font 10, olfnt01 / lo_fnt1).  Nine ids ever go through it:
+     * 31, 44, 45, 46, 47, 48, 49, 50, 51.  A new raise replaces the old. */
+    int banner_id = 0;
+    Uint32 banner_ms = 0;
+#define RAISE_BANNER(id) (banner_id = (id), banner_ms = SDL_GetTicks())
     int finished = 0;
     int arrested = 0;         /* the police ended it; not the same as finishing */
     /* The game-over sequence (game mode 6, `ev_g_ovr.cpp`) has three arms,
@@ -1083,16 +1091,13 @@ int main(int argc, char **argv)
      * 0x4d9eb8 that add_damage (0x428390) tests before adding anything, and
      * raises banner 46 INVINCIBLE. */
     int invincible = 0;
-    float invincible_at = -100.0f;
     float turbo_left = 1.0f;  /* the turbo reserve, full at the start */
-    float service_shown_at = -100.0f; /* when QUICK SERVICE was last raised */
     float finish_time = 0.0f;
     int result_booked = 0; /* the finish has been booked into `save` */
     int track_ms = 0;
     /* Radar cameras knocked over (0x4dc964, by the type-7 handler 0x428d30;
      * see a2_scene_props_step), and when banner 51 RADAR BONUS was raised. */
     int radar_knocked = 0;
-    float radar_bonus_at = -100.0f;
     /* A warning catch pulls the player over: 0x4258f0 puts the car under an
      * AI driver (0x4d9e64, run by 0x426004 -> 0x4076b0) until the 4 s
      * warning sequence (game mode 8, 0x415420) ends and 0x425980 gives
@@ -1236,7 +1241,24 @@ int main(int argc, char **argv)
 
     a2_cars cars;
     int have_cars = a2_cars_load(&cars, datadir) == 0;
-    int car_slot = 0; /* Trabant, the starting car */
+    /* Game.ini [PLAYER] car, the player's car type 0..6 ([0x4d9e2c], read at
+     * 0x42290c; "Illegal car!" outside that), and copland ([0x4d9e0c],
+     * 0x422944), which menu.dat sets when the player is named COPLAND.  With
+     * copland the player init (0x4256a0) makes the type 6 and writes
+     * MPOLIZEI_ANIM's anim id (0x85) into type 6's record of the 0x484B18
+     * table: the Lambdaghini's car with the police body.  Its wheels are
+     * type 0's (0x42571f) and the start camera's end (0x416ccd) raises
+     * banner 47 COP MODE. */
+    /* the police light flasher, 0x4a5d3c / 0x4a5d40 / 0x4a5d30 */
+    int pol_light_frame = 0, pol_light_was_on = 0;
+    Uint32 pol_light_at = 0;
+    int copland = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "copland", 0) != 0;
+    int car_slot = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "car", 0);
+    if (car_slot < 0 || car_slot > 6)
+        car_slot = 0;
+    if (copland)
+        car_slot = 6;
+    int wheel_type = copland ? 0 : car_slot;
     int car_lane = 1;   /* middle of the three lanes */
     int overtaking = 0; /* holding a lane the car is not yet in */
     /* Stuck recovery for the autopilot.  The lane-follower has no model of a
@@ -1298,7 +1320,7 @@ int main(int argc, char **argv)
      * 0x47f770).  It reads as a distance over a speed: the time to cover
      * 10 * dist metres at 40% or 65% of the car's top speed.  The clock starts
      * at one bonus (0x42439a sets timer 11 to it). */
-    float cp_bonus = 0.0f, time_left = 0.0f, extra_time_at = -100.0f;
+    float cp_bonus = 0.0f, time_left = 0.0f;
     int timed = 0;
     if (have_cars && !no_clock && !circuit && ti_idx >= 0 && ti_idx < 7) {
         static const int cp_dist[7] = { 0, 142, 0, 110, 0, 142, 0 };
@@ -1318,7 +1340,11 @@ int main(int argc, char **argv)
     /* The car's own size, from its mesh -- CARS.DAT has performance but no
      * dimensions.  A Diablo is 18.8 units wide against the Trabant's 16.4. */
     float car_half_width = a2_car_half_width(car_slot);
-    int car_model = a2_scene_load_model(scene, &rcs, anims, a2_car_anim_name(car_slot));
+    float car_half_len = a2_car_half_length(car_slot);
+    if (copland) /* the collision box is the mesh's (0x449a30) */
+        a2_cop_half_size(&car_half_width, &car_half_len);
+    int car_model = a2_scene_load_model(scene, &rcs, anims,
+                                        copland ? "MPOLIZEI_ANIM" : a2_car_anim_name(car_slot));
     /* car_whl.cpp: the racing meshes have no wheels; four WIEL_ANIM hang on the
      * car (0x4136c0, called for the player at 0x42572b) */
     int wheel_model = a2_scene_load_model(scene, &rcs, anims, "WIEL_ANIM");
@@ -1485,7 +1511,9 @@ int main(int argc, char **argv)
     while (next_camera < camera_count && camera_chunk[next_camera] < player_chunk0)
         next_camera++;
     float split_time = 0.0f;
-    float split_shown_at = -100.0f;
+    int cop_banner_done = 0; /* COP MODE, raised once as the race starts */
+    int cop_msg_seen = 0;
+    float cop_msg_age = 0.0f;
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -1880,14 +1908,28 @@ int main(int argc, char **argv)
              * only; I makes the car invincible (above), on any stage.  Held, T
              * keeps adding time every frame -- read that way from the code,
              * not tried in the running game. */
+            /* 47 COP MODE as the start camera hands over (0x416ccd) */
+            if (copland && !cop_banner_done) {
+                cop_banner_done = 1;
+                RAISE_BANNER(47);
+            }
+            /* 49 / 50, the police warnings, at the catch (0x41535e / 0x415352) */
+            if (cops) {
+                float age = 0.0f;
+                int msg = a2_cops_message(cops, &age);
+                if ((msg == 49 || msg == 50) && (msg != cop_msg_seen || age < cop_msg_age))
+                    RAISE_BANNER(msg);
+                cop_msg_seen = msg;
+                cop_msg_age = age;
+            }
             if ((k[SDL_SCANCODE_LCTRL] || k[SDL_SCANCODE_RCTRL]) && k[SDL_SCANCODE_SPACE]) {
                 if (k[SDL_SCANCODE_T] && timed && !circuit) {
                     time_left += 180.0f;
-                    extra_time_at = race_time;
+                    RAISE_BANNER(44);
                 }
                 if (k[SDL_SCANCODE_I] && !invincible) {
                     invincible = 1;
-                    invincible_at = race_time;
+                    RAISE_BANNER(46);
                     fprintf(stderr, "INVINCIBLE\n");
                 }
             }
@@ -2018,7 +2060,7 @@ int main(int argc, char **argv)
                         cidx[nc++] = i;
                     }
                 }
-                float hw = car_half_width, hl = a2_car_half_length(car_slot), sdt = dt / 8.0f;
+                float hw = car_half_width, hl = car_half_len, sdt = dt / 8.0f;
                 float slide_n[2] = {0.0f, 0.0f};
                 int sliding = 0;
                 for (int sub = 0; sub < 8; sub++) {
@@ -2119,7 +2161,7 @@ int main(int argc, char **argv)
                                                drv.v_lat, drv.v_fwd, drv.heading, &prop_rng);
                 if (cams) {
                     radar_knocked += cams;
-                    radar_bonus_at = race_time; /* banner 51, 0x428da3 */
+                    RAISE_BANNER(51); /* 0x428da3 */
                     fprintf(stderr, "radar bonus: camera knocked over (%d) at %.1f s, frame %d\n", radar_knocked, race_time, frames);
                 }
             }
@@ -2134,6 +2176,28 @@ int main(int argc, char **argv)
                     if (brake_light_model < 0) /* the stamp is the other path */
                         stamp_brake_light(scene, hud, car_slot, lit);
                 }
+            }
+            /* The police light (0x40c860, texture-blit slot 14): while any cop
+             * has its siren on (the count [0x4a5d38] kept by 0x40c640, made a
+             * flag in 0x4a5d30), every 200 ms of GetTickCount it stamps the
+             * current frame of anim 41 into CARS01.PCX at (99, 62) and flips
+             * it; when the count falls back to 0, 0x40c76c stamps frame 0.
+             * Anim 41 is (326, 325), RC.IMG 325 (dark) and 324 (lit) once the
+             * +1 is taken off; CARS01 ships with the lit one, so until the
+             * first chase every police car shows it.  One sheet, so every
+             * police car flashes together, the player's too in COP MODE.
+             * 0x42ae90 does nothing without texturecopy. */
+            if (texture_copy && hud) {
+                int on = a2_cops_in_pursuit(cops);
+                Uint32 now = SDL_GetTicks();
+                if (on && now - pol_light_at >= 200) {
+                    pol_light_at = now;
+                    stamp_sprite(scene, hud, pol_light_frame ? 324 : 325, "CARS01.PCX", 99, 62);
+                    pol_light_frame = !pol_light_frame;
+                } else if (!on && pol_light_was_on) {
+                    stamp_sprite(scene, hud, 325, "CARS01.PCX", 99, 62);
+                }
+                pol_light_was_on = on;
             }
             if (audio) {
                 int S = a2_audio_sfx_volume(audio);
@@ -2301,7 +2365,7 @@ int main(int argc, char **argv)
                 int at = toi_take(&toi, TOI_OBJECT, obj_inst, n, cp) ||
                          (a2_scene_object_box(scene, obj_inst, &ob) &&
                           engine_contact(pre_x, pre_z, pre_h, car_half_width,
-                                         a2_car_half_length(car_slot), step_dx, step_dz, &ob, n,
+                                         car_half_len, step_dx, step_dz, &ob, n,
                                          cp));
                 float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1],
                                               0.5f * (0.2f + oe), om, 0.0f, 0.0f, om <= 0.0f, dv2,
@@ -2348,7 +2412,7 @@ int main(int argc, char **argv)
                 int at = toi_take(&toi, TOI_TRAFFIC, who, n, cp) ||
                          (a2_traffic_car_box(traffic, who, &ob) &&
                           engine_contact(pre_x, pre_z, pre_h, car_half_width,
-                                         a2_car_half_length(car_slot), step_dx, step_dz, &ob, n,
+                                         car_half_len, step_dx, step_dz, &ob, n,
                                          cp));
                 float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1], 0.2f, om,
                                               ovx, ovz, 0, dv2, NULL, 0.0f, 0.0f, car.x, car.z,
@@ -2408,7 +2472,7 @@ int main(int argc, char **argv)
                 ob.heading = od->heading;
                 int at = toi_take(&toi, kind == 0 ? TOI_RACER : TOI_COP, whoa, n, cp) ||
                          engine_contact(pre_x, pre_z, pre_h, car_half_width,
-                                        a2_car_half_length(car_slot), step_dx, step_dz, &ob, n, cp);
+                                        car_half_len, step_dx, step_dz, &ob, n, cp);
                 float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1],
                                               kind == 0 ? 0.2f : 0.25f, om, ovx, ovz, 0, dv2, opos,
                                               ol, ow, car.x, car.z, at ? cp : NULL);
@@ -2511,11 +2575,17 @@ int main(int argc, char **argv)
                      * new record, and the lap's time checks become the saved
                      * set; the saved count is the lap's own either way.  The
                      * circuits carry no checkpoints, so that count is 0. */
-                    if ((int)(last_lap * 1000.0f) < save.lap_record)
+                    /* and raises 31 NIEUW RONDE RECORD for a record lap,
+                     * otherwise 45 LAATSTE RONDE (0x4298d5 / 0x429921) --
+                     * on every lap, the code has no test for the last one */
+                    if ((int)(last_lap * 1000.0f) < save.lap_record) {
                         save.lap_record = (int)(last_lap * 1000.0f);
+                        RAISE_BANNER(31);
+                    } else {
+                        RAISE_BANNER(45);
+                    }
                     save.time_checks = 0;
                     lap_start = race_time;
-                    lap_shown_at = race_time;
                     lap++;
                     fprintf(stderr, "lap %d complete in %.1f s\n", lap - 1, last_lap);
                     /* Game.ini [OPTIONS] Nrlaps: "Number of laps to drive in
@@ -2587,7 +2657,7 @@ int main(int argc, char **argv)
                 int repaired = damage;
                 turbo_left = 1.0f;   /* set_turbo_tank(100) */
                 damage = 0;          /* reset the damage */
-                service_shown_at = race_time;
+                RAISE_BANNER(48); /* 0x42a51d */
                 if (audio)
                     a2_audio_play(audio, 47, 0); /* repair.wav, 0x42a515 */
                 fprintf(stderr, "QUICK SERVICE at chunk %d: turbo refilled, %d damage repaired\n",
@@ -2615,11 +2685,10 @@ int main(int argc, char **argv)
 
             if (next_checkpoint < checkpoint_count && ch >= checkpoint_chunk[next_checkpoint]) {
                 split_time = race_time;
-                split_shown_at = race_time;
                 next_checkpoint++;
                 if (timed && !arrested) {
                     time_left += cp_bonus;
-                    extra_time_at = race_time;
+                    RAISE_BANNER(44); /* 0x42a621 */
                 }
                 if (audio)
                     a2_audio_play(audio, 83, 0); /* checkp.wav, 0x42a5a8 */
@@ -3173,7 +3242,7 @@ int main(int argc, char **argv)
                 glRotatef(car.pitch_ang, 1.0f, 0.0f, 0.0f);
                 glRotatef(car.roll, 0.0f, 0.0f, 1.0f);
                 a2_scene_draw_model_rpy(scene, car_model, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-                a2_wheels_draw(&wheels, scene, wheel_model, car_slot);
+                a2_wheels_draw(&wheels, scene, wheel_model, wheel_type);
                 if (brake_lit == 1 && brake_light_model >= 0)
                     draw_brake_lights(scene, brake_light_model, car_slot);
                 glPopMatrix();
@@ -3437,64 +3506,42 @@ int main(int argc, char **argv)
                     }
                 }
 
-                /* QUICK SERVICE, language.ini 48 -- banner 48 in the original,
-                 * raised by the trigger-2 handler at 0x42a51d. */
-                if (race_time - service_shown_at < 2.5f) {
-                    const char *qs = a2_lang_get(lang, 48, "QUICK SERVICE");
-                    float bs = small * 1.4f;
-                    a2_font3d_draw(font, scene, qs,
-                                   (win_w - a2_font3d_width(font, qs) * bs) * 0.5f,
-                                   win_h * 0.16f, bs);
-                }
-
-                /* 44 EXTRA TIJD, 46 INVINCIBLE, and the two game-over arms the
-                 * police code does not already announce: 40 TOTAL LOSS and 41
-                 * TIJD IS OM. */
-                {
-                    int id = 0;
-                    const char *fb = "";
-                    if (game_over_msg == 40 || game_over_msg == 41) {
-                        id = game_over_msg;
-                        fb = id == 40 ? "TOTAL LOSS" : "TIJD IS OM";
-                    } else if (race_time - extra_time_at < 2.5f) {
-                        id = 44;
-                        fb = "EXTRA TIJD";
-                    } else if (race_time - invincible_at < 2.5f) {
-                        id = 46;
-                        fb = "INVINCIBLE";
-                    } else if (race_time - radar_bonus_at < 2.5f) {
-                        id = 51;
-                        fb = "RADAR BONUS";
-                    }
-                    if (id) {
-                        const char *txt = a2_lang_get(lang, id, fb);
-                        float bs = small * (id <= 41 ? 1.8f : 1.4f);
-                        a2_font3d_draw(font, scene, txt,
-                                       (win_w - a2_font3d_width(font, txt) * bs) * 0.5f,
-                                       win_h * (id <= 41 ? 0.40f : 0.10f), bs);
+                /* the banner slot (see banner_id) */
+                if (banner_id && fnt_label) {
+                    Uint32 now = SDL_GetTicks();
+                    if (now - banner_ms <= 2000 && ((now / 100) & 1)) {
+                        static const char *const fb[52] = {
+                            [31] = "NIEUW RONDE RECORD", [44] = "EXTRA TIJD",
+                            [45] = "LAATSTE RONDE",      [46] = "INVINCIBLE",
+                            [47] = "COP MODE",           [48] = "QUICK SERVICE",
+                            [49] = "EERSTE WAARSCHUWING", [50] = "LAATSTE WAARSCHUWING",
+                            [51] = "RADAR BONUS"};
+                        const char *txt = a2_lang_get(lang, banner_id, fb[banner_id]);
+                        float sc = win_h / 480.0f;
+                        a2_font_draw(fnt_label, txt,
+                                     win_w * 0.5f - a2_font_text_width(fnt_label, txt, sc) * 0.5f,
+                                     80.0f * sc - a2_font_height(fnt_label, sc) * 0.5f, sc);
                     }
                 }
 
-                /* Checkpoint banner for a few seconds after crossing. */
-                if (race_time - split_shown_at < 3.0f) {
-                    int m = (int)(split_time / 60.0f);
-                    snprintf(line, sizeof line, "%s %d.%02d.%d",
-                             a2_lang_get(lang, 33, "RACE TIJD"), m, ((int)split_time) % 60,
-                             (int)((split_time - (int)split_time) * 10.0f));
-                    float bs = small * 1.4f;
-                    a2_font3d_draw(font, scene, line,
-                                   (win_w - a2_font3d_width(font, line) * bs) * 0.5f,
-                                   win_h * 0.16f, bs);
+                /* the two game-over arms the police code does not already
+                 * announce: 40 TOTAL LOSS and 41 TIJD IS OM */
+                if (game_over_msg == 40 || game_over_msg == 41) {
+                    int id = game_over_msg;
+                    const char *txt = a2_lang_get(lang, id, id == 40 ? "TOTAL LOSS" : "TIJD IS OM");
+                    float bs = small * 1.8f;
+                    a2_font3d_draw(font, scene, txt,
+                                   (win_w - a2_font3d_width(font, txt) * bs) * 0.5f,
+                                   win_h * 0.40f, bs);
                 }
 
-                /* The police: the game's own two warnings and then the arrest.
-                 * 49 EERSTE WAARSCHUWING, 50 LAATSTE WAARSCHUWING, 42
-                 * GEARRESTEERD -- a three-strike rule counted by
-                 * `g_times_caught` in the original (see cops.h). */
+                /* The police: the two warnings go through the banner slot
+                 * (above); the arrest's 42 GEARRESTEERD and 43 RACE OVER are
+                 * the game-over sequence's own (see cops.h). */
                 if (cops) {
                     float age = 0.0f;
                     int msg = a2_cops_message(cops, &age);
-                    if (msg && age < 4.0f) {
+                    if ((msg == 42 || msg == 43) && age < 4.0f) {
                         const char *fb = msg == 49   ? "EERSTE WAARSCHUWING"
                                          : msg == 50 ? "LAATSTE WAARSCHUWING"
                                          : msg == 43 ? "RACE OVER"
@@ -3518,17 +3565,6 @@ int main(int argc, char **argv)
                                    win_h * 0.40f, bs);
                 }
 
-                /* Lap banner just after crossing the line. */
-                if (circuit && race_time - lap_shown_at < 3.0f) {
-                    int m = (int)(last_lap / 60.0f);
-                    snprintf(line, sizeof line, "%s %d   %d.%02d.%d",
-                             a2_lang_get(lang, 39, "RONDE"), lap - 1, m, ((int)last_lap) % 60,
-                             (int)((last_lap - (int)last_lap) * 10.0f));
-                    float bs = small * 1.4f;
-                    a2_font3d_draw(font, scene, line,
-                                   (win_w - a2_font3d_width(font, line) * bs) * 0.5f,
-                                   win_h * 0.16f, bs);
-                }
             }
             /* the tweak menu's text, as 0x466420 prints it: x = 10, a row
              * every 20 from y = 10, on the 640x480 screen */
