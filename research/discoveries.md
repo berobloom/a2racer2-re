@@ -6626,10 +6626,15 @@ back to the list).
     100 ms on / 100 ms off blink.
   - It is drawn with **0x41bfc0(surface, element 0x4c, mode 1, text, font)**.
     Mode 1 centres the text on the element's point.
-- Element 76 in the 12-byte layout table at 0x488510 (`{anim, x, y}`, 84
-  elements a resolution): the hires record is (-1, **160, 40**), a 320x240
-  layout. The lores record is all zeros. The Wine capture puts the centre at
-  (320, 80) of 640x480.
+- Element 76 in the 12-byte layout table at 0x488510 (`{anim, x, y}`): the
+  reader picks the half at +84 elements when the lores flag [0x4d9a70] is
+  **0** (0x41c018: `sete`), and that half has the 640x480 coordinates
+  (element 0: (380, 431) against (190, 180)). But that half holds **zeros
+  from element 50 on**, element 76 included. The first half has (-1, 160,
+  40). How the banner then lands where it does is **not resolved**: the
+  [0x4d9a6c] +320 adjustment, or a scale inside the font draw 0x46a270, are
+  candidates. **MEASURED:** the Wine capture (RESOLUTION=3) puts the text's
+  centre at about (320, 80) of 640x480, and the port uses that.
 - The font is **font 10** of the 148-byte font records at 0x486d08:
   **olfnt01.fnt** (hires) / lo_fnt1.fnt (lores), the HUD's label font.
 - **0x429860** (Tr_finis.cpp, lap completion) raises **31 NIEUW RONDE
