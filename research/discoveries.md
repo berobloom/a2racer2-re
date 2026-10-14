@@ -6542,6 +6542,14 @@ offset table read the constants but not what they do.
   with the police on). Regressions: etappe1 283.8 s, 2 unwedges; etappe5
   342.8 s, 1; etappe2 1224.0 s, 25; etappe1 with police 327.4 s, 2 (was
   345.8 s, 8).
+- Port (session 15, later): **the impulse is now applied in the step**, as
+  0x440fb0 does (0x4497f0 right after the move). step_impulse in main.c uses
+  each obstacle's own mass and restitution, and the blocks after the move
+  keep only the push-out, the damage and the sound for those contacts. This
+  removed the t = 0 deviation: the port stops at t = 0 as the original does
+  and the impulse turns the car away. The overlap deviation stays.
+  Regressions: etappe1 295.3 s, 1 unwedge; etappe5 342.1 s, 1; etappe2
+  1206.9 s, **10** (was 25); etappe1 with police 323.8 s, 4.
 - Port: the AI cars (racers, cops) take the same contact-limited step, one
   a frame as the engine moves every object but the player: put back by
   their move (velocity x dt x 10), stopped at their earliest contact,

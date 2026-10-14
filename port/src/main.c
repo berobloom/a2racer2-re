@@ -95,6 +95,75 @@ static int toi_take(const toi_hit *t, int kind, int idx, float n[2], float p[2])
     return 1;
 }
 
+/* The impulse of one step's contact (0x4497f0, applied by 0x440fb0 right
+ * after the step's move), with each obstacle's own parameters -- the same
+ * ones the collision blocks after the move use:
+ *   barriers   restitution 0.2 against the world
+ *   scenery    columns immovable at 0.1, arrows 13000 kg and parked police
+ *              cars 1300 kg at 0.2 (0x445441..0x445486), mean with the car's
+ *   traffic    the vehicle table's mass, 0.2, the car takes its share
+ *   racers     the car table's mass, 0.2; cops 0.25; they take their share
+ * Returns the impulse's magnitude. */
+static float step_impulse(a2_drive *drv, const toi_hit *h, float hl, float hw, float m,
+                          a2_scene *scene, a2_traffic *traffic, a2_racers *racers,
+                          a2_cops *cops, const a2_handling_table *handling)
+{
+    float dv2[3];
+    switch (h->kind) {
+    case TOI_RAIL:
+        return a2_drive_impulse_at(drv, hl, hw, m, h->n[0], h->n[1], 0.2f, 0.0f, 0.0f, 0.0f, 1,
+                                   NULL, NULL, 0.0f, 0.0f, drv->x, drv->z, h->p);
+    case TOI_OBJECT: {
+        int type = a2_scene_object_type(scene, h->idx);
+        float om = type == 8 ? 13000.0f : type == 10 ? 1300.0f : 0.0f;
+        float oe = type == 5 ? 0.1f : 0.2f;
+        float opos[2] = {0.0f, 0.0f};
+        a2_scene_object_pos(scene, h->idx, &opos[0], &opos[1]);
+        float j = a2_drive_impulse_at(drv, hl, hw, m, h->n[0], h->n[1], 0.5f * (0.2f + oe), om,
+                                      0.0f, 0.0f, om <= 0.0f, dv2, opos, 4.0f, 1.0f, drv->x,
+                                      drv->z, h->p);
+        if (om > 0.0f)
+            a2_scene_object_push(scene, h->idx, dv2[0], dv2[1], dv2[2]);
+        return j;
+    }
+    case TOI_TRAFFIC: {
+        float ovx = 0.0f, ovz = 0.0f, om = 1000.0f;
+        const char *oanim = NULL;
+        if (traffic && a2_traffic_car_motion(traffic, h->idx, &ovx, &ovz, &oanim)) {
+            int hi = oanim ? a2_handling_find(handling, oanim) : -1;
+            if (hi >= 0 && handling->v[hi].valid && handling->v[hi].mass > 0.0f)
+                om = handling->v[hi].mass;
+        }
+        float j = a2_drive_impulse_at(drv, hl, hw, m, h->n[0], h->n[1], 0.2f, om, ovx, ovz, 0,
+                                      dv2, NULL, 0.0f, 0.0f, drv->x, drv->z, h->p);
+        if (traffic)
+            a2_traffic_car_push(traffic, h->idx, dv2[0], dv2[1]);
+        return j;
+    }
+    case TOI_RACER:
+    case TOI_COP: {
+        int racer = h->kind == TOI_RACER;
+        a2_drive *od = racer ? a2_racer_drive(racers, h->idx) : a2_cop_drive(cops, h->idx);
+        if (!od)
+            return 0.0f;
+        int oslot = racer ? a2_racer_car(racers, h->idx) : 3;
+        const char *oanim = racer ? a2_car_anim_name(oslot) : "MPOLIZEI_ANIM";
+        float om = 1000.0f, ovx, ovz;
+        int hi = a2_handling_find(handling, oanim);
+        if (hi >= 0 && handling->v[hi].valid && handling->v[hi].mass > 0.0f)
+            om = handling->v[hi].mass;
+        a2_ai_world_velocity(od, &ovx, &ovz);
+        float opos[2] = {od->x, od->z};
+        float ol = 0.2f * a2_car_half_length(oslot), ow = 0.2f * a2_car_half_width(oslot);
+        float j = a2_drive_impulse_at(drv, hl, hw, m, h->n[0], h->n[1], racer ? 0.2f : 0.25f, om,
+                                      ovx, ovz, 0, dv2, opos, ol, ow, drv->x, drv->z, h->p);
+        a2_ai_push(od, dv2[0], dv2[1], dv2[2]);
+        return j;
+    }
+    }
+    return 0.0f;
+}
+
 /* The engine's contact against one box (0x44a0f0, contact.h): the player's
  * box from where it started the frame, moved by this frame's step.  On a hit
  * the normal (into the other box) and the contact point replace the
@@ -1542,6 +1611,10 @@ int main(int argc, char **argv)
     a2_tweak_init(&tweak);
     float pre_x = 0.0f, pre_z = 0.0f, pre_h = 0.0f, step_dx = 0.0f, step_dz = 0.0f;
     toi_hit toi = {TOI_NONE, -1, {0.0f, 0.0f}, {0.0f, 0.0f}};
+    /* impulses the steps applied this frame, per TOI kind: the largest
+     * magnitude, and the obstacle (-2 none) */
+    float step_j[6];
+    int step_idx[6];
     int cam_smooth_on = 1;         /* camera +0x6c */
     float cam_smooth = 0.245f;     /* camera +0x84 */
     float cam_eye[3], cam_look[3]; /* the smoothed position and look point */
@@ -2007,15 +2080,23 @@ int main(int argc, char **argv)
              * player in 8 steps of dt/8 (0x440fb0: [0x4e65d8] is the player),
              * each only as far as its earliest contact (0x44a0f0, contact.c)
              * against the barriers (0x449c10's slabs), solid scenery and the
-             * other vehicles, so the car never sinks into them.  Port's
-             * simplification: the first contact stops the move for the rest
-             * of the frame (the turn goes on), and the collision blocks below
-             * apply its impulse; the original applies it in the step and
-             * carries on along the wall (0x441490). */
+             * other vehicles, so the car never sinks into them.  A contact
+             * the car runs into is re-tested as 0x441490 does it, and its
+             * impulse is applied in the step (0x4497f0, step_impulse), so the
+             * next step moves with the new velocity.  The collision blocks
+             * after the move keep the push-out, the damage and the sound,
+             * and apply an impulse only for a contact no step saw. */
             denv.no_integrate = 1;
             a2_drive_step(&drv, &denv, dt);
             denv.no_integrate = 0;
             toi.kind = TOI_NONE;
+            for (int k = 0; k < 6; k++) {
+                step_j[k] = 0.0f;
+                step_idx[k] = -2;
+            }
+            float hit_hl = car_hand ? car_hand->length * 0.5f : 2.25f;
+            float hit_hw = car_hand ? car_hand->width * 0.5f : 0.85f;
+            float hit_m = car_hand && car_hand->mass > 0.0f ? car_hand->mass : 1000.0f;
             {
                 a2_cbox cand[320];
                 int ckind[320], cidx[320], nc = 0;
@@ -2097,13 +2178,7 @@ int main(int argc, char **argv)
                      * the move x t). The real velocity is left alone; the
                      * impulse changes it. */
                     float vn = vx * hit.n[0] + vz * hit.n[1];
-                    /* Port deviation: the original skips the re-test at
-                     * t = 0 (0x441490 returns 0) and leaves the escape to
-                     * the impulse, applied right after in the same step.
-                     * The port's impulse comes once a frame, which left a
-                     * car pinned to a slab at t = 0 (etappe2 chunk 117), so
-                     * the port re-tests at t = 0 as well. */
-                    if (vn >= 0.0f) {
+                    if (best > 0.0f && vn >= 0.0f) {
                         float k = -10.0f - vn; /* the normal part becomes -10 */
                         float wx = vx + k * hit.n[0], wz = vz + k * hit.n[1];
                         float wmx = 10.0f * sdt * wx, wmz = 10.0f * sdt * wz;
@@ -2113,7 +2188,9 @@ int main(int argc, char **argv)
                         if (t2 > 1.0f)
                             t2 = 1.0f;
                         a2_drive_integrate_move(&drv, sdt, wmx * t2, wmz * t2);
-                    } else if (best > 0.0f) {
+                    } else if (best > 0.0f || vn >= 0.0f) {
+                        /* stopped at the contact; at t = 0 not moved at all,
+                         * the impulse below turning it away */
                         a2_drive_integrate_move(&drv, sdt, mx * best, mz * best);
                     } else {
                         /* Port deviation: a box already overlapping the car
@@ -2124,13 +2201,21 @@ int main(int argc, char **argv)
                          * move go and the push-out separates them. */
                         a2_drive_integrate_move(&drv, sdt, mx, mz);
                     }
-                    /* the impulse takes the frame's first contact the car's
-                     * contact point moves into (a2_drive_impulse_at) */
-                    if (toi.kind == TOI_NONE) {
+                    /* the impulse, in the step (0x4497f0 after 0x43f900),
+                     * when the contact point moves into the obstacle */
+                    {
                         float rx = 0.1f * (hit.p[0] - drv.x), rz = 0.1f * (hit.p[1] - drv.z);
                         float cvx = vx - drv.yaw_rate * rz, cvz = vz + drv.yaw_rate * rx;
-                        if (cvx * hit.n[0] + cvz * hit.n[1] > 0.0f)
-                            toi = hit;
+                        if (cvx * hit.n[0] + cvz * hit.n[1] > 0.0f) {
+                            if (toi.kind == TOI_NONE)
+                                toi = hit; /* the frame's first, for the blocks below */
+                            float j = step_impulse(&drv, &hit, hit_hl, hit_hw, hit_m, scene,
+                                                   traffic, racers, cops, &handling);
+                            if (step_idx[hit.kind] == -2 || j > step_j[hit.kind]) {
+                                step_j[hit.kind] = fmaxf(step_j[hit.kind], j);
+                                step_idx[hit.kind] = hit.idx;
+                            }
+                        }
                     }
                 }
 #undef EARLIEST
@@ -2312,9 +2397,6 @@ int main(int argc, char **argv)
              * The push-out keeps the car clear; the impulse sets its
              * velocity, spin and hop.  The magnitude of the first frame of a
              * contact drives the damage and the crunch (0x4273b0, 0x427cc0). */
-            float hit_hl = car_hand ? car_hand->length * 0.5f : 2.25f;
-            float hit_hw = car_hand ? car_hand->width * 0.5f : 0.85f;
-            float hit_m = car_hand && car_hand->mass > 0.0f ? car_hand->mass : 1000.0f;
             float slide[2] = {0.0f, 0.0f};
             /* This frame's collision for the sound (0x427cc0): the impact
              * magnitude on the first frame of a contact, 0 while it lasts,
@@ -2337,9 +2419,11 @@ int main(int argc, char **argv)
                  * own normal (the push-out found it) */
                 float n[2] = {-slide[0], -slide[1]}, cp[2];
                 int at = toi_take(&toi, TOI_RAIL, -1, n, cp);
-                float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1], 0.2f, 0.0f,
-                                              0.0f, 0.0f, 1, NULL, NULL, 0.0f, 0.0f, car.x, car.z,
-                                              at ? cp : NULL);
+                float j = step_idx[TOI_RAIL] != -2
+                              ? step_j[TOI_RAIL] /* the steps applied it */
+                              : a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1], 0.2f,
+                                                    0.0f, 0.0f, 0.0f, 1, NULL, NULL, 0.0f, 0.0f,
+                                                    car.x, car.z, at ? cp : NULL);
                 col_mag = fmaxf(col_mag, was_touching ? 0.0f : j);
                 if (!was_touching)
                     hit_mag = fmaxf(hit_mag, j);
@@ -2393,10 +2477,13 @@ int main(int argc, char **argv)
                           engine_contact(pre_x, pre_z, pre_h, car_half_width,
                                          car_half_len, step_dx, step_dz, &ob, n,
                                          cp));
-                float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1],
-                                              0.5f * (0.2f + oe), om, 0.0f, 0.0f, om <= 0.0f, dv2,
-                                              opos, 4.0f, 1.0f, car.x, car.z, at ? cp : NULL);
-                if (om > 0.0f) {
+                int stepped = step_idx[TOI_OBJECT] == obj_inst;
+                float j = stepped ? step_j[TOI_OBJECT]
+                                  : a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1],
+                                                        0.5f * (0.2f + oe), om, 0.0f, 0.0f,
+                                                        om <= 0.0f, dv2, opos, 4.0f, 1.0f, car.x,
+                                                        car.z, at ? cp : NULL);
+                if (om > 0.0f && !stepped) {
                     a2_scene_object_push(scene, obj_inst, dv2[0], dv2[1], dv2[2]);
                     if (getenv("A2_COL_LOG"))
                         fprintf(stderr, "push: object %d (type %d) by (%.2f, %.2f) m/s, spin %.3f, j %.0f\n",
@@ -2440,10 +2527,15 @@ int main(int argc, char **argv)
                           engine_contact(pre_x, pre_z, pre_h, car_half_width,
                                          car_half_len, step_dx, step_dz, &ob, n,
                                          cp));
-                float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1], 0.2f, om,
-                                              ovx, ovz, 0, dv2, NULL, 0.0f, 0.0f, car.x, car.z,
-                                              at ? cp : NULL);
-                a2_traffic_car_push(traffic, who, dv2[0], dv2[1]);
+                float j;
+                if (step_idx[TOI_TRAFFIC] == who) {
+                    j = step_j[TOI_TRAFFIC]; /* the steps applied it */
+                } else {
+                    j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1], 0.2f, om,
+                                            ovx, ovz, 0, dv2, NULL, 0.0f, 0.0f, car.x, car.z,
+                                            at ? cp : NULL);
+                    a2_traffic_car_push(traffic, who, dv2[0], dv2[1]);
+                }
                 col_mag = fmaxf(col_mag, was_hitting_car ? 0.0f : j);
                 if (!was_hitting_car)
                     hit_mag = fmaxf(hit_mag, j);
@@ -2499,10 +2591,16 @@ int main(int argc, char **argv)
                 int at = toi_take(&toi, kind == 0 ? TOI_RACER : TOI_COP, whoa, n, cp) ||
                          engine_contact(pre_x, pre_z, pre_h, car_half_width,
                                         car_half_len, step_dx, step_dz, &ob, n, cp);
-                float j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1],
-                                              kind == 0 ? 0.2f : 0.25f, om, ovx, ovz, 0, dv2, opos,
-                                              ol, ow, car.x, car.z, at ? cp : NULL);
-                a2_ai_push(od, dv2[0], dv2[1], dv2[2]);
+                int tk = kind == 0 ? TOI_RACER : TOI_COP;
+                float j;
+                if (step_idx[tk] == whoa) {
+                    j = step_j[tk]; /* the steps applied it */
+                } else {
+                    j = a2_drive_impulse_at(&drv, hit_hl, hit_hw, hit_m, n[0], n[1],
+                                            kind == 0 ? 0.2f : 0.25f, om, ovx, ovz, 0, dv2, opos,
+                                            ol, ow, car.x, car.z, at ? cp : NULL);
+                    a2_ai_push(od, dv2[0], dv2[1], dv2[2]);
+                }
                 if (j > 0.0f) {
                     col_mag = fmaxf(col_mag, j);
                     hit_mag = fmaxf(hit_mag, j);

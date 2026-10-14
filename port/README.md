@@ -526,10 +526,10 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 283.8 s**, 3rd (racers 275.2 / 278.9 s), 2 unwedges, 0 damaging impacts |
-| etappe5 | **finishes in 342.8 s**, 2nd (racer 322.8 s), 1 unwedge, 1 damaging impact |
-| etappe2 (city, 2 laps) | **completes both laps**, 1224.0 s (553.2 + 670.8), 4th (racers 1083.3 / 1202.0 / 1205.9 s); 25 unwedges on the city corners |
-| etappe1 with police | finishes in 327.4 s, 4th (racers 318.6 / 324.1 / 326.7 s), 2 unwedges; every cop chased a racer, none the player |
+| etappe1 | **finishes in 295.3 s**, 4th (racers 286.4 / 286.7 / 286.7 s), 1 unwedge, 2 damaging impacts |
+| etappe5 | **finishes in 342.1 s**, 3rd (racers 331.9 / 332.0 s), 1 unwedge, 2 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1206.9 s (613.3 + 593.6), 3rd (racers 1191.1 / 1197.7 s); 10 unwedges on the city corners |
+| etappe1 with police | finishes in 323.8 s, 4th (racers 310.3 / 314.2 / 316.0 s), 4 unwedges; every cop chased a racer, none the player |
 
 These are on the new AI model (session 13), rerun in session 14 with the
 ground planes, the engine's box contact (src/contact.c), the player's 8
@@ -691,10 +691,10 @@ reported before this point should be treated as a one-off sample.
   something is re-tested as 0x441490 does it: the velocity's part along the
   contact normal is set to 10 away from it, and the car moves by that, so the
   car never sinks into a slab (see discoveries.md "The contact geometry, for
-  boxes"). Two port deviations keep a car from pinning itself, because the
-  port applies the impulse once a frame rather than in each step: the
-  re-test also runs at t = 0, and a box the car is already inside and
-  moving away from does not hold it. The push-out, a circle of the car's half-width, stays as a
+  boxes"). The impulse is applied inside the step, as the original's
+  0x4497f0 is, so the next step moves with the new velocity. One port
+  deviation remains: a box the car is already inside and moving away from does
+  not hold it. The original never gets into such an overlap. The push-out, a circle of the car's half-width, stays as a
   safety net. The AI cars move in one step, as the original moves every object but the
   player, likewise stopped at their first contact and sliding on.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn
