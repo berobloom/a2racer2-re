@@ -42,8 +42,10 @@
    enumerated D3D device do we open", not a per-card code path.
    Now STRONGLY SUPPORTED that it selects the Voodoo's *secondary DirectDraw
    device* so the D3D HAL comes from the 3Dfx board (see hypotheses.md).
-   To confirm: find the consumer of 0x4650C0's return value and whether the
-   chosen DDraw GUID is passed to `DirectDrawCreate` at 0x466110.
+   ~~To confirm: find the consumer of 0x4650C0's return value and whether the
+   chosen DDraw GUID is passed to `DirectDrawCreate` at 0x466110.~~
+   **Confirmed (session 15):** it is passed, as the GUID. See discoveries.md
+   "Which DirectDraw device the game opens".
 6. **PARTLY RESOLVED (session 5)**: 16-bit mode renders to 5:6:5 and the game
    picks the 5:6:5 D3D texture format (`TXF_16BPP_RGB selected = 3`); alpha
    formats 5:5:5:1 / 4:4:4:4 / 8:8:8:8 are enumerated and alpha blending caps

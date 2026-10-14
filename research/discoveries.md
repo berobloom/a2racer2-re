@@ -6630,3 +6630,43 @@ back to the list).
 - The port draws all nine banner-slot ids this way now. It dropped its own
   checkpoint-split and lap-time banners, which the original does not have.
 
+## Which DirectDraw device the game opens (session 15)
+
+Completes open question 5 (session 9), which found the driver-name scan
+(0x46d130) and the selector 0x46d290 but not who uses them.
+
+- CONFIRMED (code): the **only DirectDrawCreate** (0x466271, through the
+  import thunk 0x47d416) takes as its **GUID** the record returned by
+  **0x46d290([0x49e740])**. The record's first 16 bytes are the enumerated
+  device's GUID (copied at 0x46d23e). When the selected class of device was
+  not found, 0x46d290 returns **NULL**, i.e. the primary display driver.
+- CONFIRMED (code): **[0x49e740]** is set only by 0x464ff0(2, sel, 0)
+  (0x465022), called from **0x420770** on **Raser.ini [PROGRAM] RESOLUTION**
+  ([0x4895b0], read at 0x420a37). The jump table is at 0x4208dc:
+
+  | RESOLUTION | Raser.ini comment | driver selector | 0x464ff0(0, n) |
+  |---|---|---|---|
+  | 0 | 320x200x8 | 0, primary | 0 |
+  | 1 | 640x480x8 | 0, primary | 3 |
+  | 2 | -- | 0, primary | 9 |
+  | **3** | **640x480x16** (shipped) | **1, the 3Dfx device** | 9 |
+  | 4 | -- | 1, the 3Dfx device | 10 |
+  | 5 | -- | 0, primary | 6, and 0x44c750(1) |
+
+  So the shipped 16-bit mode asks for the 3Dfx board's DirectDraw device
+  (found by the names `3DFX`, `DD3Dfx`, `R3D`, `mnstr2`) and falls back to the
+  primary display when there is none.
+- CONFIRMED (code): a **user-chosen device overrides it.** 0x420eae reads
+  **Raser.ini [DIRECTX] INDEX** into 0x489639, **NAME** into 0x48964d and
+  **GUID** (parsed as `%d,%d,...`) into 0x48963d. With INDEX non-zero,
+  0x420888 switches to selector **4** ("using user defined driver %d",
+  [0x4a0ed0]), after adding that GUID as an enumeration record (0x46cfd0).
+- The shipped Raser.ini has **no [DIRECTX] section**. The setup program
+  **instlng.exe** writes one: its strings include `DIRECTX`, `index`, `guid`,
+  `raser.ini`, the GUID format `%d,%d,%d,%d,%d,%d,%d,%d` and the choice
+  **"Automatisch"**. So the installer lets the player pick a Direct3D device,
+  and "automatic" leaves the RESOLUTION rule above in charge (LIKELY: the
+  installer's own code is not traced).
+- Under Wine there is no 3Dfx device, so RESOLUTION=3 opens the primary
+  display, which is what every capture so far has used.
+

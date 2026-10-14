@@ -26,7 +26,7 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   `n:\libraries\a2racerii\win3ddp\versie_1` is the version used by A2 Racer II.
   The `.d3d` extension likely still means "Davilex 3D data" (their own mesh
   format, not a Microsoft one).
-- STRONGLY SUPPORTED: the **"Righteous dd3ddfx driver found %d" check (0x4650C0,
+- **CONFIRMED (session 15, code)**, was STRONGLY SUPPORTED: the **"Righteous dd3ddfx driver found %d" check (0x4650C0,
   reached from the DirectDraw enumeration at 0x46D270) is how the game enables
   3Dfx hardware acceleration.** On Voodoo Graphics / Voodoo Rush cards the 3D
   chip appeared as a *secondary* DirectDraw device (driver name `dd3ddfx`, the
@@ -34,6 +34,10 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   `IID_IDirect3D2` from it yields a hardware D3D HAL. This reading only became
   available once real-D3D use was established; previously the check looked
   purposeless. Not yet proven — needs the consumer of 0x4650C0's return value.
+  **Settled (session 15):** the record 0x46d290 returns is passed as the GUID
+  to the only DirectDrawCreate (0x466271, via 0x47d416), and the selector
+  comes from Raser.ini RESOLUTION. See discoveries.md "Which DirectDraw
+  device the game opens".
   **Correction (session 15):** 0x4650C0 is not the check. It maps a DirectX
   HRESULT to its name string and has about 80 callers. The strings
   "dd3ddfx driver found %d" (0x4a11f0) and "Righteous dd3ddfx driver found %d"
