@@ -81,6 +81,9 @@ void a2_drive_step(a2_drive *d, const a2_drive_env *e, float dt);
 void a2_drive_body(a2_drive *d, const a2_drive_env *e, float dt);
 /* 0x4404a0 with a contact time: move t of the step's way, turn the whole step. */
 void a2_drive_integrate_t(a2_drive *d, float dt, float t);
+/* The same with the step's displacement given (world units): the move along
+ * an obstacle after a contact. */
+void a2_drive_integrate_move(a2_drive *d, float dt, float dx, float dz);
 void a2_drive_integrate(a2_drive *d, float dt);
 /* The engine's collision impulse (0x441490's response, see main.c's notes):
  * the car `d` (half-length hl, half-width hw in metres, mass m1) hits along

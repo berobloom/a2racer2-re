@@ -509,14 +509,14 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 279.5 s**, 4th (racers 268.7 / 268.8 / 269.5 s), 2 unwedges, no damaging impact |
-| etappe5 | **finishes in 355.2 s**, 3rd (racers 347.5 / 347.7 s; the third, behind the player, gets no time), 8 unwedges, 4 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1250.9 s (621.0 + 629.9), 4th (racers 1052.8 / 1056.2 / 1084.0 s); 70 unwedges on the city corners |
-| etappe1 with police | finishes in 312.7 s, 4th (racers 295.3 / 301.2 / 303.2 s), **caught once** (242.2 s), 2 unwedges; the other chases are given up after 60 s (HARD) |
+| etappe1 | **finishes in 292.0 s**, 3rd (racers 279.2 / 284.2 s), no unwedge, 2 damaging impacts |
+| etappe5 | **finishes in 352.7 s**, 4th (racers 338.8 / 339.5 / 339.5 s), 1 unwedge, 3 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1251.7 s (612.5 + 639.2), 3rd (racers 1055.3 / 1057.3 s); 24 unwedges on the city corners |
+| etappe1 with police | finishes in 342.2 s, 4th (racers 309.7 / 311.0 / 316.9 s), 8 unwedges; every cop chased a racer, none the player |
 
 These are on the new AI model (session 13), rerun in session 14 with the
-ground planes and the engine's box contact (src/contact.c) for every
-vehicle-vehicle and vehicle-scenery hit. The runs are chaotic: one different
+ground planes, the engine's box contact (src/contact.c) and the player's
+8 contact-limited steps. The runs are chaotic: one different
 bounce early on changes traffic, wedges and crashes for the rest of the race,
 so compare counts and orders of magnitude rather than tenths of seconds.
 Before session 14: etappe1 249.7 s, etappe5 383.2 s, etappe2 1253.7 s,
@@ -668,11 +668,13 @@ reported before this point should be treated as a one-off sample.
   racers, cops and solid scenery the contact is the original's (session 14,
   src/contact.c): the earliest corner of either box to cross a side of the
   other over the frame's move, with that side's outward normal and the corner
-  as the lever arm. The barriers keep the wall's own
-  normal: the original makes them boxes too (0x449c10), but it moves a car
-  only to the time of impact. The port pushes out after the fact, and its
-  corners then catch the joints between slabs (see discoveries.md). The
-  push-out is still a circle of the car's half-width.
+  as the lever arm. The barriers are boxes too, as the
+  original makes them (0x449c10: a 10-unit slab behind each rail). Like the
+  original, the player moves in 8 steps of dt/8, each only as far as its first
+  contact, and then slides along the obstacle for the rest of the frame, so
+  the car never sinks into a slab (see discoveries.md "The contact geometry,
+  for boxes"). The push-out, a circle of the car's half-width, stays as a
+  safety net. The AI cars still move in one step and use the push-out.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn
   table (0x484a48), with the behaviour drawn separately. Both traffic
   behaviours prefer 25 m/s, which is what a real race's debug.txt logs, so a

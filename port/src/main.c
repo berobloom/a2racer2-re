@@ -1991,31 +1991,52 @@ int main(int argc, char **argv)
                     }
                 }
                 float hw = car_half_width, hl = a2_car_half_length(car_slot), sdt = dt / 8.0f;
+                float slide_n[2] = {0.0f, 0.0f};
+                int sliding = 0;
                 for (int sub = 0; sub < 8; sub++) {
-                    if (toi.kind != TOI_NONE) {
-                        a2_drive_integrate_t(&drv, sdt, 0.0f);
-                        continue;
-                    }
                     float hh = floorf(drv.heading);
                     float ang = (float)(((int)hh) & 0xfff) * (6.28318531f / 4096.0f);
                     float sn = sinf(ang), cs = cosf(ang);
                     float mx = 10.0f * sdt * (cs * drv.v_lat - sn * drv.v_fwd);
                     float mz = 10.0f * sdt * (sn * drv.v_lat + cs * drv.v_fwd);
-                    a2_cbox self = {-hw, -hl, hw, hl, drv.x, drv.z, drv.heading};
-                    float best = 2.0f;
-                    for (int i = 0; i < nc; i++) {
-                        float t, pt[2], nn[2];
-                        if (a2_contact(&self, mx, mz, &cand[i], &t, pt, nn) && t < best) {
-                            best = t;
-                            toi.kind = ckind[i];
-                            toi.idx = cidx[i];
-                            toi.n[0] = nn[0];
-                            toi.n[1] = nn[1];
-                            toi.p[0] = pt[0];
-                            toi.p[1] = pt[1];
+                    if (sliding) { /* along the obstacle: drop the part into it */
+                        float into = mx * slide_n[0] + mz * slide_n[1];
+                        if (into > 0.0f) {
+                            mx -= into * slide_n[0];
+                            mz -= into * slide_n[1];
                         }
                     }
-                    a2_drive_integrate_t(&drv, sdt, best <= 1.0f ? best : 1.0f);
+                    a2_cbox self = {-hw, -hl, hw, hl, drv.x, drv.z, drv.heading};
+                    float best = 2.0f;
+                    toi_hit hit = {TOI_NONE, -1, {0.0f, 0.0f}, {0.0f, 0.0f}};
+                    for (int i = 0; i < nc; i++) {
+                        float t, pt[2], nn[2];
+                        /* only a contact the car moves into stops it; one it
+                         * already leaves does not (0x441490 returns 0 when
+                         * v . n > 0, i.e. separating, in its own sign) */
+                        if (!a2_contact(&self, mx, mz, &cand[i], &t, pt, nn) || t >= best)
+                            continue;
+                        /* the contact point's velocity, as the impulse takes
+                         * it (a2_drive_impulse_at): v + w x r, r in metres */
+                        float rx = 0.1f * (pt[0] - (drv.x + mx * t));
+                        float rz = 0.1f * (pt[1] - (drv.z + mz * t));
+                        float cvx = mx / (10.0f * sdt) - drv.yaw_rate * rz;
+                        float cvz = mz / (10.0f * sdt) + drv.yaw_rate * rx;
+                        if (cvx * nn[0] + cvz * nn[1] > 0.0f) {
+                            best = t;
+                            hit = (toi_hit){ckind[i], cidx[i], {nn[0], nn[1]}, {pt[0], pt[1]}};
+                        }
+                    }
+                    float tt = best <= 1.0f ? best : 1.0f;
+                    a2_drive_integrate_move(&drv, sdt, mx * tt, mz * tt);
+                    if (hit.kind != TOI_NONE) {
+                        if (toi.kind == TOI_NONE)
+                            toi = hit; /* the impulse takes the frame's first contact */
+                        /* the rest of the frame slides along it (0x441490) */
+                        slide_n[0] = hit.n[0];
+                        slide_n[1] = hit.n[1];
+                        sliding = 1;
+                    }
                 }
                 if (getenv("A2_COL_LOG") && toi.kind != TOI_NONE)
                     fprintf(stderr, "toi: kind %d idx %d n (%.2f, %.2f)\n", toi.kind, toi.idx,

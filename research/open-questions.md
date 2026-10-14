@@ -845,9 +845,9 @@ phrasing may not be the original's.)*
 53. **MOSTLY RESOLVED (session 14): the box-box contact.** See discoveries.md
     "The contact geometry, for boxes"; ported as src/contact.c and checked
     against the original under Unicorn (1499 of 1500). The barriers are
-    the same boxes (0x449c10), but the port can use them only once it moves
-    cars to the time of impact as the original does (0x441490); see
-    discoveries.md. Still open: the exact arms of the record builder 0x449840
+    the same boxes (0x449c10), and the port moves the player in the
+    original's 8 contact-limited steps (session 14); see discoveries.md.
+    Simplified: the impulse once per frame, and 0x441490's re-test. Still open: the exact arms of the record builder 0x449840
     (which object is +8 and which +0xc in each arm).
     Earlier notes:
     0x441490 does **not** bisect the frame. It reads the contact record

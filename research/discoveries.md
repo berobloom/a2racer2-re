@@ -6439,8 +6439,27 @@ offset table read the constants but not what they do.
   carriageway.
 - 0x44acf0 is a static overlap test (is any corner of B strictly inside A),
   used later in 0x44a0f0; 0x449de0 adds the registered objects.
-- Port: `a2_scene_rail_boxes` builds the slabs, but **the port does not use
-  them yet**. Tried in session 14: 68% of the barrier contacts (2022 of 2958
+- CONFIRMED (code): **the engine moves each object in steps, each only as
+  far as its earliest contact.** In 0x440fb0 the object at [0x4e65d8] (the
+  player) takes **8 steps of dt/8**, every other object one. Each step runs
+  0x44a0f0 for the contact time t, then 0x441490 (0 when the contact
+  separates; otherwise it re-tests with the velocity's normal part set to
+  10), then 0x43f900 -> 0x4404a0, which moves the object by its velocity x
+  dt x 10 x t (or by 0x441490's vector) and turns it over the whole step.
+  The impulse follows (0x4497f0). The integrator truncates each step's turn
+  to whole units, so 8 steps do not equal one.
+- Port (session 14, after the attempt below): the player's driving model runs
+  once, then 8 steps of dt/8 (a2_drive_integrate_move), each stopped at its
+  earliest contact the car moves into (contact point velocity . n > 0, as the
+  impulse takes it) against the barrier slabs, solid scenery, traffic,
+  racers and cops. After a contact the rest of the frame slides along it (the
+  move minus its part into the obstacle), and the frame's first contact
+  gives the impulse. Port's simplifications: the impulse once per frame,
+  after the move, and the slide as a projection rather than 0x441490's
+  re-test. Regressions: etappe1 292.0 s with 0 unwedges (was 2), etappe5
+  352.7 s with 1 (was 8), etappe2 1251.7 s with 24 (was 70).
+- The earlier attempt (session 14): `a2_scene_rail_boxes` built the slabs but
+  the port did not stop at the contact time. Tried in session 14: 68% of the barrier contacts (2022 of 2958
   on etappe2) hit a slab's end face where two slabs meet. That brakes a
   scraping car, and every regression got slower with more unwedges (etappe2
   1407 s against 1251 s). The original never lets a car into the slabs: it

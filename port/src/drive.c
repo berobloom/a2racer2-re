@@ -516,8 +516,14 @@ void a2_drive_integrate_t(a2_drive *d, float dt, float t)
     int hi = ((int)h) & 0xfff;
     float ang = (float)hi * HEAD_TO_RAD;
     float sn = sinf(ang), cs = cosf(ang);
-    d->x += 10.0f * dt * t * (cs * d->v_lat - sn * d->v_fwd);
-    d->z += 10.0f * dt * t * (sn * d->v_lat + cs * d->v_fwd);
+    a2_drive_integrate_move(d, dt, 10.0f * dt * t * (cs * d->v_lat - sn * d->v_fwd),
+                            10.0f * dt * t * (sn * d->v_lat + cs * d->v_fwd));
+}
+
+void a2_drive_integrate_move(a2_drive *d, float dt, float dx, float dz)
+{
+    d->x += dx;
+    d->z += dz;
     float dh = dt * d->yaw_rate * TURN / TWO_PI;
     d->heading += dh;
     int ri = ((int)(-dh)) & 0xfff;
