@@ -106,7 +106,7 @@
    waypoints, and the base type it accompanies varies by track (etappe2 is all
    type 2, etappe3 mostly type 4, etappe0 mostly type 0). (`.pmp` f3/f4 were resolved in session 6 — they are the
    per-chunk AI trigger slots, see question 38.)
-11. **RESOLVED (session 7), except three header fields.** `.pth` is a list of
+11. **RESOLVED (sessions 7-12)**: the three header fields are f2 the path type, f3 the lap (session 12) and f4 the duration in ms (session 10). `.pth` is a list of
     **camera paths**: `i32 version(-1); u32 count;` then per path six dwords
     (`first_chunk, last_chunk, f2, f3, f4, point_count`) and `point_count`
     records of `u32 flag; float x,y,z`. All 7 tracks parse byte-exactly, and
@@ -215,7 +215,7 @@
     190 entries and 190 "no damage frames" returns, and never a zone line. So
     DAMAGE_VALUE/DAMAGE_MESH are never written at runtime in the shipped
     game. See "The regional damage code never runs" in discoveries.md.
-18. **RESOLVED (session 9)**, bar two unread helpers. The structure is now documented (see
+18. **RESOLVED (session 9)**; the "two unread helpers" are named below (change_active_camera and a camera-parameter setter), in the old AI model the shipped game does not run. The structure is now documented (see
     "The police" in discoveries.md): `t_cop` is a 32-byte record in a T_ARRAY
     at 0x4a5238; each cop carries a **max speed** (+0x14) and **max lanes**
     (+0x18) that the `.pmp` **speed and lane triggers set** -- trigger 4/5/6/8
