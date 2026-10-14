@@ -6553,8 +6553,10 @@ offset table read the constants but not what they do.
   The AI cars' one step then got the same move: 0x441490's re-test replaces
   their projection slide. Regressions: etappe1 312.5 s, 2 unwedges; etappe5
   351.2 s, 1; etappe2 1144.2 s, 7; etappe1 with police 344.2 s, 1. Every
-  racer finishes on every stage, and the player's time moves by up to about
-  20 s between runs with the traffic.
+  racer finishes on every stage. The drive-test runs are **deterministic**:
+  a second etappe1 run gave the same times to 0.1 s. So the player's time
+  moving by up to about 20 s between these versions comes from the changes
+  themselves; a different contact early on changes everything after it.
 - Port: the AI cars (racers, cops) take the same contact-limited step, one
   a frame as the engine moves every object but the player: put back by
   their move (velocity x dt x 10), stopped at their earliest contact,
