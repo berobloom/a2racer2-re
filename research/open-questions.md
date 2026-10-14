@@ -368,7 +368,10 @@
     channel, `c = c*c >> 8` (0x4682a4..), a gamma of exactly 2. The sprite
     loader (Sprite.cpp) and the PCX loader (Rcpcx.cpp) convert through it, so
     the 3D textures are darkened as well as the HUD sprites. See discoveries.md
-    "Game.ini gamma squares every colour". Earlier text:
+    "Game.ini gamma squares every colour". **Correction (session 15):** the
+    fonts are squared as well. The "fonts do not" below compared olfnt02 with
+    a colour that is not its index 230, which is (189,202,231) in e02_pl16
+    and squares to the measured blue. Earlier text:
     **PARTLY RESOLVED (session 9, runtime).** Capturing the game under Wine
     settles the practical half: the HUD **sprites** come out as a **gamma of
     about 2.0** on the palette (fixed at black and white; index 73 measured
