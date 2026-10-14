@@ -389,7 +389,7 @@ Tweak Menu
   | A[26] | — | — | always 0, unused |
   | A[27] | 0x4A5F4C | Remkracht | braking force (stored negative) |
   | A[28] | 0x4A5F50 | Motor vertraging | engine deceleration |
-  | A[29] | — | (not in the menu) | the body's roll rate into a turn, 0x40F90D (settled session 13) |
+  | A[29] | 0x4A5F54 | Rolhoek versterking (in the roll sub-menu) | the body's roll rate into a turn, 0x40F90D (settled sessions 13-14) |
   | A[30] | 0x4A5F58 | Stuursnelheid | steering speed |
   | B[0,1] | 0x4A5DF0 | Rolhoek demping / factor | roll |
   | B[2,3] | 0x4A5DF8 | Pitchhoek demping / Factor | pitch |
@@ -2429,8 +2429,9 @@ per-object yaw update, and the only place A[29] is read.
   it: **`_d3d_objects`, element type `c_3dobject`**, stride 153 bytes (the code
   computes `field_08 * 17 * 9`).
 - So **A[29] acts on the car's renderable model, not on its physics object.**
-  That is consistent with everything else about it: it is the one car field the
-  TWEAK_MODE menu does not expose (that menu's 10 values are all handling), and
+  That is consistent with everything else about it: (correction, session 14:
+  the tweak menu does expose it, as "Rolhoek versterking" in its roll
+  sub-menu 0x411710, ±0.1) and
   two runtime experiments found nothing -- patching it between 0.0 and 40.0
   changed neither a coast-down (038/017/000 against 037/015/000 km/h at matching
   race times) nor straight-line acceleration (131 against 138 km/h).
@@ -6502,12 +6503,33 @@ Everything it gates, from the flag's six readers:
   96 x n), 3 the player.
 - **F12 held** (0x42524a, key 0x7b): prints `frameRate: %f` (1/dt) at
   (10, 80) and `vchunks: %d` ([0x4d9a8c]) at (10, 100).
-- **Tab held** (0x40fe6c, key 9, in the player's step 0x40fc30): the tweak
-  menu, **0x412e90**. It reads Space, numpad + and numpad - and prints Dutch
-  labels and values ("Punt vooruitschakelen", "Schakelpunt: %3.3f",
-  "Remkracht: %3.3f", "Motor vertraging: %3.3f", "Draaihoek: %3.3f"). Its
-  save writes **CARS.DAT** ("wb"). Sub-editors 0x412c00, 0x412820,
-  0x412390. Not ported.
+- **Tab** (0x40fe6c, key 9, in the player's step 0x40fc30): the tweak menu,
+  **0x412e90**, one modal screen per press, chosen by the state [0x4a7074]
+  (jump table 0x41368c):
+
+  | state | screen | field (player's record) | step |
+  |---|---|---|---|
+  | 0 | main menu 0x412c00, Up/Down '>', Space picks | | |
+  | 1 | per-gear list 0x412820 | A[gear + 6 x gearbox] (0x4a5edc + 4 n) | ±0.05 |
+  | 2 | per-gear list 0x412390 | A[12 + gear + 6 x gearbox] (0x4a5f0c + 4 n) | ±1, Right/Left ±10 |
+  | 3 | Punt vooruitschakelen | upshift 0x4a5f40 | ±0.1 |
+  | 4 | Punt terugschakelen | downshift 0x4a5f44 | ±0.1 |
+  | 5 | Remkracht | 0x4a5f4c | ±0.1 |
+  | 6 | Afremmen motor | 0x4a5f50 | ±0.5 |
+  | 7 | Rolhoek list 0x411710 | versterking A[29] 0x4a5f54 ±0.1, demping B[0] ±0.5, factor B[1] ±1 | |
+  | 8 | Pitchhoek list 0x411bd0 | demping B[2] ±0.5, factor B[3] ±1 | |
+  | 9 | Hoogte list 0x411fb0 | demping B[4] ±0.5, factor B[5] ±1 | |
+  | 10 | Draaihoek | steering speed 0x4a5f58 | ±0.1 |
+  | 11 | Opslaan: fwrite(0x4a5ee0, 124, 10) and (0x4a5df0, 24, 10) to CARS.DAT | | |
+  | 12 | Stoppen | | |
+
+  Numpad + (0x6b) raises by a step and numpad - (0x6d) lowers, one step a
+  press (each waits for the release); Space ends a screen. The "gearbox"
+  index is [0x4d9ed0], the gearbox upgrade. The pitch list's items read
+  "Rolhoek demping/factor" in the game's own strings.
 - 0x41aa0c: a debug display in draw_dashboard on the key 'L' (session 8).
 
-Port: the cameras, M and F12 (main.c); not the tweak menu or the L display.
+Port: the cameras, M, F12 and the tweak menu (src/tweak.c, its text in
+slider13 at the original's rows); not the L display. How the per-gear and
+suspension lists leave their editors on Space is not traced (the port goes
+back to the list).

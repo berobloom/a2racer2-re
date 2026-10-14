@@ -48,6 +48,7 @@ if(SDL2_FOUND AND OPENGL_FOUND)
     src/racers.c
     src/wheels.c
     src/contact.c
+    src/tweak.c
     src/sky.c
     src/trackinfo.c
     src/results.c

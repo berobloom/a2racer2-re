@@ -16,6 +16,7 @@
  *   5 7 8 9 0  the tweak-mode views (Raser.ini TWEAK_MODE=1)
  *   M        tweak mode: the camera follows the next car (racers, then you)
  *   F12      tweak mode, held: the frame rate and the visible chunks
+ *   Tab      tweak mode: the tweak menu (Up/Down, Space, numpad + and -)
  *   D        cycle the overlay detail 0-3 (the original's 'detail' key)
  *
  * Port-only helpers: O scenery, G .cmp barriers, T traffic, H hides the HUD,
@@ -45,6 +46,7 @@
 #include "track.h"
 #include "wheels.h"
 #include "contact.h"
+#include "tweak.h"
 
 #include <GL/gl.h>
 #include <SDL2/SDL.h>
@@ -1507,6 +1509,8 @@ int main(int argc, char **argv)
     int cam_view_prev = 1;
     int cam_set = -1;              /* a preset to switch to this frame */
     int cam_target = 3;            /* [0x4d9b2c]: 0-2 a racer, 3 the player */
+    a2_tweak tweak;
+    a2_tweak_init(&tweak);
     float pre_x = 0.0f, pre_z = 0.0f, pre_h = 0.0f, step_dx = 0.0f, step_dz = 0.0f;
     toi_hit toi = {TOI_NONE, -1, {0.0f, 0.0f}, {0.0f, 0.0f}};
     int cam_smooth_on = 1;         /* camera +0x6c */
@@ -1550,6 +1554,16 @@ int main(int argc, char **argv)
                 if (cam.pitch < -89.0f)
                     cam.pitch = -89.0f;
             } else if (ev.type == SDL_KEYDOWN) {
+                /* the tweak menu (tweak.h): Tab opens a screen, which then
+                 * takes the keys while the race stands still */
+                if (tweak.open) {
+                    if (a2_tweak_key(&tweak, ev.key.keysym.sym, &cars, car_slot, up_gearbox,
+                                     datadir))
+                        continue;
+                } else if (ev.key.keysym.sym == SDLK_TAB && tweak_mode && drive_mode && have_cars) {
+                    a2_tweak_open(&tweak, &cars, datadir);
+                    continue;
+                }
                 switch (ev.key.keysym.sym) {
                 case SDLK_ESCAPE:
                     if (mouse_captured) {
@@ -1628,6 +1642,8 @@ int main(int argc, char **argv)
         last = now;
         if (dt > 0.1f)
             dt = 0.1f;
+        if (tweak.open)
+            dt = 0.0f; /* the menu is modal in the original: the race stands still */
         /* Fixed step for headless runs, so they are reproducible.  It has to be
          * set here, before anything reads `dt`: when it was applied further
          * down, the autopilot's own stuck timer had already accumulated
@@ -3503,15 +3519,25 @@ int main(int argc, char **argv)
                                    win_h * 0.16f, bs);
                 }
             }
+            /* the tweak menu's text, as 0x466420 prints it: x = 10, a row
+             * every 20 from y = 10, on the 640x480 screen */
+            /* (in slider13, the HUD's one full-ASCII font; which set
+             * 0x466420 prints with is not traced) */
+            if (tweak.open && fnt_pct && have_cars) {
+                float sx = win_w / 640.0f, sy = win_h / 480.0f;
+                a2_tweak_text(&tweak, &cars, car_slot, up_gearbox);
+                for (int r = 0; r < tweak.line_count; r++)
+                    a2_font_draw(fnt_pct, tweak.lines[r], 10.0f * sx, (10.0f + 20.0f * r) * sy, sy);
+            }
             /* F12, tweak mode (0x42524a): the frame rate and the visible
              * chunks, at (10, 80) and (10, 100) of the 640x480 screen */
-            if (tweak_mode && fnt_label && SDL_GetKeyboardState(NULL)[SDL_SCANCODE_F12]) {
+            if (tweak_mode && fnt_pct && SDL_GetKeyboardState(NULL)[SDL_SCANCODE_F12]) {
                 char line[64];
                 float sx = win_w / 640.0f, sy = win_h / 480.0f;
                 snprintf(line, sizeof line, "frameRate: %f", dt > 0.0f ? 1.0f / dt : 0.0f);
-                a2_font_draw(fnt_label, line, 10.0f * sx, 80.0f * sy, sy);
+                a2_font_draw(fnt_pct, line, 10.0f * sx, 80.0f * sy, sy);
                 snprintf(line, sizeof line, "vchunks: %d", radius);
-                a2_font_draw(fnt_label, line, 10.0f * sx, 100.0f * sy, sy);
+                a2_font_draw(fnt_pct, line, 10.0f * sx, 100.0f * sy, sy);
             }
             a2_sprites_end();
         }

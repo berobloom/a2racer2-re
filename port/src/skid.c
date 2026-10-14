@@ -74,7 +74,7 @@ static void add(strip *st, const svert p[4])
 void a2_skid_lay(a2_skid *k, int i, float x, float y, float z, float psi, float vl, float vy,
                  float vf, float rear, float dt)
 {
-    if (!k)
+    if (!k || dt <= 0.0f) /* a frozen frame (the tweak menu) lays nothing */
         return;
     if (i < 4) {
         k->prev = i;

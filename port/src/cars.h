@@ -34,9 +34,9 @@
  *                         d3d_objects[obj.field_08].f_7c -= dt * A[29] * a
  *                       -- it acts on the car's *renderable model*
  *                       (`_d3d_objects`, element type `c_3dobject`), not on its
- *                       physics object, which is why the tweak menu does not
- *                       expose it and why changing it alters neither
- *                       acceleration nor coasting. It is the **body roll
+ *                       physics object, which is why changing it alters
+ *                       neither acceleration nor coasting. The tweak menu
+ *                       names it "Rolhoek versterking". It is the **body roll
  *                       rate into a turn**: +0x7c is the roll that the roll
  *                       spring 0x40ebd0 integrates (session 13). Trabant 1.6,
  *                       Astra 0.9, four cars at 1.0, Diablo 0.1. drive.c
