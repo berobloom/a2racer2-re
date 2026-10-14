@@ -1,0 +1,11 @@
+# The game itself (copyrighted, large) and everything derived from it
+/A2 Racer II*
+/.work/
+# Build output and caches
+/port/build/
+__pycache__/
+*.pyc
+# Vendored rizin executables (reverse-engineering/tools, see open question 19)
+/reverse-engineering/tools/rizin
+/reverse-engineering/tools/rz-asm
+/reverse-engineering/tools/rz-bin

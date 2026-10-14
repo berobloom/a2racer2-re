@@ -1,0 +1,887 @@
+{
+ "00403660": {
+  "strings": [
+   "ascii   )\\o@",
+   "ascii   33c@H"
+  ],
+  "src": []
+ },
+ "00404150": {
+  "strings": [
+   "ascii   S_SHADOW_ANIM"
+  ],
+  "src": []
+ },
+ "00404960": {
+  "strings": [
+   "ascii   5^\\fA"
+  ],
+  "src": []
+ },
+ "004055c0": {
+  "strings": [
+   "ascii     2. 2e versnelling",
+   "ascii     2. Rolhoek factor",
+   "ascii   Pitchhoek Factor"
+  ],
+  "src": []
+ },
+ "00407140": {
+  "strings": [
+   "ascii   Calling 'init_ai_cockpit_camera'\\n"
+  ],
+  "src": []
+ },
+ "004076b0": {
+  "strings": [
+   "ascii    %s(%d) : *FOG* error setting transform state <%s>\\n"
+  ],
+  "src": []
+ },
+ "00408080": {
+  "strings": [
+   "ascii   %s (%d) Illegal game action index:%d!"
+  ],
+  "src": []
+ },
+ "004083d0": {
+  "strings": [
+   "ascii   %s (%d) Trying to delete a free game action slot! Index=%d"
+  ],
+  "src": []
+ },
+ "004084b0": {
+  "strings": [
+   "ascii   %s (%d) Trying to delete a free game action slot! Index=%d"
+  ],
+  "src": []
+ },
+ "004088f0": {
+  "strings": [
+   "ascii   end of draw_dashboard()\\n"
+  ],
+  "src": []
+ },
+ "00409670": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ev_stcam.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ev_stcam.cpp"
+  ]
+ },
+ "0040a190": {
+  "strings": [
+   "ascii    %s(%d) : could not create surface (%s)\\n"
+  ],
+  "src": []
+ },
+ "0040a390": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ev_stcam.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ev_stcam.cpp"
+  ]
+ },
+ "0040a8a0": {
+  "strings": [
+   "ibm037  RI\u00e7\u00cd7RB\u00bd"
+  ],
+  "src": []
+ },
+ "0040b970": {
+  "strings": [
+   "ascii   lo_vlag.fnt"
+  ],
+  "src": []
+ },
+ "0040bf90": {
+  "strings": [
+   "ibm037  RIQ<"
+  ],
+  "src": []
+ },
+ "0040f3c0": {
+  "strings": [
+   "ascii   lo_fnt1.fnt"
+  ],
+  "src": []
+ },
+ "00410280": {
+  "strings": [
+   "ascii   lo_fnt1.fnt"
+  ],
+  "src": []
+ },
+ "00410b00": {
+  "strings": [
+   "ascii   game.ini"
+  ],
+  "src": []
+ },
+ "00410df0": {
+  "strings": [
+   "ascii   CHECKPOINT"
+  ],
+  "src": []
+ },
+ "004114a0": {
+  "strings": [
+   "ascii   -%02d.%d",
+   "ascii   end of draw_dashboard()\\n"
+  ],
+  "src": []
+ },
+ "00411650": {
+  "strings": [
+   "ascii   -%02d.%d",
+   "ascii   end of draw_dashboard()\\n"
+  ],
+  "src": []
+ },
+ "004142b0": {
+  "strings": [
+   "ascii   %s (%d) Incorrect pcx index: %d"
+  ],
+  "src": []
+ },
+ "004147f0": {
+  "strings": [
+   "ascii   %s (%d) Incorrect pcx index: %d"
+  ],
+  "src": []
+ },
+ "004149b0": {
+  "strings": [
+   "ascii   %s (%d) Incorrect pcx index: %d"
+  ],
+  "src": []
+ },
+ "00414b70": {
+  "strings": [
+   "ascii   %s (%d) Incorrect pcx index: %d"
+  ],
+  "src": []
+ },
+ "00416590": {
+  "strings": [
+   "ascii   Creating radar: width=%d, height=%d\\n"
+  ],
+  "src": []
+ },
+ "00416760": {
+  "strings": [
+   "ascii   Creating radar: width=%d, height=%d\\n"
+  ],
+  "src": []
+ },
+ "004168c0": {
+  "strings": [
+   "ascii   Creating radar: width=%d, height=%d\\n"
+  ],
+  "src": []
+ },
+ "00417140": {
+  "strings": [
+   "ascii    %s(%d) : blitting error (%s).",
+   "ascii   %s (%d) skidmark index incorrect! Index was:%d",
+   "ascii   C:\\work\\A2racII\\Game\\gfx_shdw.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\gfx_shdw.cpp"
+  ]
+ },
+ "004179e0": {
+  "strings": [
+   "ascii   %s (%d) skidmark index incorrect! Index was:%d",
+   "ascii   C:\\work\\A2racII\\Game\\gfx_shdw.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\gfx_shdw.cpp"
+  ]
+ },
+ "004182c0": {
+  "strings": [
+   "ascii   INVDESTALPHA"
+  ],
+  "src": []
+ },
+ "00418330": {
+  "strings": [
+   "ascii   BOTHSRCALPHA",
+   "ascii   INVDESTALPHA",
+   "ascii   set xvga vars allowmodex\\n"
+  ],
+  "src": []
+ },
+ "00418830": {
+  "strings": [
+   "ascii   %s (%d) nr_percents read incorrect: %d!",
+   "ascii   No source or destination alpha blending supported.\\n"
+  ],
+  "src": []
+ },
+ "00418ab0": {
+  "strings": [
+   "ascii   Can't get alpha caps: alpha blending disabled.\\n"
+  ],
+  "src": []
+ },
+ "00418da0": {
+  "strings": [
+   "ascii   No source or destination alpha blending supported.\\n"
+  ],
+  "src": []
+ },
+ "004190d0": {
+  "strings": [
+   "ascii    %s(%d) : string is not initialised\\n",
+   "ascii   n:\\libraries\\a2racerii\\win3ddp\\versie_1\\include\\str.h"
+  ],
+  "src": [
+   "n:\\libraries\\a2racerii\\win3ddp\\versie_1\\include\\str.h"
+  ]
+ },
+ "00419b10": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\gm_init.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\gm_init.cpp"
+  ]
+ },
+ "00419e00": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\gm_init.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\gm_init.cpp"
+  ]
+ },
+ "0041a5f0": {
+  "strings": [
+   "ascii   loading etappe 5 anims\\n"
+  ],
+  "src": []
+ },
+ "0041a780": {
+  "strings": [
+   "ascii   loading etappe 4 anims\\n"
+  ],
+  "src": []
+ },
+ "0041aea0": {
+  "strings": [
+   "ascii   loading etappe 1 anims\\n"
+  ],
+  "src": []
+ },
+ "0041b560": {
+  "strings": [
+   "ascii   (set_game_display) %s(%d) : Invalid resolution GAME supports only 320x200 OR 640x480"
+  ],
+  "src": []
+ },
+ "0041bd50": {
+  "strings": [
+   "ascii    %s(%d) : this info slot is not initialised\\n",
+   "ascii    %s(%d) : this info slot is not initialised\\n",
+   "ascii   %s (%d) Incorrect animation frame while trying to blit to texture!\\n Texture index: %d, frame: %d",
+   "ascii   %s (%d) nr_percents read incorrect: %d!",
+   "ascii   %s(%d): Impossible collision! (Center of object).C:\\work\\A2racII\\Game\\plr_car.cpp",
+   "ascii   ------------------------------------------------------------------------------------",
+   "ascii   A_BPILBP_ANIM",
+   "ascii   A_CNSTR1_ANIM",
+   "ascii   A_LPIJL1_ANIM",
+   "ascii   A_MOLEN_ANIM",
+   "ascii   A_RDBLK_ANIM",
+   "ascii   Axes,",
+   "ascii   C:\\work\\A2racII\\Game\\txt_vbrd.cpp",
+   "ascii   D3DERR_INVALIDCURRENTVIEWPORT",
+   "ascii   Device",
+   "ascii   E00_REC6_ANIM",
+   "ascii   E01_KANT_ANIM",
+   "ascii   E04_GEB1_ANIM",
+   "ascii   GEORGE: Init order bad!",
+   "ascii   Loading texture anims for 16-bit mode\\n",
+   "ascii   Miscellaneous device",
+   "ascii   Source: point = (%f, %f, %f).\\n",
+   "ascii   Translating: position2 = (%f, %f, %f), vector = (%f, %f, %f).\\n",
+   "ascii   Vj1hT",
+   "ascii   \\nEntering -> mesh_damage_collision_func(%d).\\n",
+   "ascii   a_TRFFC1.PCX",
+   "ascii   a_wgwerk.pcx",
+   "ascii   c_di_dev_info",
+   "ascii   car is finished\\n",
+   "ascii   car is trying to finish illegal\\n",
+   "ascii   e04_vang.pcx",
+   "ascii   e04_wilb.pcx",
+   "ascii   e05_vang.pcx",
+   "ascii   e05_weg.pcx",
+   "ascii   go.wav",
+   "ascii   init_all_config_textures\\n",
+   "ascii   init_sparks()\\n",
+   "ascii   loading etappe 1 anims\\n",
+   "ascii   m_device_list",
+   "ascii   n:\\libraries\\a2racerii\\win3ddp\\versie_1\\include\\viewport.inl",
+   "ascii   sliploop.wav",
+   "ascii   trein.wav",
+   "ascii   turbo.wav",
+   "ascii   vracht.wav"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\plr_car.cpp",
+   "C:\\work\\A2racII\\Game\\txt_vbrd.cpp"
+  ]
+ },
+ "00421af0": {
+  "strings": [
+   "ascii    %s(%d) : D3DError DrawPrimitive : %s\\n",
+   "ascii    %s(%d) : D3DError DrawPrimitive : %s\\n",
+   "ascii    him!\\n",
+   "ascii    trying to get an illegal static object handler: %d",
+   "ascii   %-24.24s %-24.24s",
+   "ascii   %d waypoints on the LEFT.\\n",
+   "ascii   %s(%d) - chunk waypoint left overflow\\n",
+   "ascii   %s(%d) : Cannot set target lock offset in current camera mode.\\n\\tMode flags:\\n\\t\\tm_dampening      %d\\n\\t\\tm_position_lock  %d\\n\\t\\tm_target_lock    %d\\n\\t\\tm_follow         %d\\n",
+   "ascii   %s(%d): Double-indexed damage entry %d for file '%s'.",
+   "ascii   %s(%d): Error reading file '%s': item count does not match.",
+   "ascii   %s.%s",
+   "ascii   %s.%s",
+   "ascii   (rceng_get_waypoint_position) illegal chunk: %d",
+   "ascii   D3DLIB.CPP",
+   "ascii   D3DLIB.CPP",
+   "ascii   E00_PALS_ANIM",
+   "ascii   Effect",
+   "ascii   In range, braking. Speed = %f.\\n",
+   "ascii   Init physics for main-object (%d)\\n",
+   "ascii   LIGHT.CPP",
+   "ascii   LIGHT.CPP",
+   "ascii   LIGHT.CPP",
+   "ascii   MATERIAL.CPP",
+   "ascii   MATERIAL.CPP",
+   "ascii   MATERIAL.CPP",
+   "ascii   MATERIAL.CPP",
+   "ascii   MATERIAL.CPP",
+   "ascii   MATH3D.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   RWPh",
+   "ascii   TARGET LOCK is ON.\\n",
+   "ascii   UpdateTimes",
+   "ascii   WP Position = (%f,%f,%f).\\n",
+   "ascii   \\tCalling sndfx_play_object_sample.\\n",
+   "ascii   animname %s\\n",
+   "ascii   c:\\visual~1\\dplib\\mesh.inl",
+   "ascii   c_damage*",
+   "ascii   c_waypoint",
+   "ascii   cam_main.cpp",
+   "ascii   exit lights\\n",
+   "ascii   found object in list: index %d.\\n",
+   "ascii   g_damages",
+   "ascii   g_rails",
+   "ascii   hXkI",
+   "ascii   init d3d device\\n",
+   "ascii   init viewport\\n",
+   "ascii   init z-buffer\\n",
+   "ascii   light_t",
+   "ascii   loading chunk: %d\\n",
+   "ascii   m_chunks",
+   "ascii   main_objects",
+   "ascii   obj_main.cpp",
+   "ascii   obj_phys.cpp",
+   "ascii   rd_chunk.cpp",
+   "ascii   rd_chunk.cpp",
+   "ascii   rd_drmap.cpp",
+   "ascii   rd_main.cpp",
+   "ascii   releasing lights\\n",
+   "ascii   type %d\\n"
+  ],
+  "src": []
+ },
+ "00441db0": {
+  "strings": [
+   "ascii    %s(%d) : Error Execute objectfuncion : %d\\n",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   MESH.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   OBJECT3D.CPP",
+   "ascii   TEXT.CPP",
+   "ascii   TEXT.CPP",
+   "ascii   loading triangle data {\\n",
+   "ascii   vertices  : %d\\n"
+  ],
+  "src": []
+ },
+ "00444cf0": {
+  "strings": [
+   "ascii   .pcx"
+  ],
+  "src": []
+ },
+ "00446b80": {
+  "strings": [
+   "ascii   TEXT.CPP",
+   "ascii   TEXT.CPP"
+  ],
+  "src": []
+ },
+ "00447820": {
+  "strings": [
+   "ascii   VIEWPORT.CPP",
+   "ascii   VIEWPORT.CPP"
+  ],
+  "src": []
+ },
+ "00447ab0": {
+  "strings": [
+   "ascii   L$\\bQRV",
+   "ascii   STR.CPP"
+  ],
+  "src": []
+ },
+ "00448ba0": {
+  "strings": [
+   "ascii   clipped execute failed",
+   "ascii   execute failed"
+  ],
+  "src": []
+ },
+ "00449a30": {
+  "strings": [
+   "ascii   Set viewport failed"
+  ],
+  "src": []
+ },
+ "0044a520": {
+  "strings": [
+   "ascii   Texture load failed"
+  ],
+  "src": []
+ },
+ "0044b6f0": {
+  "strings": [
+   "ascii   Texture not locked"
+  ],
+  "src": []
+ },
+ "0044c2f0": {
+  "strings": [
+   "ascii   D3DERR_INITFAILED"
+  ],
+  "src": []
+ },
+ "0044c760": {
+  "strings": [
+   "ascii   D3DERR_VIEWPORTHASNODEVICE"
+  ],
+  "src": []
+ },
+ "0044c7b0": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n",
+   "ascii   c_d3d_drv_info"
+  ],
+  "src": []
+ },
+ "0044c930": {
+  "strings": [
+   "ascii   D3DEVDSC.CPP",
+   "ascii   D3DINFO.CPP"
+  ],
+  "src": []
+ },
+ "0044cc80": {
+  "strings": [
+   "ascii   D3DERR_INVALIDPALETTE",
+   "ascii   D3DEVDSC.CPP",
+   "ascii   Type             : HARDWARE RGB driver\\n",
+   "ascii   Type             : SOFTWARE RAMP driver\\n",
+   "ascii   Type             : SOFTWARE RGB driver\\n"
+  ],
+  "src": []
+ },
+ "0044d480": {
+  "strings": [
+   "ascii   D3DERR_INVALIDPRIMITIVETYPE"
+  ],
+  "src": []
+ },
+ "0044e620": {
+  "strings": [
+   "ascii   lights\\n"
+  ],
+  "src": []
+ },
+ "0044f1a0": {
+  "strings": [
+   "ascii   Clipping         : %s\\n"
+  ],
+  "src": []
+ },
+ "0044f9c0": {
+  "strings": [
+   "ascii     TXFORMAT : texture format %d, 8bit palettized\\n"
+  ],
+  "src": []
+ },
+ "0044faf0": {
+  "strings": [
+   "ascii   ?333333"
+  ],
+  "src": []
+ },
+ "00450280": {
+  "strings": [
+   "ascii   D3DERR_INVALIDCURRENTVIEWPORT"
+  ],
+  "src": []
+ },
+ "00452660": {
+  "strings": [
+   "ascii   TXFORMAT : using this texture format for rgb\\n"
+  ],
+  "src": []
+ },
+ "004527b0": {
+  "strings": [
+   "ascii   c_txf_drv_info"
+  ],
+  "src": []
+ },
+ "004545d0": {
+  "strings": [
+   "ascii   c:\\visual~1\\dplib\\d3dev.h",
+   "ascii   c:\\visual~1\\dplib\\light.inl"
+  ],
+  "src": []
+ },
+ "00454ab0": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ]
+ },
+ "00455b50": {
+  "strings": [
+   "ascii    %s(%d) : error description is not available\\n",
+   "ascii    %s(%d) :D3DError Creating viewport : %s\\n",
+   "ascii    %s(%d) :D3DError Setting viewport : %s\\n"
+  ],
+  "src": []
+ },
+ "00455ea0": {
+  "strings": [
+   "ascii    %s(%d) : T_ARRAY::sort %s[%d] of type %s not initialized\\n"
+  ],
+  "src": []
+ },
+ "00456310": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ]
+ },
+ "00456c80": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ]
+ },
+ "00456da0": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ]
+ },
+ "00458340": {
+  "strings": [
+   "ascii    %s(%d) : error flipping surfaces\\n"
+  ],
+  "src": []
+ },
+ "0045a220": {
+  "strings": [
+   "ascii   direct draw invalid gui id"
+  ],
+  "src": []
+ },
+ "0045af20": {
+  "strings": [
+   "ascii   exclusive mode was already set",
+   "ascii   hardware does not support alpha acceleration",
+   "ascii   one or more invalid parameters"
+  ],
+  "src": []
+ },
+ "0045b370": {
+  "strings": [
+   "ascii   operation is not supported"
+  ],
+  "src": []
+ },
+ "0045bae0": {
+  "strings": [
+   "ascii   back screen\\n",
+   "ascii   locking done\\n"
+  ],
+  "src": []
+ },
+ "0045bed0": {
+  "strings": [
+   "ascii   D3DERR_NOVIEWPORTS"
+  ],
+  "src": []
+ },
+ "0045ca30": {
+  "strings": [
+   "ascii   init input\\n",
+   "ascii   system info\\n"
+  ],
+  "src": []
+ },
+ "0045e670": {
+  "strings": [
+   "ascii   C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ],
+  "src": [
+   "C:\\work\\A2racII\\Game\\ai_cfun.cpp"
+  ]
+ },
+ "0045fac0": {
+  "strings": [
+   "ascii    %s(%d) : error setting format (%s)\\n",
+   "ascii   %s (%d) nr_percents read incorrect: %d!"
+  ],
+  "src": []
+ },
+ "0045ff70": {
+  "strings": [
+   "ascii    %s(%d) : error duplicating sound buffer (%s)\\n"
+  ],
+  "src": []
+ },
+ "004601e0": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n",
+   "ascii   lane = %d, ai_chosen_lane(l_ai) = %d.\\n"
+  ],
+  "src": []
+ },
+ "00460340": {
+  "strings": [
+   "ascii   lane = %d, ai_chosen_lane(l_ai) = %d.\\n"
+  ],
+  "src": []
+ },
+ "00460520": {
+  "strings": [
+   "ascii    %s(%d) : attempt at setting buffer %d to illegal volume %dDb\\n",
+   "ascii    %s(%d) : error playing sound %d (%s)\\n",
+   "ascii    %s(%d) : type sound buffer %d index illegal for panning \\n",
+   "ascii   Using default driver\\n",
+   "ascii   playing %s buffer %d\\n"
+  ],
+  "src": []
+ },
+ "00460de0": {
+  "strings": [
+   "ascii    RGB: %d:%d:%d\\n"
+  ],
+  "src": []
+ },
+ "00461790": {
+  "strings": [
+   "ascii    %s(%d) : illegal character index %d (max=%d)\\nC:\\work\\winlib\\Clipblit.cpp"
+  ],
+  "src": [
+   "C:\\work\\winlib\\Clipblit.cpp"
+  ]
+ },
+ "004628a0": {
+  "strings": [
+   "ascii   OBJECT3D.CPP"
+  ],
+  "src": []
+ },
+ "004636d0": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n",
+   "ascii   (get_ini_arguments_online) %s(%d) : the lenght of an argument is to big (max. %d)."
+  ],
+  "src": []
+ },
+ "00463c20": {
+  "strings": [
+   "ascii   MESH.CPP"
+  ],
+  "src": []
+ },
+ "00464e50": {
+  "strings": [
+   "ascii   Computername = %s\\n"
+  ],
+  "src": []
+ },
+ "00464ef0": {
+  "strings": [
+   "ascii   Getting system information\\n"
+  ],
+  "src": []
+ },
+ "00464ff0": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n",
+   "ascii   %s = HDD\\n"
+  ],
+  "src": []
+ },
+ "004650c0": {
+  "strings": [
+   "ascii    %-*.*s %-*.*s\\n",
+   "ascii   dd3ddfx driver found %d\\n"
+  ],
+  "src": []
+ },
+ "00465a20": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n"
+  ],
+  "src": []
+ },
+ "00465bc0": {
+  "strings": [
+   "ascii    %s(%d) : (handle_mouse) Mouse is not initialised",
+   "ascii    %s(%d) : (restore_mouse_button) blitting error %s (source -> x: %d, y: %d, bx: %d, by: %d : dest -> x: %d, y: %d, bx: %d, by: %d)"
+  ],
+  "src": []
+ },
+ "00466110": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n",
+   "ascii   (1)Ymax : %d\\n"
+  ],
+  "src": []
+ },
+ "00466420": {
+  "strings": [
+   "ascii    %s(%d) : error opening mixer device (%s)\\n",
+   "utf32le \\a\\b\u1002\u1003\u1004\u1007\u1005\u1008 blocks=Basic Latin,Myanmar"
+  ],
+  "src": []
+ },
+ "00467560": {
+  "strings": [
+   "ascii    %s(%d) : error get mixer control details (%s)\\n"
+  ],
+  "src": []
+ },
+ "00468230": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n"
+  ],
+  "src": []
+ },
+ "00468380": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n"
+  ],
+  "src": []
+ },
+ "00468530": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n"
+  ],
+  "src": []
+ },
+ "00469b20": {
+  "strings": [
+   "ascii   %s = FLOPPY\\n"
+  ],
+  "src": []
+ },
+ "00470030": {
+  "strings": [
+   "utf32le Y\\vl\\rm p"
+  ],
+  "src": []
+ },
+ "0047036d": {
+  "strings": [
+   "ascii   Cop States",
+   "ascii   Lane trigger value = %d.\\n",
+   "ascii   Setting max lanes = %d.\\n",
+   "ascii   obj_sample(obj_index) = %d. SNDFX_POLITIE_SIRENE = %d.\\n"
+  ],
+  "src": []
+ },
+ "00470770": {
+  "strings": [
+   "ascii   Setting max speed to %f.\\n"
+  ],
+  "src": []
+ },
+ "0047467e": {
+  "strings": [
+   "ascii    %s(%d) : T_ARRAY(construction) illegal array size %s %s[0..%d]\\n"
+  ],
+  "src": []
+ },
+ "004764a0": {
+  "strings": [
+   "ascii   QVh\\f"
+  ],
+  "src": []
+ },
+ "00476aa0": {
+  "strings": [
+   "ascii   Ahead of target!\\n"
+  ],
+  "src": []
+ },
+ "00478780": {
+  "strings": [
+   "ascii   f9=>"
+  ],
+  "src": []
+ },
+ "00479470": {
+  "strings": [
+   "ascii   QVh\\f"
+  ],
+  "src": []
+ },
+ "0047c1d0": {
+  "strings": [
+   "ascii   FINISCH -> CHANGE_LANE()\\n"
+  ],
+  "src": []
+ }
+}
