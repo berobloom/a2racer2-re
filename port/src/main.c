@@ -2840,6 +2840,10 @@ int main(int argc, char **argv)
                                             he && he->mass > 0.0f ? he->mass : 1300.0f, 0.3f};
                 }
             }
+            /* the AI car's impulse at a contact from its step */
+#define collide_impulse_at(A, H, E, M2, OVX, OVZ, WORLD, DV2, OPOS, OL, OW)                         \
+    a2_drive_impulse_at((A)->d, (A)->hlm, (A)->hwm, (A)->m, (H).n[0], (H).n[1], (E), (M2), (OVX),    \
+                        (OVZ), (WORLD), (DV2), (OPOS), (OL), (OW), (A)->d->x, (A)->d->z, (H).p)
             /* the engine's contact (0x44a0f0) moves a body by its velocity x
              * dt x 10 for the frame; from where it started */
             float adt = drive_test ? 1.0f / 30.0f : dt;
@@ -2852,13 +2856,109 @@ int main(int argc, char **argv)
                  * far off nothing is drawn and the barriers are only loaded
                  * per chunk here as well */
                 int ach = a2_scene_nearest_chunk(scene, a->d->x, a->d->z);
+                /* The engine moves every object but the player in one step,
+                 * only as far as its earliest contact (0x440fb0, contact.c).
+                 * The AI cars have already moved; put the car back where it
+                 * started, find that contact over the move, and slide along
+                 * it for the rest (as the player's steps do).  The impulse
+                 * for it follows here; the push-out below stays as the
+                 * safety net. */
+                toi_hit ah = {TOI_NONE, -1, {0.0f, 0.0f}, {0.0f, 0.0f}};
+                {
+                    float px = a->d->x - amx, pz = a->d->z - amz;
+                    a2_cbox cand[300];
+                    int ckind[300], cidx[300], nc = 0;
+                    int nr = a2_scene_rail_boxes(scene, ach, cand, 200);
+                    for (int k = 0; k < nr; k++) {
+                        ckind[nc] = TOI_RAIL;
+                        cidx[nc++] = k;
+                    }
+                    int sidx[48];
+                    int ns = a2_scene_solid_boxes(scene, ach, cand + nc, sidx, 48);
+                    for (int k = 0; k < ns; k++) {
+                        ckind[nc] = TOI_OBJECT;
+                        cidx[nc++] = sidx[k];
+                    }
+                    for (int k = 0; traffic && k < a2_traffic_count(traffic) && nc < 300; k++)
+                        if (a2_traffic_car_box(traffic, k, &cand[nc]) &&
+                            fabsf(cand[nc].x - px) < 300.0f && fabsf(cand[nc].z - pz) < 300.0f) {
+                            ckind[nc] = TOI_TRAFFIC;
+                            cidx[nc++] = k;
+                        }
+                    for (int k = 0; k < nb && nc < 300; k++) {
+                        ai_body *b = &B[k];
+                        if (k == i || fabsf(b->d->x - px) > 300.0f || fabsf(b->d->z - pz) > 300.0f)
+                            continue;
+                        cand[nc] = (a2_cbox){-b->hwu, -b->hlu, b->hwu, b->hlu, b->d->x, b->d->z,
+                                             b->d->heading};
+                        ckind[nc] = TOI_RACER; /* another AI body, by its index in B */
+                        cidx[nc++] = k;
+                    }
+                    a2_cbox self = {-a->hwu, -a->hlu, a->hwu, a->hlu, px, pz, a->d->heading};
+                    float best = 2.0f;
+                    for (int k = 0; k < nc; k++) {
+                        float t, pt[2], nn[2];
+                        if (!a2_contact(&self, amx, amz, &cand[k], &t, pt, nn) || t >= best)
+                            continue;
+                        float rx = 0.1f * (pt[0] - (px + amx * t));
+                        float rz = 0.1f * (pt[1] - (pz + amz * t));
+                        float cvx = avx - a->d->yaw_rate * rz, cvz = avz + a->d->yaw_rate * rx;
+                        if (cvx * nn[0] + cvz * nn[1] > 0.0f) {
+                            best = t;
+                            ah = (toi_hit){ckind[k], cidx[k], {nn[0], nn[1]}, {pt[0], pt[1]}};
+                        }
+                    }
+                    if (ah.kind != TOI_NONE) {
+                        float rmx = amx * (1.0f - best), rmz = amz * (1.0f - best);
+                        float into = rmx * ah.n[0] + rmz * ah.n[1];
+                        if (into > 0.0f) {
+                            rmx -= into * ah.n[0];
+                            rmz -= into * ah.n[1];
+                        }
+                        a->d->x = px + amx * best + rmx;
+                        a->d->z = pz + amz * best + rmz;
+                        if (ah.kind == TOI_RAIL) {
+                            collide_impulse_at(a, ah, a->e, 0.0f, 0.0f, 0.0f, 1, NULL,
+                                               NULL, 0.0f, 0.0f);
+                        } else if (ah.kind == TOI_OBJECT) {
+                            int ot = a2_scene_object_type(scene, ah.idx);
+                            float om = ot == 8 ? 13000.0f : ot == 10 ? 1300.0f : 0.0f;
+                            float oe = ot == 5 ? 0.1f : 0.2f, opos[2] = {0.0f, 0.0f}, dv2[3];
+                            a2_scene_object_pos(scene, ah.idx, &opos[0], &opos[1]);
+                            collide_impulse_at(a, ah, 0.5f * (a->e + oe), om, 0.0f, 0.0f, om <= 0.0f,
+                                               dv2, opos, 4.0f, 1.0f);
+                            if (om > 0.0f)
+                                a2_scene_object_push(scene, ah.idx, dv2[0], dv2[1], dv2[2]);
+                        } else if (ah.kind == TOI_TRAFFIC) {
+                            float ovx = 0.0f, ovz = 0.0f, om = 1000.0f, dv2[3];
+                            const char *oanim = NULL;
+                            if (a2_traffic_car_motion(traffic, ah.idx, &ovx, &ovz, &oanim)) {
+                                int hi = oanim ? a2_handling_find(&handling, oanim) : -1;
+                                if (hi >= 0 && handling.v[hi].valid && handling.v[hi].mass > 0.0f)
+                                    om = handling.v[hi].mass;
+                            }
+                            collide_impulse_at(a, ah, 0.5f * (a->e + 0.2f), om, ovx, ovz, 0, dv2,
+                                               NULL, 0.0f, 0.0f);
+                            a2_traffic_car_push(traffic, ah.idx, dv2[0], dv2[1]);
+                        } else {
+                            ai_body *b = &B[ah.idx];
+                            float ovx, ovz, dv2[3], opos[2] = {b->d->x, b->d->z};
+                            a2_ai_world_velocity(b->d, &ovx, &ovz);
+                            collide_impulse_at(a, ah, 0.5f * (a->e + b->e), b->m, ovx, ovz, 0, dv2,
+                                               opos, 2.0f * b->hlm, 2.0f * b->hwm);
+                            a2_ai_push(b->d, dv2[0], dv2[1], dv2[2]);
+                        }
+                    }
+                }
                 float sl[2];
-                if (a2_scene_collide_rails(scene, ach, &a->d->x, &a->d->z, a->hwu, sl))
+                if (a2_scene_collide_rails(scene, ach, &a->d->x, &a->d->z, a->hwu, sl) &&
+                    ah.kind != TOI_RAIL)
                     collide_impulse(a->d, a->hlm, a->hwm, a->m, -sl[0], -sl[1], a->e, 0.0f, 0.0f,
                                     0.0f, 1, NULL, NULL, 0.0f, 0.0f, a->d->x, a->d->z);
                 float pu[2];
                 int tw = -1;
-                if (traffic && a2_traffic_collide(traffic, &a->d->x, &a->d->z, a->hwu, pu, &tw)) {
+                if (traffic && a2_traffic_collide(traffic, &a->d->x, &a->d->z, a->hwu, pu, &tw) &&
+                    !(ah.kind == TOI_TRAFFIC && ah.idx == tw)) {
                     float ovx = 0.0f, ovz = 0.0f, om = 1000.0f, dv2[3];
                     const char *oanim = NULL;
                     if (a2_traffic_car_motion(traffic, tw, &ovx, &ovz, &oanim)) {
@@ -2880,6 +2980,8 @@ int main(int argc, char **argv)
                     ai_body *b = &B[j];
                     if (!a2_ai_capsule_push(b->d, b->hlu, b->hwu, &a->d->x, &a->d->z, a->hwu, pu))
                         continue;
+                    if (ah.kind == TOI_RACER && ah.idx == j)
+                        continue; /* its impulse came with the contact above */
                     float ovx, ovz, dv2[3];
                     a2_ai_world_velocity(b->d, &ovx, &ovz);
                     float opos[2] = {b->d->x, b->d->z};

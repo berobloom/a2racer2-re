@@ -842,7 +842,9 @@ phrasing may not be the original's.)*
     chunk-entry test should see the change. The remaining candidate is the
     AI record's +0x2c flag, which skips the whole check at 0x40ad1e when set.
 
-53. **MOSTLY RESOLVED (session 14): the box-box contact.** See discoveries.md
+53. **RESOLVED (session 14): the contact geometry.** The record builder's
+    arms are in discoveries.md too. Earlier text: **MOSTLY RESOLVED (session
+    14): the box-box contact.** See discoveries.md
     "The contact geometry, for boxes"; ported as src/contact.c and checked
     against the original under Unicorn (1499 of 1500). The barriers are
     the same boxes (0x449c10), and the port moves the player in the

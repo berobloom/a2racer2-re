@@ -509,14 +509,14 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 292.0 s**, 3rd (racers 279.2 / 284.2 s), no unwedge, 2 damaging impacts |
-| etappe5 | **finishes in 352.7 s**, 4th (racers 338.8 / 339.5 / 339.5 s), 1 unwedge, 3 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1251.7 s (612.5 + 639.2), 3rd (racers 1055.3 / 1057.3 s); 24 unwedges on the city corners |
-| etappe1 with police | finishes in 342.2 s, 4th (racers 309.7 / 311.0 / 316.9 s), 8 unwedges; every cop chased a racer, none the player |
+| etappe1 | **finishes in 313.3 s**, 3rd (racers 293.3 / 294.8 s), 3 unwedges, 2 damaging impacts |
+| etappe5 | **finishes in 339.2 s**, 2nd (racer 327.8 s), 1 unwedge, 6 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1211.0 s (602.0 + 609.0), 4th (racers 1189.3 / 1191.5 / 1195.9 s); 24 unwedges on the city corners |
+| etappe1 with police | finishes in 345.8 s, 4th (racers 313.2 / 314.7 / 314.9 s), 8 unwedges; every cop chased a racer, none the player |
 
 These are on the new AI model (session 13), rerun in session 14 with the
-ground planes, the engine's box contact (src/contact.c) and the player's
-8 contact-limited steps. The runs are chaotic: one different
+ground planes, the engine's box contact (src/contact.c), the player's 8
+contact-limited steps and the AI cars' one. The runs are chaotic: one different
 bounce early on changes traffic, wedges and crashes for the rest of the race,
 so compare counts and orders of magnitude rather than tenths of seconds.
 Before session 14: etappe1 249.7 s, etappe5 383.2 s, etappe2 1253.7 s,
@@ -674,7 +674,8 @@ reported before this point should be treated as a one-off sample.
   contact, and then slides along the obstacle for the rest of the frame, so
   the car never sinks into a slab (see discoveries.md "The contact geometry,
   for boxes"). The push-out, a circle of the car's half-width, stays as a
-  safety net. The AI cars still move in one step and use the push-out.
+  safety net. The AI cars move in one step, as the original moves every object but the
+  player, likewise stopped at their first contact and sliding on.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn
   table (0x484a48), with the behaviour drawn separately. Both traffic
   behaviours prefer 25 m/s, which is what a real race's debug.txt logs, so a

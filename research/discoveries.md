@@ -6409,6 +6409,22 @@ offset table read the constants but not what they do.
   into the contact record 0x4e6760: the point is the struck corner, the
   normal is the crossed side's (negated in one arm), and the objects are at
   +8 / +0xc.
+- CONFIRMED (code), **the record builder 0x449840(A, B, hit)**, A the box
+  whose side was crossed, B the box whose corner crossed it, +0x48 the
+  "moves" flag (0 for barriers and static scenery):
+
+  | A | B | +4 | +8 | +0xc | point | normal |
+  |---|---|---|---|---|---|---|
+  | static | moving | 0 | B | 0 | B's corner, B's frame | A's side normal turned by A.heading - B.heading (B's frame) |
+  | moving | static | 0 | A | 0 | B's corner, B's frame | A's side normal in A's frame, negated |
+  | moving | moving | 1 | B | A | B's corner, B's frame | as the first row |
+  | static | static | assert (line 0xff) | | | | |
+
+  So object +8 is the one whose corner touched, except in the second row,
+  where it is the moving A. That row still gives B's corner in B's frame, a
+  point in the wrong object's frame, LIKELY a slip in the original (it
+  would skew the impulse's lever arm for a moving box hit by a barrier slab's
+  corner).
 - CONFIRMED: **0x441490 is not a frame bisection.** It reads the record,
   returns 0 if the object already separates (v . n > 0), otherwise adjusts the
   velocity along n and runs 0x44a0f0 again.
@@ -6458,6 +6474,12 @@ offset table read the constants but not what they do.
   after the move, and the slide as a projection rather than 0x441490's
   re-test. Regressions: etappe1 292.0 s with 0 unwedges (was 2), etappe5
   352.7 s with 1 (was 8), etappe2 1251.7 s with 24 (was 70).
+- Port: the AI cars (racers, cops) take the same contact-limited step, one
+  a frame as the engine moves every object but the player: put back by
+  their move (velocity x dt x 10), stopped at their earliest contact,
+  sliding on, with the impulse at that contact. The racers on etappe2 now
+  finish in about 1190 s against 1055 s, consistent with them no longer
+  cutting into the barriers on the city corners.
 - The earlier attempt (session 14): `a2_scene_rail_boxes` built the slabs but
   the port did not stop at the contact time. Tried in session 14: 68% of the barrier contacts (2022 of 2958
   on etappe2) hit a slab's end face where two slabs meet. That brakes a
