@@ -3551,12 +3551,34 @@ int main(int argc, char **argv)
                     rval = save_rval;
                 }
 
+                /* The highway panel's second row (0x419b10, detail 3):
+                 * 52 RACE RECORD over [0x4d9acc] as mm:ss:t, or the literal
+                 * "--:--:-" while there is none (0x0FFFFFFF).  Its rows are
+                 * placed off a capture of the original (Wine, 640x480,
+                 * etappe1), in the HUD's 800x600 units (capture px x 1.25):
+                 * the label 52 px under RACE TIJD's, its bracket the time's
+                 * moved 50 px down and 24 left and 22/46 as wide, and
+                 * POSITIE 103 px under RACE TIJD (on a circuit RONDE INFO
+                 * sits between). */
+                if (overlay_detail >= 3 && !circuit) {
+                    HUD_LABEL(a2_lang_get(lang, 52, "RACE RECORD"), 71.0f * s);
+                    HUD_BRACKET(425, 0, 22, 27, 7, right - 146.0f * s, 69.5f * s, 32.5f, 23.0f);
+                    int rr = save.race_record;
+                    if (rr >= A2_NO_RECORD || rr <= 0)
+                        snprintf(line, sizeof line, "--:--:-");
+                    else
+                        snprintf(line, sizeof line, "%02d:%02d:%d", rr / 1000 / 60,
+                                 rr / 1000 % 60, rr / 100 % 10);
+                    HUD_VALUE(fnt_time, line, 97.0f * s);
+                }
                 if (racers) {
-                    HUD_LABEL(a2_lang_get(lang, 38, "POSITIE"), 178.0f * s);
-                    HUD_BRACKET(425, 37, 91, 17, 11, right - 87.0f * s, 193.0f * s, 26.0f, 28.0f);
+                    float py = circuit ? 178.0f : 135.0f;
+                    HUD_LABEL(a2_lang_get(lang, 38, "POSITIE"), py * s);
+                    HUD_BRACKET(425, 37, 91, 17, 11, right - 87.0f * s, (py + 15.0f) * s, 26.0f,
+                                28.0f);
                     snprintf(line, sizeof line, "%d/%d", PLAYER_POSITION(),
                              a2_racers_count(racers) + 1);
-                    HUD_VALUE(fnt_time, line, 204.0f * s);
+                    HUD_VALUE(fnt_time, line, (py + 26.0f) * s);
                 }
                 if (circuit) {
                     HUD_LABEL(a2_lang_get(lang, 39, "RONDE"), 238.0f * s);
@@ -3566,20 +3588,28 @@ int main(int argc, char **argv)
                 }
 
                 /* --- bottom right: damage, turbo, speed.  Every offset is
-                 * measured up from the bottom of the original's screen. --- */
+                 * measured off a 640x480 capture of the original (Wine,
+                 * etappe1, session 15) and given in the HUD's 800x600 units
+                 * (capture px x 1.25; the original draws olfnt01 at 0.8 at
+                 * 640x480), up from the bottom and in from the right. --- */
+                float save_right_b = right;
+                right = win_w - 11.25f * s; /* the labels' right edge, x = 631 */
                 float kmh = car.speed < 0.0f ? -car.speed * 3.6f : car.speed * 3.6f;
                 snprintf(line, sizeof line, "%d", (int)(kmh + 0.5f));
                 /* The digits stop 44 pixels short of the edge: that is the room
                  * the "km/h" mark beside them needs. */
+                /* digits x 507..597, y 430..466; "km/h" 602..630 x 461..471;
+                 * the bracket x 486..546, y 422..443 */
                 if (fnt_speed)
                     a2_font_draw(fnt_speed, line,
-                                 right - 44.0f * s - a2_font_text_width(fnt_speed, line, lsc),
-                                 bot - 52.0f * s, lsc);
+                                 win_w - 53.75f * s - a2_font_text_width(fnt_speed, line, lsc),
+                                 bot - 65.0f * s, lsc);
                 else
-                    HUD_VALUE(fnt_speed, line, bot - 52.0f * s);
-                a2_sprite_draw_sub(hud, 426, 63, 53, 16, 6, right - 37.0f * s, bot - 28.0f * s,
-                                   37.0f * s, 18.0f * s);
-                HUD_BRACKET(426, 0, 37, 34, 12, right - 96.0f * s, bot - 92.0f * s, 88.0f, 45.0f);
+                    HUD_VALUE(fnt_speed, line, bot - 65.0f * s);
+                a2_sprite_draw_sub(hud, 426, 63, 53, 16, 6, win_w - 47.5f * s, bot - 23.75f * s,
+                                   35.0f * s, 12.5f * s);
+                hud_bracket(hud, 426, 0, 37, 34, 12, win_w - 192.5f * s, bot - 72.5f * s,
+                            75.0f * s, 26.0f * s, s);
 
                 if (overlay_detail >= 3) {
                     /* Both bars are an 11-frame 91x8 ladder in RC.IMG, in 10%
@@ -3601,11 +3631,13 @@ int main(int argc, char **argv)
                     /* The frame stretches to the element's size but the fill
                      * strip keeps its own 91x8 proportions, which is why the
                      * fill band looks taller than the frame's placeholder. */
-                    float bar_w = 123.0f * s, bar_h = 23.0f * s;
-                    float fill_w = bar_w * (49.0f / 55.0f);
-                    float fill_h = fill_w * (8.0f / 91.0f);
-                    static const float bar_y[2] = { 119.0f, 168.0f };  /* turbo, damage */
-                    static const float lab_y[2] = { 142.0f, 190.0f };
+                    /* frames x 532..630 (98 x 22-23), fills 91 x 8 at 1:1 from
+                     * x 540, 7 below the frame's top; damage frame y 342,
+                     * turbo 380; labels' tops 330 and 370 */
+                    float bar_w = 122.5f * s, bar_h = 27.5f * s;
+                    float fill_w = 113.75f * s, fill_h = 10.0f * s;
+                    static const float bar_y[2] = { 125.0f, 172.5f };  /* turbo, damage */
+                    static const float lab_y[2] = { 136.25f, 186.25f };
                     for (int b = 0; b < 2; b++) {
                         /* TURBO sits above SNELHEID and SCHADE above that. */
                         int is_turbo = (b == 0);
@@ -3619,13 +3651,13 @@ int main(int argc, char **argv)
                         /* frame = level * (frames - 1) / 100, truncated
                          * (0x41aad1, _ftol 0x4700e0) */
                         int step = (int)(frac * 10.0f);
-                        float bx = right - 2.0f * s - bar_w, by = bot - bar_y[b] * s;
+                        float bx = win_w - 135.0f * s, by = bot - bar_y[b] * s;
                         hud_bracket(hud, 426, 25, is_turbo ? 19 : 0, 55, 13, bx, by, bar_w, bar_h,
                                     s);
                         /* 431, the all-dark bar, backs both: the frame carries a
                          * placeholder fill of its own and the chevrons are
                          * transparent between the arrows. */
-                        float fx = bx + bar_w * (6.0f / 55.0f), fy = by + (bar_h - fill_h) * 0.5f;
+                        float fx = bx + 10.0f * s, fy = by + 8.75f * s;
                         a2_sprite_draw_sub(hud, 431, 0, 0, 91, 8, fx, fy, fill_w, fill_h);
                         a2_sprite_draw_sub(hud, is_turbo ? chevron[step] : solid[step], 0, 0, 91, 8,
                                            fx, fy, fill_w, fill_h);
@@ -3633,14 +3665,15 @@ int main(int argc, char **argv)
                             /* The damage percentage is centred in its bar. */
                             snprintf(val, sizeof val, "%d%%", (int)(frac * 100.0f + 0.5f));
                             a2_font_draw(fnt_pct, val,
-                                         bx + (bar_w - a2_font_text_width(fnt_pct, val, s)) * 0.5f,
-                                         by + bar_h * 0.5f - a2_font_height(fnt_pct, s) * 0.5f, s);
+                                         fx + (fill_w - a2_font_text_width(fnt_pct, val, s)) * 0.5f,
+                                         fy + fill_h * 0.5f - a2_font_height(fnt_pct, s) * 0.5f, s);
                         }
                         HUD_LABEL(label, bot - lab_y[b] * s);
                     }
                 }
                 /* Last, so the turbo bar's bottom rail passes behind it. */
-                HUD_LABEL(a2_lang_get(lang, 54, "SNELHEID"), bot - 93.0f * s);
+                HUD_LABEL(a2_lang_get(lang, 54, "SNELHEID"), bot - 83.75f * s);
+                right = save_right_b;
 
                 /* --- bottom left: the radar --- */
                 hud_radar(scene, traffic, racers, cops, 72.0f * s, bot - 72.0f * s, 56.0f * s,

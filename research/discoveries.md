@@ -6253,13 +6253,14 @@ sub-objects. Every address below was read in spel.dat.
   Rcpcx.cpp PCX loader, whose pixel conversion calls 0x468380 with an 8-bit
   source (0x46b6c0..0x46b7f9). The port already darkened it; that was LIKELY
   and is now backed by the code path.
-- The fonts are still unexplained. The ascii.cpp loader converts glyph
-  pixels through 0x468380 as well: 8-bit at 0x46a6ed and 24-bit at 0x46a658,
-  picked by [0x4eacbc]. Gamma is switched on in the display init
-  (0x420ffa, inside 0x420fe0) before any art loads, so load order does not
-  explain it. Yet session 9 measured olfnt02's blue unsquared. LIKELY the
-  drawn colour is applied at draw time (the port's fonts are tinted at draw
-  time too); not traced.
+- CONFIRMED (code + data, session 15): **the fonts are squared too.**
+  The ascii.cpp loader converts glyph indices through 0x468380 (8-bit at
+  0x46a6ed, 24-bit at 0x46a658, raw copy only in mode 0, picked by
+  [0x4eacbc]). olfnt02's main index **230** is **(189,202,231)** in
+  e02_pl16, which squares to (140,160,209); session 9 measured
+  (140,158,214) in the original. Session 9's "the fonts are not squared"
+  compared against the wrong reference, a colour that was not index 230's.
+  The port now squares its font atlases (font.c).
 
 ## Traffic sign faces in the port (session 14)
 
@@ -6765,4 +6766,33 @@ Completes open question 5 (session 9), which found the driver-name scan
 - This corrects session 9's "turbo: 14, 12, 11, 15..21, 13". That was read off
   the art, not the game, and it called the orange ladder the unused third
   set. The port now draws anim 21 and truncates both bars.
+
+## The HUD at 640x480: 800x600 units, and the highway panel (session 15)
+
+- MEASURED (Wine capture, RESOLUTION=3, 640x480): the HUD labels are drawn
+  at **0.8 of olfnt01's size**: SCHADE 58 px against the font's 72,
+  RACE TIJD 80 against 100, SNELHEID 71 against 90. So the HUD is laid out
+  for **800x600** and scaled to the screen, which is what the port's
+  `s = win_h / 600` assumed. The bar fills come out 91-92 px wide on screen
+  (113.75 units). The frames are 55x13 regions of sprite 426, stretched
+  to about 98x22 px.
+- CONFIRMED (code): the highway top-right panel is **0x419b10** (overlay
+  detail > 2): bracket element 0x39, then RACE TIJD (33) over the race
+  timer (3) as `%02d:%02d:%d` (elements 0x26 / 0x27, fonts 10 / 11), then
+  **RACE RECORD (52)** over [0x4d9acc], the race record in ms, or the
+  literal `--:--:-` (0x4882e8) while it is 0x0FFFFFFF (elements 0x3a /
+  0x3b), then POSITIE (38). Every HUD label is font 10 (SCHADE 0x41a4d7,
+  TURBO 0x41a438, SNELHEID 0x41a487, POSITIE 0x419d5a). The circuit panel
+  is 0x419e00 (RONDE INFO).
+- CONFIRMED (code): the checkpoint panel 0x41a5f0 also has a literal
+  **"EXTRA TIJD"** (0x488300, not language.ini) at element 0x4c, timed off
+  0x4dcaa0. This is separate from the banner slot's 44. Not ported; the timing is
+  not read.
+- The port had no RACE RECORD row on the highway stages and placed POSITIE
+  as on a circuit. Both are fixed. The bottom group is refitted to the
+  capture, in 800x600 units (capture px x 1.25).
+- The element table (0x488510) gives these elements in its first half in
+  320x240-like numbers (0x3a = (254, 25)). They do not map onto the capture
+  by a simple x2 (RACE RECORD's label sits at about (522, 57)), so the port's
+  numbers are measured, not read from the table.
 
