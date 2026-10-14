@@ -17,6 +17,7 @@
  *   M        tweak mode: the camera follows the next car (racers, then you)
  *   F12      tweak mode, held: the frame rate and the visible chunks
  *   Tab      tweak mode: the tweak menu (Up/Down, Space, numpad + and -)
+ *   L        tweak mode, held: the player's chunk number
  *   D        cycle the overlay detail 0-3 (the original's 'detail' key)
  *
  * Port-only helpers: O scenery, G .cmp barriers, T traffic, H hides the HUD,
@@ -3528,6 +3529,13 @@ int main(int argc, char **argv)
                 a2_tweak_text(&tweak, &cars, car_slot, up_gearbox);
                 for (int r = 0; r < tweak.line_count; r++)
                     a2_font_draw(fnt_pct, tweak.lines[r], 10.0f * sx, (10.0f + 20.0f * r) * sy, sy);
+            }
+            /* L, tweak mode (0x41aa15, in draw_dashboard): the player's
+             * chunk ([0x4d9e44]) at (0, 100), in font 11 (olfnt02) */
+            if (tweak_mode && fnt_time && drive_mode && SDL_GetKeyboardState(NULL)[SDL_SCANCODE_L]) {
+                char line[16];
+                snprintf(line, sizeof line, "%d", a2_scene_nearest_chunk(scene, car.x, car.z));
+                a2_font_draw(fnt_time, line, 0.0f, 100.0f * (win_h / 480.0f), win_h / 480.0f);
             }
             /* F12, tweak mode (0x42524a): the frame rate and the visible
              * chunks, at (10, 80) and (10, 100) of the 640x480 screen */

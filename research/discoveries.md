@@ -6527,9 +6527,11 @@ Everything it gates, from the flag's six readers:
   press (each waits for the release); Space ends a screen. The "gearbox"
   index is [0x4d9ed0], the gearbox upgrade. The pitch list's items read
   "Rolhoek demping/factor" in the game's own strings.
-- 0x41aa0c: a debug display in draw_dashboard on the key 'L' (session 8).
+- **L held** (0x41aa15, key 0x4c, at the end of draw_dashboard): the
+  player's chunk number ([0x4d9e44], "%d") at (0, 100) in font 11
+  (olfnt02).
 
-Port: the cameras, M, F12 and the tweak menu (src/tweak.c, its text in
-slider13 at the original's rows); not the L display. How the per-gear and
+Port: all of it -- the cameras, M, F12, L and the tweak menu (src/tweak.c,
+its text in slider13 at the original's rows). How the per-gear and
 suspension lists leave their editors on Space is not traced (the port goes
 back to the list).
