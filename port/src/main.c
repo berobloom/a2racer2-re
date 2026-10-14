@@ -2637,9 +2637,15 @@ int main(int argc, char **argv)
              * lag on, each frame moves the camera `factor` of the way to where
              * it wants to be (the code divides by dt and multiplies by it
              * again, so it is per frame).  The port scales that to 30 frames a
-             * second, since the original's step is its frame rate -- ours. The
-             * car's yaw only: the original turns by the car object's whole
-             * matrix, body roll and pitch included. */
+             * second, since the original's step is its frame rate -- ours.
+             * Then (0x447f78..0x448111, camera +0x80, set to 1 by the
+             * constructor 0x447119 and never cleared) the lagged position is
+             * turned into the car's frame (0x45e970, the transpose), its
+             * along-the-car part replaced by the preset's z, and turned back:
+             * only the sideways and height parts lag, the distance behind the
+             * car does not.  The look point is not lagged (only the position,
+             * +0x88, is).  The car's yaw only: the original turns by the car
+             * object's whole matrix, body roll and pitch included. */
             {
                 /* key 3 (0x414500): held, keep the view and show preset 5;
                  * released, go back */
@@ -2698,10 +2704,14 @@ int main(int argc, char **argv)
                     cam_fresh = 0;
                 } else {
                     float f = 1.0f - powf(1.0f - cam_smooth, dt * 30.0f);
-                    for (int i = 0; i < 3; i++) {
+                    for (int i = 0; i < 3; i++)
                         cam_eye[i] += f * (want[i] - cam_eye[i]);
-                        cam_look[i] += f * (look[i] - cam_look[i]);
-                    }
+                    /* hold the distance along the car at the preset's z */
+                    float ex = cam_eye[0] - tx, ez = cam_eye[2] - tz;
+                    float lx = ex * cs - ez * sn;
+                    cam_eye[0] = tx + lx * cs + oz * sn;
+                    cam_eye[2] = tz - lx * sn + oz * cs;
+                    memcpy(cam_look, look, sizeof look);
                 }
                 float dx = cam_look[0] - cam_eye[0], dy = cam_look[1] - cam_eye[1],
                       dz = cam_look[2] - cam_eye[2];

@@ -6358,6 +6358,24 @@ offset table read the constants but not what they do.
   moves `+0x84 x (wanted - previous)` each frame: the delta is divided by dt
   and multiplied by dt again (0x441cd0 both times), so the lag is **per
   frame**, not per second.
+- CONFIRMED (code), **the lag never changes the distance behind the car**
+  (0x447f78..0x448111): when the camera is attached to an object (+0x70),
+  has one (+0xa0 != -1) and +0x80 is 1, the lagged position minus the
+  object's is turned into the object's frame by the transposed matrix
+  (0x45e970), its z (along the car) is **overwritten with the offset's z**
+  (`mov [esp+0x34], [ebx+0xac]`, 0x44805d), and the result is turned back and
+  stored as both the position and the previous position (+0x88). Only the
+  sideways and height parts lag. +0x80 is set to 1 by the constructor
+  (0x447119) and no other instruction in the code section writes a camera's
+  +0x80 (a full scan of `mov [reg+0x80], ...`), so this holds for every
+  lagged preset. The branch sits inside the lag-on test (0x447dc7), so rigid
+  presets skip it (they need no correction).
+- CONFIRMED (code): only the position is lagged. The look point (+0x54) is
+  rebuilt every frame and merely copied to +0x94 (0x447f5e), with no blend.
+- The port had lagged the whole position and the look point, so at speed the
+  camera fell back: about 3x the per-frame travel at 30 fps, i.e. the car
+  looked smaller the faster it went (user report, session 15). Fixed in
+  main.c; screenshots at 84 and 179 km/h now show the car at the same size.
 - MEASURED (not from code): the projection's **vertical view angle is about
   65.6 degrees** at 640x480. The Trabant on the start grid in preset 1, at
   rest, is 136 px wide in a Wine capture. The port, with the same camera, gives
