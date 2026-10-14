@@ -6550,6 +6550,11 @@ offset table read the constants but not what they do.
   and the impulse turns the car away. The overlap deviation stays.
   Regressions: etappe1 295.3 s, 1 unwedge; etappe5 342.1 s, 1; etappe2
   1206.9 s, **10** (was 25); etappe1 with police 323.8 s, 4.
+  The AI cars' one step then got the same move: 0x441490's re-test replaces
+  their projection slide. Regressions: etappe1 312.5 s, 2 unwedges; etappe5
+  351.2 s, 1; etappe2 1144.2 s, 7; etappe1 with police 344.2 s, 1. Every
+  racer finishes on every stage, and the player's time moves by up to about
+  20 s between runs with the traffic.
 - Port: the AI cars (racers, cops) take the same contact-limited step, one
   a frame as the engine moves every object but the player: put back by
   their move (velocity x dt x 10), stopped at their earliest contact,

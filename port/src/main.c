@@ -3173,27 +3173,43 @@ int main(int argc, char **argv)
                     }
                     a2_cbox self = {-a->hwu, -a->hlu, a->hwu, a->hlu, px, pz, a->d->heading};
                     float best = 2.0f;
+                    toi_hit first = {TOI_NONE, -1, {0.0f, 0.0f}, {0.0f, 0.0f}};
                     for (int k = 0; k < nc; k++) {
                         float t, pt[2], nn[2];
-                        if (!a2_contact(&self, amx, amz, &cand[k], &t, pt, nn) || t >= best)
-                            continue;
-                        float rx = 0.1f * (pt[0] - (px + amx * t));
-                        float rz = 0.1f * (pt[1] - (pz + amz * t));
-                        float cvx = avx - a->d->yaw_rate * rz, cvz = avz + a->d->yaw_rate * rx;
-                        if (cvx * nn[0] + cvz * nn[1] > 0.0f) {
+                        if (a2_contact(&self, amx, amz, &cand[k], &t, pt, nn) && t < best) {
                             best = t;
-                            ah = (toi_hit){ckind[k], cidx[k], {nn[0], nn[1]}, {pt[0], pt[1]}};
+                            first = (toi_hit){ckind[k], cidx[k], {nn[0], nn[1]}, {pt[0], pt[1]}};
                         }
                     }
-                    if (ah.kind != TOI_NONE) {
-                        float rmx = amx * (1.0f - best), rmz = amz * (1.0f - best);
-                        float into = rmx * ah.n[0] + rmz * ah.n[1];
-                        if (into > 0.0f) {
-                            rmx -= into * ah.n[0];
-                            rmz -= into * ah.n[1];
+                    if (first.kind != TOI_NONE) {
+                        /* the move, as the player's steps make it: 0x441490's
+                         * re-test with the normal part 10 away for a contact
+                         * the velocity runs into, else stopped at the contact
+                         * (the overlap deviation as for the player) */
+                        float vn = avx * first.n[0] + avz * first.n[1];
+                        if (best > 0.0f && vn >= 0.0f) {
+                            float kk = -10.0f - vn;
+                            float wmx = (avx + kk * first.n[0]) * adt * 10.0f;
+                            float wmz = (avz + kk * first.n[1]) * adt * 10.0f;
+                            float t2 = 1.0f;
+                            for (int k = 0; k < nc; k++) {
+                                float t, pt[2], nn[2];
+                                if (a2_contact(&self, wmx, wmz, &cand[k], &t, pt, nn) && t < t2)
+                                    t2 = t;
+                            }
+                            a->d->x = px + wmx * t2;
+                            a->d->z = pz + wmz * t2;
+                        } else if (best > 0.0f || vn >= 0.0f) {
+                            a->d->x = px + amx * best;
+                            a->d->z = pz + amz * best;
                         }
-                        a->d->x = px + amx * best + rmx;
-                        a->d->z = pz + amz * best + rmz;
+                        /* the impulse when the contact point moves into it */
+                        float rx = 0.1f * (first.p[0] - a->d->x), rz = 0.1f * (first.p[1] - a->d->z);
+                        float cvx = avx - a->d->yaw_rate * rz, cvz = avz + a->d->yaw_rate * rx;
+                        if (cvx * first.n[0] + cvz * first.n[1] > 0.0f)
+                            ah = first;
+                    }
+                    if (ah.kind != TOI_NONE) {
                         if (ah.kind == TOI_RAIL) {
                             collide_impulse_at(a, ah, a->e, 0.0f, 0.0f, 0.0f, 1, NULL,
                                                NULL, 0.0f, 0.0f);

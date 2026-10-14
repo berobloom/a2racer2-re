@@ -526,10 +526,10 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 295.3 s**, 4th (racers 286.4 / 286.7 / 286.7 s), 1 unwedge, 2 damaging impacts |
-| etappe5 | **finishes in 342.1 s**, 3rd (racers 331.9 / 332.0 s), 1 unwedge, 2 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1206.9 s (613.3 + 593.6), 3rd (racers 1191.1 / 1197.7 s); 10 unwedges on the city corners |
-| etappe1 with police | finishes in 323.8 s, 4th (racers 310.3 / 314.2 / 316.0 s), 4 unwedges; every cop chased a racer, none the player |
+| etappe1 | **finishes in 312.5 s**, 4th (racers 301.8 / 303.5 / 308.3 s), 2 unwedges, 5 damaging impacts |
+| etappe5 | **finishes in 351.2 s**, 4th (racers 337.8 / 337.8 / 339.3 s), 1 unwedge, 3 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1144.2 s (545.6 + 598.6), 4th (racers 1118.4 / 1119.0 / 1136.7 s); 7 unwedges on the city corners |
+| etappe1 with police | finishes in 344.2 s, 4th (racers 310.4 / 326.8 / 330.4 s), 1 unwedge; every cop chased a racer, none the player |
 
 These are on the new AI model (session 13), rerun in session 14 with the
 ground planes, the engine's box contact (src/contact.c), the player's 8
@@ -696,7 +696,7 @@ reported before this point should be treated as a one-off sample.
   deviation remains: a box the car is already inside and moving away from does
   not hold it. The original never gets into such an overlap. The push-out, a circle of the car's half-width, stays as a
   safety net. The AI cars move in one step, as the original moves every object but the
-  player, likewise stopped at their first contact and sliding on.
+  player, with the same 0x441490 re-test and the impulse at the contact.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn
   table (0x484a48), with the behaviour drawn separately. Both traffic
   behaviours prefer 25 m/s, which is what a real race's debug.txt logs, so a
