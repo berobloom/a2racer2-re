@@ -6383,8 +6383,18 @@ offset table read the constants but not what they do.
   width x tan(fov/2) = 87.6 (152 px at 60 degrees, 125 at 70). The
   projection code is not traced.
 - Port: main.c `cam_preset` and the camera block follow all of the above; the
-  lag is scaled to 30 frames a second (the original's step is its frame rate)
-  and the car's yaw stands in for its whole matrix. Port choices, both.
+  lag is scaled to 30 frames a second (the original's step is its frame
+  rate), a port choice.
+- CONFIRMED (code, session 15): the object the camera hangs on is a
+  **c_3dobject** in the array at [0x4ea9e0]. The update computes `idx * 17`,
+  then `* 9`, a 153-byte stride, and reads the matrix at +0x10 and the
+  position at +0x50. That is the same `_d3d_objects` array whose +0x7c the
+  A[29] body roll writes ("Two driving models" above), so the camera turns
+  with the drawn body, pitch and roll included. The port now builds the car's
+  matrix as it draws it (yaw, then pitch, then roll) and uses it for the
+  offset, the look point and the hold-distance correction. How the matrix at
+  +0x10 is rebuilt from the angles is not traced, so the rotation order is the
+  port's.
 
 ## The meshes are not shaded (session 14)
 

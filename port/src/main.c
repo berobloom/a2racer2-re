@@ -2713,8 +2713,11 @@ int main(int argc, char **argv)
              * along-the-car part replaced by the preset's z, and turned back:
              * only the sideways and height parts lag, the distance behind the
              * car does not.  The look point is not lagged (only the position,
-             * +0x88, is).  The car's yaw only: the original turns by the car
-             * object's whole matrix, body roll and pitch included. */
+             * +0x88, is).  "The car's frame" is its 3D object's matrix
+             * (0x4ea9e0, 153-byte c_3dobject records, matrix +0x10, position
+             * +0x50): the same object that is drawn, so the body's pitch
+             * (+0x74) and roll (+0x7c) turn the camera too.  The port builds
+             * it as the car is drawn: yaw, then pitch, then roll. */
             {
                 /* key 3 (0x414500): held, keep the view and show preset 5;
                  * released, go back */
@@ -2741,7 +2744,8 @@ int main(int argc, char **argv)
             }
             {
                 /* the car the camera follows (M, tweak mode) */
-                float tx = car.x, ty = car.y, tz = car.z, tyaw = car.yaw;
+                float tx = car.x, ty = car.y + car.ride, tz = car.z, tyaw = car.yaw;
+                float tpitch = car.pitch_ang, troll = car.roll;
                 if (cam_target < 3 && racers && cam_target < a2_racers_count(racers)) {
                     const a2_drive *od = a2_racer_drive(racers, cam_target);
                     if (od) {
@@ -2749,21 +2753,46 @@ int main(int argc, char **argv)
                         ty = od->y;
                         tz = od->z;
                         tyaw = od->heading * (360.0f / 4096.0f) + 180.0f;
+                        tpitch = od->pitch * (360.0f / 4096.0f);
+                        troll = od->roll * (360.0f / 4096.0f);
                     }
                 }
-                float th = (180.0f - tyaw) * (float)M_PI / 180.0f, cs = cosf(th), sn = sinf(th);
+                /* M = Ry(180 - yaw) Rx(pitch) Rz(roll), the draw's order;
+                 * columns are the car's x, y and z axes in the world */
+                float M[3][3];
+                {
+                    float a = (180.0f - tyaw) * (float)M_PI / 180.0f;
+                    float p = tpitch * (float)M_PI / 180.0f, r = troll * (float)M_PI / 180.0f;
+                    float ca = cosf(a), sa = sinf(a), cp = cosf(p), sp = sinf(p), cr = cosf(r),
+                          sr = sinf(r);
+                    /* Rx Rz */
+                    float B[3][3] = {{cr, -sr, 0.0f}, {cp * sr, cp * cr, -sp}, {sp * sr, sp * cr, cp}};
+                    for (int c = 0; c < 3; c++) {
+                        M[0][c] = ca * B[0][c] + sa * B[2][c];
+                        M[1][c] = B[1][c];
+                        M[2][c] = -sa * B[0][c] + ca * B[2][c];
+                    }
+                }
+#define CAM_TURN(o, x, y, z)                                                                         \
+    ((o)[0] = M[0][0] * (x) + M[0][1] * (y) + M[0][2] * (z),                                       \
+     (o)[1] = M[1][0] * (x) + M[1][1] * (y) + M[1][2] * (z),                                       \
+     (o)[2] = M[2][0] * (x) + M[2][1] * (y) + M[2][2] * (z))
                 float ox = cam_preset[cam_view].x, oy = cam_preset[cam_view].y,
                       oz = cam_preset[cam_view].z;
-                float want[3] = {tx + ox * cs + oz * sn, ty + oy, tz - ox * sn + oz * cs};
+                float off[3];
+                CAM_TURN(off, ox, oy, oz);
+                float want[3] = {tx + off[0], ty + off[1], tz + off[2]};
                 float look[3];
                 if (cam_preset[cam_view].target) {
-                    look[0] = tx;
-                    look[1] = ty + 10.0f;
-                    look[2] = tz;
+                    CAM_TURN(off, 0.0f, 10.0f, 0.0f);
+                    look[0] = tx + off[0];
+                    look[1] = ty + off[1];
+                    look[2] = tz + off[2];
                 } else {
-                    look[0] = want[0] + sn * 100.0f; /* along the car */
-                    look[1] = want[1];
-                    look[2] = want[2] + cs * 100.0f;
+                    CAM_TURN(off, 0.0f, 0.0f, 100.0f); /* along the car */
+                    look[0] = want[0] + off[0];
+                    look[1] = want[1] + off[1];
+                    look[2] = want[2] + off[2];
                 }
                 float jump = (want[0] - cam_eye[0]) * (want[0] - cam_eye[0]) +
                              (want[2] - cam_eye[2]) * (want[2] - cam_eye[2]);
@@ -2775,11 +2804,16 @@ int main(int argc, char **argv)
                     float f = 1.0f - powf(1.0f - cam_smooth, dt * 30.0f);
                     for (int i = 0; i < 3; i++)
                         cam_eye[i] += f * (want[i] - cam_eye[i]);
-                    /* hold the distance along the car at the preset's z */
-                    float ex = cam_eye[0] - tx, ez = cam_eye[2] - tz;
-                    float lx = ex * cs - ez * sn;
-                    cam_eye[0] = tx + lx * cs + oz * sn;
-                    cam_eye[2] = tz - lx * sn + oz * cs;
+                    /* hold the distance along the car at the preset's z:
+                     * into the car's frame by the transpose, z replaced,
+                     * and back */
+                    float e[3] = {cam_eye[0] - tx, cam_eye[1] - ty, cam_eye[2] - tz};
+                    float lx = M[0][0] * e[0] + M[1][0] * e[1] + M[2][0] * e[2];
+                    float ly = M[0][1] * e[0] + M[1][1] * e[1] + M[2][1] * e[2];
+                    CAM_TURN(off, lx, ly, oz);
+                    cam_eye[0] = tx + off[0];
+                    cam_eye[1] = ty + off[1];
+                    cam_eye[2] = tz + off[2];
                     memcpy(cam_look, look, sizeof look);
                 }
                 float dx = cam_look[0] - cam_eye[0], dy = cam_look[1] - cam_eye[1],
@@ -2787,6 +2821,7 @@ int main(int argc, char **argv)
                 memcpy(cam.pos, cam_eye, sizeof cam_eye);
                 cam.yaw = atan2f(dx, -dz) * 180.0f / (float)M_PI;
                 cam.pitch = atan2f(dy, sqrtf(dx * dx + dz * dz)) * 180.0f / (float)M_PI;
+#undef CAM_TURN
             }
             /* The police warning's camera (0x4151f0, camera 6 for the 4 s of
              * game mode 8): at the next chunk's point, 20 units up, looking at
