@@ -6521,6 +6521,27 @@ offset table read the constants but not what they do.
   after the move, and the slide as a projection rather than 0x441490's
   re-test. Regressions: etappe1 292.0 s with 0 unwedges (was 2), etappe5
   352.7 s with 1 (was 8), etappe2 1251.7 s with 24 (was 70).
+- CONFIRMED (code, session 15), **0x441490(obj, dt, &vec, t, &flag)** in full,
+  as 0x440fb0 calls it (0x441062..0x441067):
+  - it returns 0 when **t = 0**, or when 0x4499e0 finds no contact;
+  - it returns 0 when the object's velocity (+0x6c) **separates**
+    (v . n > 0, with the record's normal);
+  - otherwise it sets **v' = v + (10 - v . n) n** (the normal part becomes
+    exactly 10, outward), re-runs 0x44a0f0 with it, and returns
+    **vec = v' x t2**. It restores the real velocity and the contact record,
+    so only the move uses v'.
+  - 0x43f900 then moves by `vec` when 0x441490 returned 1. Otherwise it moves
+    by the velocity x t, which stops the object at the contact; at t = 0 it
+    does not move it at all. The impulse 0x4497f0 follows within the same
+    step.
+- Port (session 15): the sub-step uses that re-test in place of the slide.
+  There are two deviations, both because the impulse comes once a frame
+  rather than in every step. The re-test also runs at t = 0; without it a
+  car stayed pinned to a slab on etappe2 chunk 117. And a box the car
+  already overlaps and moves away from does not hold it (etappe1 chunk 442,
+  with the police on). Regressions: etappe1 283.8 s, 2 unwedges; etappe5
+  342.8 s, 1; etappe2 1224.0 s, 25; etappe1 with police 327.4 s, 2 (was
+  345.8 s, 8).
 - Port: the AI cars (racers, cops) take the same contact-limited step, one
   a frame as the engine moves every object but the player: put back by
   their move (velocity x dt x 10), stopped at their earliest contact,
