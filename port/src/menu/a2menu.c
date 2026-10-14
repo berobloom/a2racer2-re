@@ -231,21 +231,19 @@ int main(int argc, char **argv)
         if (first && !no_intro)
             play_video(&m, ren, tex, "intro");
         first = 0;
-        /* 0x407580: after the last stage, win.smk if the player leads the
-         * overall standings (row 0 of TOTAAL by name), lose.smk otherwise;
-         * then the career goes back to stage 0 */
-        if (m.career.finished_career) {
-            const uint8_t *lead = m_slot_row(&m.career, 0, 0);
-            int won = strncmp((const char *)lead + 1, m_slot_name(&m.career), 9) == 0;
-            play_video(&m, ren, tex, won ? "win" : "lose");
-            m_slot_set_int(&m.career, M_SLOT_ETAPPE, 0);
-        }
+        /* After the last stage the menu loop first shows the standings
+         * (0x4076c7 -> 0x405630, which opens mhigh_open_screen 0x405530) and
+         * then plays the ending (0x407580): win.smk if the player leads the
+         * overall standings (row 0 of TOTAAL by name), lose.smk otherwise,
+         * and the career goes back to stage 0.  Here the video comes as the
+         * standings are left. */
+        int career_end = m.career.finished_career;
         m.now = SDL_GetTicks();
         m.quit = m.start_race = 0;
         memset(m.kept_focus, 0, sizeof m.kept_focus); /* a fresh menu.dat */
         free(m.bg);
         m.bg = NULL;
-        m_ui_enter(&m, SCR_MAIN);
+        m_ui_enter(&m, career_end ? SCR_STANDINGS : SCR_MAIN);
         while (!m.quit && !m.start_race) {
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {
@@ -272,6 +270,13 @@ int main(int argc, char **argv)
             m.now = SDL_GetTicks();
             m_ui_tick(&m);
             if (m.next_screen >= 0) {
+                if (career_end && m.screen == SCR_STANDINGS) {
+                    const uint8_t *lead = m_slot_row(&m.career, 0, 0);
+                    int won = strncmp((const char *)lead + 1, m_slot_name(&m.career), 9) == 0;
+                    play_video(&m, ren, tex, won ? "win" : "lose");
+                    m_slot_set_int(&m.career, M_SLOT_ETAPPE, 0);
+                    career_end = 0;
+                }
                 m_ui_enter(&m, m.next_screen);
                 m.next_screen = -1;
             }

@@ -760,7 +760,13 @@ phrasing may not be the original's.)*
     - **Stage advance:** menu main (0x409b87) reads `finished`. If it is set,
       it loads the results (0x402390) and 0x409870 advances the player record's
       etappe by one, whatever the position. When the etappe was already 6 it
-      sets 0x43e70c (LIKELY "game completed").
+      sets 0x43e70c, **the career-completed flag** (session 14, CONFIRMED by its
+      readers): 0x4076a6 (the menu loop's start) then shows the standings
+      (0x405630 -> mhigh_open_screen 0x405530) and plays the ending
+      (0x407580, win/lose and etappe 0); 0x40702c swaps the main screen's
+      definition ([0x42ebdd] = 0x42fa08 instead of 0x42ce34, unless [0x43e7d4]
+      is set), which is where the "Restart" label comes from (0x40703a). The
+      port's a2menu now shows the standings before the ending.
     - **Standings:** 0x40aeb0 builds the standings.
     - **Videos (answered, session 12):** win / lose play after the last
       stage, chosen by whether the player leads the TOTAAL standings. Intro
