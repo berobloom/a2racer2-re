@@ -6243,6 +6243,23 @@ sub-objects. Every address below was read in spel.dat.
   meshes are not shaded".)
 - Port: `a2_gfx_set_gamma` / `a2_gfx_gamma_rgba` (gfx.c), applied to the 3D
   textures, the sky and every stamped sprite. The HUD sprites already had it.
+- CONFIRMED (code, session 15): the converter **0x468380(colour, source
+  bpp)** squares an **8-bit** source through the current palette
+  (0x4eace0, 0x468436) and a **24-bit** one through 0x468230. A **16-bit**
+  source is returned unchanged (0x4683f0), so 16-bit art would escape the
+  gamma.
+- STRONGLY SUPPORTED (code, session 15): **the sky is darkened.**
+  gfx_sky.cpp's init loads its panorama with **0x46b500** (0x41e7c3), the
+  Rcpcx.cpp PCX loader, whose pixel conversion calls 0x468380 with an 8-bit
+  source (0x46b6c0..0x46b7f9). The port already darkened it; that was LIKELY
+  and is now backed by the code path.
+- The fonts are still unexplained. The ascii.cpp loader converts glyph
+  pixels through 0x468380 as well: 8-bit at 0x46a6ed and 24-bit at 0x46a658,
+  picked by [0x4eacbc]. Gamma is switched on in the display init
+  (0x420ffa, inside 0x420fe0) before any art loads, so load order does not
+  explain it. Yet session 9 measured olfnt02's blue unsquared. LIKELY the
+  drawn colour is applied at draw time (the port's fonts are tinted at draw
+  time too); not traced.
 
 ## Traffic sign faces in the port (session 14)
 
