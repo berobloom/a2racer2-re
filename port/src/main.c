@@ -14,6 +14,8 @@
  * Drive-mode keys that mirror the original:
  *   1 2 3 4  camera views (near chase / cockpit / hold to look back / far chase);
  *   5 7 8 9 0  the tweak-mode views (Raser.ini TWEAK_MODE=1)
+ *   M        tweak mode: the camera follows the next car (racers, then you)
+ *   F12      tweak mode, held: the frame rate and the visible chunks
  *   D        cycle the overlay detail 0-3 (the original's 'detail' key)
  *
  * Port-only helpers: O scenery, G .cmp barriers, T traffic, H hides the HUD,
@@ -1504,6 +1506,7 @@ int main(int argc, char **argv)
     int cam_view = 1;
     int cam_view_prev = 1;
     int cam_set = -1;              /* a preset to switch to this frame */
+    int cam_target = 3;            /* [0x4d9b2c]: 0-2 a racer, 3 the player */
     float pre_x = 0.0f, pre_z = 0.0f, pre_h = 0.0f, step_dx = 0.0f, step_dz = 0.0f;
     toi_hit toi = {TOI_NONE, -1, {0.0f, 0.0f}, {0.0f, 0.0f}};
     int cam_smooth_on = 1;         /* camera +0x6c */
@@ -1572,6 +1575,14 @@ int main(int argc, char **argv)
                 case SDLK_8: if (tweak_mode) cam_set = 7; break;
                 case SDLK_9: if (tweak_mode) cam_set = 8; break;
                 case SDLK_0: if (tweak_mode) cam_set = 9; break;
+                /* M, tweak mode (0x424ef8): the camera follows the next car,
+                 * racer 0, 1, 2, then the player ([0x4d9b2c] 3), 0x4149b0 */
+                case SDLK_m:
+                    if (tweak_mode) {
+                        cam_target = cam_target + 1 > 3 ? 0 : cam_target + 1;
+                        cam_fresh = 1;
+                    }
+                    break;
                 case SDLK_o:
                     show_objects = !show_objects;
                     break;
@@ -2637,15 +2648,26 @@ int main(int argc, char **argv)
                 }
             }
             {
-                float th = (180.0f - car.yaw) * (float)M_PI / 180.0f, cs = cosf(th), sn = sinf(th);
+                /* the car the camera follows (M, tweak mode) */
+                float tx = car.x, ty = car.y, tz = car.z, tyaw = car.yaw;
+                if (cam_target < 3 && racers && cam_target < a2_racers_count(racers)) {
+                    const a2_drive *od = a2_racer_drive(racers, cam_target);
+                    if (od) {
+                        tx = od->x;
+                        ty = od->y;
+                        tz = od->z;
+                        tyaw = od->heading * (360.0f / 4096.0f) + 180.0f;
+                    }
+                }
+                float th = (180.0f - tyaw) * (float)M_PI / 180.0f, cs = cosf(th), sn = sinf(th);
                 float ox = cam_preset[cam_view].x, oy = cam_preset[cam_view].y,
                       oz = cam_preset[cam_view].z;
-                float want[3] = {car.x + ox * cs + oz * sn, car.y + oy, car.z - ox * sn + oz * cs};
+                float want[3] = {tx + ox * cs + oz * sn, ty + oy, tz - ox * sn + oz * cs};
                 float look[3];
                 if (cam_preset[cam_view].target) {
-                    look[0] = car.x;
-                    look[1] = car.y + 10.0f;
-                    look[2] = car.z;
+                    look[0] = tx;
+                    look[1] = ty + 10.0f;
+                    look[2] = tz;
                 } else {
                     look[0] = want[0] + sn * 100.0f; /* along the car */
                     look[1] = want[1];
@@ -3115,7 +3137,7 @@ int main(int argc, char **argv)
             /* Car meshes are authored nose-toward +Z, and the model rotation
              * takes the opposite sign from the view matrix, so heading `yaw`
              * becomes a rotation of 180 - yaw. */
-            if (!cam_preset[cam_view].hide_car) {
+            if (!cam_preset[cam_view].hide_car || cam_target < 3) {
                 a2_scene_draw_shadow(scene, car_model, car.x, car.z, near_chunk, 180.0f - car.yaw);
                 /* the body, then its wheels in the body's frame (sub-objects) */
                 glPushMatrix();
@@ -3480,6 +3502,16 @@ int main(int argc, char **argv)
                                    (win_w - a2_font3d_width(font, line) * bs) * 0.5f,
                                    win_h * 0.16f, bs);
                 }
+            }
+            /* F12, tweak mode (0x42524a): the frame rate and the visible
+             * chunks, at (10, 80) and (10, 100) of the 640x480 screen */
+            if (tweak_mode && fnt_label && SDL_GetKeyboardState(NULL)[SDL_SCANCODE_F12]) {
+                char line[64];
+                float sx = win_w / 640.0f, sy = win_h / 480.0f;
+                snprintf(line, sizeof line, "frameRate: %f", dt > 0.0f ? 1.0f / dt : 0.0f);
+                a2_font_draw(fnt_label, line, 10.0f * sx, 80.0f * sy, sy);
+                snprintf(line, sizeof line, "vchunks: %d", radius);
+                a2_font_draw(fnt_label, line, 10.0f * sx, 100.0f * sy, sy);
             }
             a2_sprites_end();
         }

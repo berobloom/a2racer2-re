@@ -6488,3 +6488,26 @@ offset table read the constants but not what they do.
   moves it only to the time of impact (0x441490). The port pushes out after
   the fact, so the barriers keep the wall's own normal until the port steps
   to the time of impact.
+
+## What TWEAK_MODE does in a race (session 14)
+
+The shipped Raser.ini sets `TWEAK_MODE=1` ([0x4d9b24], read at 0x421fca).
+Everything it gates, from the flag's six readers:
+
+- **Keys 5, 7, 8, 9, 0** (0x41455f): camera presets 4, 6, 7, 8, 9 (see "The
+  cameras, in full").
+- **M** (0x424ef8, key 0x4d, waits for release): steps [0x4d9b2c] 0 -> 1 ->
+  2 -> 3 -> 0 and calls **0x4149b0(object)**, which sets the camera's car
+  (0x486644) and re-attaches it: 0-2 a racer's record object (0x4a55a0 +
+  96 x n), 3 the player.
+- **F12 held** (0x42524a, key 0x7b): prints `frameRate: %f` (1/dt) at
+  (10, 80) and `vchunks: %d` ([0x4d9a8c]) at (10, 100).
+- **Tab held** (0x40fe6c, key 9, in the player's step 0x40fc30): the tweak
+  menu, **0x412e90**. It reads Space, numpad + and numpad - and prints Dutch
+  labels and values ("Punt vooruitschakelen", "Schakelpunt: %3.3f",
+  "Remkracht: %3.3f", "Motor vertraging: %3.3f", "Draaihoek: %3.3f"). Its
+  save writes **CARS.DAT** ("wb"). Sub-editors 0x412c00, 0x412820,
+  0x412390. Not ported.
+- 0x41aa0c: a debug display in draw_dashboard on the key 'L' (session 8).
+
+Port: the cameras, M and F12 (main.c); not the tweak menu or the L display.
