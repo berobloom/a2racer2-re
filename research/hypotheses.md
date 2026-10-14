@@ -34,6 +34,13 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   `IID_IDirect3D2` from it yields a hardware D3D HAL. This reading only became
   available once real-D3D use was established; previously the check looked
   purposeless. Not yet proven — needs the consumer of 0x4650C0's return value.
+  **Correction (session 15):** 0x4650C0 is not the check. It maps a DirectX
+  HRESULT to its name string and has about 80 callers. The strings
+  "dd3ddfx driver found %d" (0x4a11f0) and "Righteous dd3ddfx driver found %d"
+  (0x4a11c8) are pushed at **0x46d164** and **0x46d18c**, inside the
+  DirectDraw enumeration. The real consumer is still to be read from there.
+  Related strings: "3dfx driver found %d" (0x4a1214) and "using 3dfx driver
+  %d" (0x4a1278).
 - CONFIRMED: 16-bit mode uses 5:6:5 surfaces; the game enumerates D3D texture
   formats and picks `TXF_16BPP_RGB = 3` (RGB 5:6:5), with 5:5:5:1, 4:4:4:4 and
   8:8:8:8 available for alpha. 8-bit mode uses palette-indexed textures with
