@@ -2121,6 +2121,16 @@ int main(int argc, char **argv)
                     handbrake = 1;
             }
             drv.handbrake = handbrake;
+            /* Debug: A2_SPEED_LOG prints the inputs and speed twice a second,
+             * to check the keyboard ramps at the real frame rate. */
+            if (getenv("A2_SPEED_LOG")) {
+                static float next_log;
+                if (race_time >= next_log) {
+                    next_log = race_time + 0.5f;
+                    fprintf(stderr, "speedlog t=%.1f dt=%.4f keys=%x thr=%.0f brk=%d v=%.2f\n",
+                            race_time, dt, in.keys, drv.throttle, drv.brake, drv.v_fwd);
+                }
+            }
             dground.chunk = a2_scene_nearest_chunk(scene, car.x, car.z);
             denv.turbo_active = turbo_on;
             /* the game-over and victory sequences force the handbrake on */
