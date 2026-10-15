@@ -772,7 +772,8 @@ phrasing may not be the original's.)*
     Wine ddraw source check, would show whether the texture is stretched,
     tiled or ignored.
 
-49. **How does menu.dat turn a result into the next screen?** Known so far:
+49. **Answered (sessions 12-14; marked in session 15): how menu.dat turns a
+    result into the next screen.** Every part below is settled:
     - **Stage advance:** menu main (0x409b87) reads `finished`. If it is set,
       it loads the results (0x402390) and 0x409870 advances the player record's
       etappe by one, whatever the position. When the etappe was already 6 it
