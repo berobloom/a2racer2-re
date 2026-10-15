@@ -37,6 +37,11 @@ int a2_aiw_nearest(const a2_aiw *w, int chunk, float x, float y, float z, int si
 /* 0x40c440: the waypoint's index in `chunk`'s left list, else its right list,
  * else -1. */
 int a2_aiw_lane_index(const a2_aiw *w, int chunk, int wp);
+/* The raw length of `chunk`'s side list (+0xe4 side 0, +0xe8 side 1), and
+ * 0x442150(chunk, lane, side): entry `lane` of it, clamped to the last; -1
+ * when the list is empty. */
+int a2_aiw_side_count(const a2_aiw *w, int chunk, int side);
+int a2_aiw_side_wp(const a2_aiw *w, int chunk, int lane, int side);
 /* The chunk's two .pmp trigger slots. */
 int a2_aiw_trigger(const a2_aiw *w, int chunk, int slot);
 /* 0x442700: |a - b|, the short way round. */

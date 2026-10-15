@@ -9,6 +9,10 @@
  *
  * Each car's mesh and texture come from the anim table in spel.dat
  * (N_GOLF_ANIM -> n_golf.d3d + cars02.pcx, and so on).
+ *
+ * Both carriageways carry traffic, as in the original: the cars are spawned
+ * hidden outside the visible window and brought in at its edges by
+ * ai_check_cars_outside_handling_range (see traffic.c).
  */
 #ifndef A2_TRAFFIC_H
 #define A2_TRAFFIC_H
@@ -21,18 +25,23 @@
 
 typedef struct a2_traffic a2_traffic;
 
-/* Create `count` traffic cars spread over the chunks around `start_chunk`.
- * Returns NULL if no models could be loaded. */
+/* Create the original's 20 traffic cars around `start_chunk` (STARTCHUNK),
+ * `vchunks` being Game.ini [OPTIONS] visiblechunks.  Returns NULL if no
+ * models could be loaded. */
 a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_anims *anims,
-                              int count, int start_chunk);
+                              int start_chunk, int vchunks);
 void a2_traffic_free(a2_traffic *t);
 
 /* Give traffic the per-chunk speed limits it obeys, read from the .pmp speed
  * triggers the way the original's AI reads them (see traffic.c). */
 void a2_traffic_set_limits(a2_traffic *t, const a2_track *track);
 
-/* Advance every car and recycle any that fall too far behind `player_chunk`. */
-void a2_traffic_update(a2_traffic *t, const a2_scene *scene, float dt, int player_chunk);
+/* Advance every car, and move any that is outside the window around
+ * `player_chunk` to its far edge.  `aiw` (may be NULL) gives the waypoints'
+ * obstacle lists for the "is it free" test. */
+struct a2_aiw;
+void a2_traffic_update(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw, float dt,
+                       int player_chunk);
 /* The other vehicles the traffic sees in its lanes this frame (the player,
  * the racers): every vehicle stands on a waypoint in the original, and the
  * lane scan finds whatever is there (ai_lane.cpp). */

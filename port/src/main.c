@@ -1524,7 +1524,10 @@ int main(int argc, char **argv)
                 a2_car_top_speed(&cars.cars[car_slot], 1) * 3.6f);
 
     a2_traffic *traffic =
-        no_traffic ? NULL : a2_traffic_create(scene, &rcs, anims, 24, start_chunk);
+        no_traffic ? NULL
+                   : a2_traffic_create(scene, &rcs, anims, start_chunk,
+                                       a2_ini_int(datadir, "Game.ini", "[OPTIONS]",
+                                                  "visiblechunks", 30));
     a2_traffic_set_limits(traffic, &track);
     /* The police.  The speed limit they enforce is the per-chunk .pmp trigger,
      * not the limit signs standing by the road -- see cops.h. */
@@ -3087,7 +3090,7 @@ int main(int argc, char **argv)
             a2_traffic_set_others(traffic, oth, no);
         }
         if (traffic)
-            a2_traffic_update(traffic, scene,
+            a2_traffic_update(traffic, scene, aiw,
                               drive_test ? 1.0f / 30.0f : dt,
                               drive_mode ? a2_scene_nearest_chunk(scene, car.x, car.z)
                                          : a2_scene_nearest_chunk(scene, cam.pos[0], cam.pos[2]));

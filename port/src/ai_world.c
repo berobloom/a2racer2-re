@@ -157,6 +157,27 @@ int a2_aiw_lane_index(const a2_aiw *w, int chunk, int wp)
     return -1;
 }
 
+int a2_aiw_side_count(const a2_aiw *w, int chunk, int side)
+{
+    if (!w || chunk < 0 || chunk >= w->chunk_count)
+        return 0;
+    const a2_pmp_chunk *pc = &w->tr->pmp.chunks[chunk];
+    return (int)(side ? pc->wp_right_count : pc->wp_left_count);
+}
+
+int a2_aiw_side_wp(const a2_aiw *w, int chunk, int lane, int side)
+{
+    int n = a2_aiw_side_count(w, chunk, side);
+    if (n <= 0)
+        return -1;
+    if (lane < 0)
+        lane = 0;
+    if (lane >= n)
+        lane = n - 1;
+    const a2_pmp_chunk *pc = &w->tr->pmp.chunks[chunk];
+    return (int)(side ? pc->wp_right[lane] : pc->wp_left[lane]);
+}
+
 int a2_aiw_trigger(const a2_aiw *w, int chunk, int slot)
 {
     if (!w || chunk < 0 || chunk >= w->chunk_count)

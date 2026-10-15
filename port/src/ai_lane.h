@@ -4,8 +4,9 @@
  * waypoints (ai +0x10 = 10, 0x406a13), and the same behind over 2
  * (scan_lane 0x403f60, find_obstacle 0x404600; the range is the 3D
  * distance).  Statuses as 0x404720 sets them: 0 nothing, 1 faster than us,
- * 2 not faster (3/4 dead ends and 5 oncoming do not occur in the port's
- * one-way lanes).  See research/discoveries.md "Traffic lane choice and
+ * 2 not faster (3/4 dead ends and 5 oncoming do not occur: each
+ * carriageway's lanes are one-way, and a vehicle is only seen by those on its
+ * own carriageway).  See research/discoveries.md "Traffic lane choice and
  * following". */
 #ifndef A2_AI_LANE_H
 #define A2_AI_LANE_H
@@ -14,6 +15,8 @@ typedef struct {
     float x, y, z, speed; /* world units, m/s */
     int chunk, lane;
     float t;              /* along its segment, for "ahead" within one chunk */
+    int oncoming;         /* on the other carriageway (side 0), driven against
+                           * the chunk order */
 } a2_ai_vehicle;
 
 typedef struct {

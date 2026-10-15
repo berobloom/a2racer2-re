@@ -67,12 +67,18 @@ streaming (`visiblechunks=30`) falls straight out of the data.
     (9.4 m) long against a Golf's 41.4. Treating them all as one small circle
     let the player drive into the middle of a bus and let the overtake check
     read a lane as clear when the bus's centre fell between two probe points.
-  - **Traffic**: 24 cars of the seven `N_*_ANIM` types the original spawns
+  - **Traffic**: the original's 20 cars of the seven `N_*_ANIM` types
     (Golf, Astra, Polo, Calibra, van, bus, lorry), drawn from its own spawn
     table and driven by its speed model (see "Traffic speeds" below),
-    advancing along their lane's waypoint
-    segments, changing lane to get round slower vehicles, and recycled once the
-    player leaves them behind.
+    advancing along their lane's waypoint segments and changing lane to get
+    round slower vehicles. **Both carriageways** carry traffic: 8 cars drive
+    the player's way and 12 come the other way, as the original's spawner
+    (0x40ca70) makes them. Every car starts out of play outside the visible
+    window. The original's `ai_check_cars_outside_handling_range` (0x40b2d0)
+    then brings each one in at the window's far edge (the player's chunk ±
+    29), on lane 0, once that waypoint and its neighbours are free. It does
+    the same whenever a car falls out of the window. So cars appear 29 chunks
+    ahead or behind, never next to the player.
   - **CPU racers**: three opponents (`Game.ini` `[RACERS] count`), each drawn
     with its own `RACER_<n+1>_ANIM` mesh and driven by the **shipped game's AI**
     (Game.ini `ai_model = 0`, see "The new AI model" below): a state machine
@@ -535,10 +541,10 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 286.4 s**, 4th (racers all 286.4 s), 1 unwedge, 2 damaging impacts |
-| etappe5 | **finishes in 346.9 s**, 4th (racers 334.5 / 334.9 / 336.2 s), 1 unwedge, 2 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1108.7 s (532.9 + 575.8), 3rd (racers 1106.5 / 1108.5 s); 16 unwedges on the city corners |
-| etappe1 with police | finishes in 321.9 s, 4th (racers 310.3 / 315.2 / 316.7 s), 5 unwedges; every cop chased a racer, none the player |
+| etappe1 | **finishes in 210.3 s**, 4th (racers 209.5 / 209.6 / 209.9 s), 0 unwedges, 1 damaging impact |
+| etappe5 | **finishes in 277.1 s**, 4th (racers 268.6 / 269.0 / 269.0 s), 0 unwedges, 1 damaging impact |
+| etappe2 (city, 2 laps) | **completes both laps**, 1049.4 s (537.9 + 511.5), 3rd (racers 1015.7 / 1027.3 s); 12 unwedges on the city corners |
+| etappe1 with police | finishes in 259.1 s, 4th (racers 252.2 / 252.5 / 252.6 s), 2 unwedges |
 
 These are on the new AI model (session 13), rerun in session 14 with the
 ground planes, the engine's box contact (src/contact.c), the player's 8

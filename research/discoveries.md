@@ -6934,3 +6934,62 @@ Completes open question 5 (session 9), which found the driver-name scan
   the start of a page (0x050c0000), so the read falls on the page before,
   which Wine leaves unmapped for a large block. On a Windows 9x heap the same
   read lands in heap memory and returns whatever is there (see hypotheses.md).
+
+## Traffic on both carriageways: the spawner and the recycler (session 15)
+
+- CONFIRMED, **the traffic spawner 0x40ca70** makes two groups, each from the
+  12-entry table at 0x484a48 (two `rand() % 12` draws per car, as before):
+  - **[0x484aa8] = 8 cars** on side `DIRECTION == 0` (with the shipped
+    DIRECTION 0, side 1, the player's carriageway);
+  - **[0x484aac] = 12 cars** on side `DIRECTION != 0` (side 0, the other
+    carriageway, driven against the chunk order).
+
+  In each group, half stand at `0x4426e0(STARTCHUNK - vchunks - 5 - 3i)` and
+  half at `0x4426e0(STARTCHUNK + vchunks + 5 + 3i)` (vchunks = [0x4d9a8c],
+  Game.ini visiblechunks = 30), on lane 0 (0x442150). Every one is made with
+  **+0x34 = 0** (0x40cb42, 0x40cc18, 0x40cd06, 0x40cddc): out of play.
+- CONFIRMED, +0x34 is "in play": the vehicle loop at 0x440a42 (the draw loop
+  0x440aa2) skips objects whose +0x34 is 0, and `handle_basic_ai` has a sanity
+  message for one ("SANITY CHECK ENTERING handle_basic_ai() Car (object %d)
+  is", 0x4077bf).
+- CONFIRMED, **`ai_check_cars_outside_handling_range` 0x40b2d0** (named by
+  the log line at its call, 0x424ade), once a frame after rceng_handle_objects:
+  - The window is the player's chunk ± (vchunks - 1) (0x445d70). When it runs
+    below 0 it becomes [lo + N - 1, N - 1] and [0, (c + r) % N]. When it runs
+    past N - 1 it becomes [lo, N - 1] and [0, (c + r) % N]. Then N / 2 decides
+    which part a car is beyond.
+  - For every entry of the AI table (0x4a64a0, 12 bytes: in use, object,
+    kind) except the player, if the car's chunk (+0x18) is outside the window:
+    - kind 3 (LIKELY the racers) is never moved;
+    - kind 4 calls 0x40c640(obj, 0) only when its cop record says state 1;
+    - kind 5 calls 0x40c5f0;
+    - anything else, the traffic, calls **0x40b480(obj, edge, 0)**.
+
+    A car behind the window goes to its front edge, one ahead of it to its
+    back edge.
+- CONFIRMED, **0x40b480(obj, chunk, 0)** wraps the chunk (0x4426e0) and
+  returns at once if the chunk's side-1 lane count (+0xe8, side 0's +0xe4
+  when DIRECTION is set) is exactly 1. Then it takes lane 0 of the car's side
+  (0x442150) and asks 0x40b650. When that says free, it:
+  1. moves the car onto the waypoint (0x4420f0 / 0x442230);
+  2. sets +0x18 and +0x1c to the chunk and +0x20 to the waypoint;
+  3. resets its lane trigger (0x406bf0);
+  4. re-enters it in the obstacle lists (0x4424b0);
+  5. sets **+0x34 = 1**.
+
+  Otherwise it sets **+0x34 = 0**, so a car that leaves the window and cannot
+  be placed straight away drops out of play until a later frame places it.
+- CONFIRMED, 0x40b650 in mode 0 gives up unless `rand() % 30 == 0`, and also
+  when 1 / (frame time) < 14.5 (0x40b672..0x40b68d), i.e. below 14.5 fps.
+- So in the original no traffic car is ever placed near the player. Every car
+  enters 29 chunks ahead or behind. A Wine capture of etappe1 at 5 s
+  (rev_3.png, session 15) shows a car far off on the other carriageway, and
+  the shipped debug.txt logs "Side = 0" objects 136122 times against 115175
+  for side 1.
+- The port now does this (traffic.c: spawn, recycle, put_at, wp_free), with
+  four deviations, all port choices:
+  - the 1-in-30 chance is a chance of dt per frame (the same at 30 fps);
+  - the 14.5 fps floor is left out;
+  - a -1 link is skipped instead of read through (question 55);
+  - the overlap test is centre distance against the sum of half lengths
+    (LIKELY close to 0x446a10, which was not traced).

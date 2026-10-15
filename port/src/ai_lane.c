@@ -12,9 +12,10 @@ void a2_ai_scan_lanes(const a2_ai_vehicle *self, const a2_ai_vehicle *v, int nv,
         float rf = 0.0f, rr = 0.0f;
         for (int i = 0; i < nv; i++) {
             const a2_ai_vehicle *o = &v[i];
-            if (o->lane != k || (o->x == self->x && o->z == self->z))
+            if (o->lane != k || o->oncoming != self->oncoming ||
+                (o->x == self->x && o->z == self->z))
                 continue;
-            int d = o->chunk - self->chunk;
+            int d = self->oncoming ? self->chunk - o->chunk : o->chunk - self->chunk;
             float dx = o->x - self->x, dy = o->y - self->y, dz = o->z - self->z;
             float r = sqrtf(dx * dx + dy * dy + dz * dz);
             int ahead = d > 0 || (d == 0 && o->t > self->t);

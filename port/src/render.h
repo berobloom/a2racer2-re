@@ -91,6 +91,14 @@ void a2_scene_set_anim_time(a2_scene *s, float seconds);
 int a2_scene_lane_point(const a2_scene *s, int chunk, int lane, float out[3]);
 /* Index of the lane in `chunk` whose waypoint is nearest (x, z), or -1. */
 int a2_scene_nearest_lane(const a2_scene *s, int chunk, float x, float z);
+/* The same for either carriageway: side 1 is the player's (.pmp right-hand
+ * list, driven in chunk order), side 0 the other one (the left list, driven
+ * against it).  Lanes run from the median outward on both, so the last is
+ * the slow lane.  `dist2`, when not NULL, gets the squared distance. */
+int a2_scene_lane_count_side(const a2_scene *s, int chunk, int side);
+int a2_scene_lane_point_side(const a2_scene *s, int chunk, int lane, int side, float out[3]);
+int a2_scene_nearest_lane_side(const a2_scene *s, int chunk, int side, float x, float z,
+                               float *dist2);
 /* Human-readable summary for the status line. */
 void a2_scene_stats(const a2_scene *s, char *buf, size_t buflen);
 

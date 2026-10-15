@@ -98,6 +98,10 @@ struct a2_scene {
     uint32_t waypoint_count;
     uint32_t (*chunk_wp)[A2_CHUNK_WP_MAX];
     uint32_t *chunk_wp_count;
+    /* the other carriageway (.pmp left list, side 0), ordered the same way
+     * along its own direction of travel */
+    uint32_t (*chunk_wp0)[A2_CHUNK_WP_MAX];
+    uint32_t *chunk_wp0_count;
     uint32_t **chunk_rails;
     uint32_t *chunk_rail_count;
 
@@ -566,6 +570,72 @@ static int build_objects(a2_scene *s, const a2_track *tr, const a2_archive *rcs,
 
 /* ------------------------------------------------------------------ api */
 
+/* One carriageway's running lanes in `chunk`, ordered across the road from
+ * the median outward (so the last is the slow lane), for a list driven in
+ * chunk order (`sign` 1, the right-hand list) or against it (-1, the left).
+ *
+ * Not every waypoint in a list is a running lane: a chunk may also carry the
+ * fuel-station slip road or a service path, sitting hundreds of units off the
+ * centreline (etappe1 chunk 399 has lanes at 40/80/120 and three more at
+ * 1094/1351/1694).  Running lanes are spaced 40 units apart, so sort by
+ * lateral offset and keep the contiguous run inward of the first big gap.
+ * Across the 7 tracks this drops 55 waypoints of 14548 on the right-hand
+ * side, all of them off-road.  See research/discoveries.md. */
+static void build_lanes(const a2_track *tr, uint32_t i, const uint32_t *list, uint32_t n,
+                        float sign, uint32_t *out, uint32_t *out_count)
+{
+    const a2_pmp_chunk *pc = &tr->pmp.chunks[i];
+    if (n > A2_CHUNK_WP_MAX)
+        n = A2_CHUNK_WP_MAX;
+    if (n == 0) {
+        *out_count = 0;
+        return;
+    }
+    /* Road normal, from this chunk to the next, turned with the direction of
+     * travel. */
+    float px = 0.0f, pz = 0.0f;
+    if (i + 1 < tr->pmp.chunk_count) {
+        float fx = tr->pmp.chunks[i + 1].x - pc->x;
+        float fz = tr->pmp.chunks[i + 1].z - pc->z;
+        float fl = sqrtf(fx * fx + fz * fz);
+        if (fl > 1e-3f) {
+            px = sign * fz / fl;
+            pz = -sign * fx / fl;
+        }
+    }
+    typedef struct {
+        float lat;
+        uint32_t wi;
+    } lane_sort;
+    lane_sort order[A2_CHUNK_WP_MAX];
+    for (uint32_t k = 0; k < n; k++) {
+        uint32_t wi = list[k];
+        float lat = 0.0f;
+        if ((px != 0.0f || pz != 0.0f) && wi < tr->waypoint_count)
+            lat = (tr->waypoints[wi].x - pc->x) * px + (tr->waypoints[wi].z - pc->z) * pz;
+        order[k].lat = lat;
+        order[k].wi = wi;
+    }
+    for (uint32_t a = 1; a < n; a++) { /* insertion sort, <=12 entries */
+        lane_sort v = order[a];
+        uint32_t b = a;
+        while (b > 0 && order[b - 1].lat > v.lat) {
+            order[b] = order[b - 1];
+            b--;
+        }
+        order[b] = v;
+    }
+    uint32_t keep = 1;
+    if (px != 0.0f || pz != 0.0f)
+        while (keep < n && order[keep].lat - order[keep - 1].lat <= 100.0f)
+            keep++;
+    else
+        keep = n;
+    for (uint32_t k = 0; k < keep; k++)
+        out[k] = order[k].wi;
+    *out_count = keep;
+}
+
 a2_scene *a2_scene_create(const a2_track *tr, const a2_archive *rcs, const char *prefix,
                           const char *const plane_tex[4], const char *atlas,
                           const a2_anims *anims)
@@ -680,73 +750,21 @@ a2_scene *a2_scene_create(const a2_track *tr, const a2_archive *rcs, const char 
         s->waypoints = calloc(tr->waypoint_count, sizeof(a2_waypoint));
         s->chunk_wp = calloc(s->chunk_count ? s->chunk_count : 1, sizeof(*s->chunk_wp));
         s->chunk_wp_count = calloc(s->chunk_count ? s->chunk_count : 1, sizeof(uint32_t));
-        if (!s->waypoints || !s->chunk_wp || !s->chunk_wp_count) {
+        s->chunk_wp0 = calloc(s->chunk_count ? s->chunk_count : 1, sizeof(*s->chunk_wp0));
+        s->chunk_wp0_count = calloc(s->chunk_count ? s->chunk_count : 1, sizeof(uint32_t));
+        if (!s->waypoints || !s->chunk_wp || !s->chunk_wp_count || !s->chunk_wp0 ||
+            !s->chunk_wp0_count) {
             a2_scene_destroy(s);
             return NULL;
         }
         memcpy(s->waypoints, tr->waypoints, tr->waypoint_count * sizeof(a2_waypoint));
         s->waypoint_count = tr->waypoint_count;
         for (uint32_t i = 0; i < s->chunk_count && i < tr->pmp.chunk_count; i++) {
-            /* The right-hand carriageway is the one the player drives.
-             *
-             * Not every waypoint in it is a running lane: a chunk may also
-             * carry the fuel-station slip road or a service path, sitting
-             * hundreds of units off the centreline (etappe1 chunk 399 has
-             * lanes at 40/80/120 and three more at 1094/1351/1694).  Running
-             * lanes are spaced 40 units apart, so sort by lateral offset and
-             * keep the contiguous run inward of the first big gap.  Across the
-             * 7 tracks this drops 55 waypoints of 14548, all of them off-road.
-             * See research/discoveries.md. */
             const a2_pmp_chunk *pc = &tr->pmp.chunks[i];
-            uint32_t n = pc->wp_right_count;
-            if (n > A2_CHUNK_WP_MAX)
-                n = A2_CHUNK_WP_MAX;
-            if (n == 0) {
-                s->chunk_wp_count[i] = 0;
-                continue;
-            }
-            /* Road normal, from this chunk to the next. */
-            float px = 0.0f, pz = 0.0f;
-            if (i + 1 < tr->pmp.chunk_count) {
-                float fx = tr->pmp.chunks[i + 1].x - pc->x;
-                float fz = tr->pmp.chunks[i + 1].z - pc->z;
-                float fl = sqrtf(fx * fx + fz * fz);
-                if (fl > 1e-3f) {
-                    px = fz / fl;
-                    pz = -fx / fl;
-                }
-            }
-            typedef struct {
-                float lat;
-                uint32_t wi;
-            } lane_sort;
-            lane_sort order[A2_CHUNK_WP_MAX];
-            for (uint32_t k = 0; k < n; k++) {
-                uint32_t wi = pc->wp_right[k];
-                float lat = 0.0f;
-                if ((px != 0.0f || pz != 0.0f) && wi < tr->waypoint_count)
-                    lat = (tr->waypoints[wi].x - pc->x) * px + (tr->waypoints[wi].z - pc->z) * pz;
-                order[k].lat = lat;
-                order[k].wi = wi;
-            }
-            for (uint32_t a = 1; a < n; a++) { /* insertion sort, <=12 entries */
-                lane_sort v = order[a];
-                uint32_t b = a;
-                while (b > 0 && order[b - 1].lat > v.lat) {
-                    order[b] = order[b - 1];
-                    b--;
-                }
-                order[b] = v;
-            }
-            uint32_t keep = 1;
-            if (px != 0.0f || pz != 0.0f)
-                while (keep < n && order[keep].lat - order[keep - 1].lat <= 100.0f)
-                    keep++;
-            else
-                keep = n;
-            for (uint32_t k = 0; k < keep; k++)
-                s->chunk_wp[i][k] = order[k].wi;
-            s->chunk_wp_count[i] = keep;
+            build_lanes(tr, i, pc->wp_right, pc->wp_right_count, 1.0f, s->chunk_wp[i],
+                        &s->chunk_wp_count[i]);
+            build_lanes(tr, i, pc->wp_left, pc->wp_left_count, -1.0f, s->chunk_wp0[i],
+                        &s->chunk_wp0_count[i]);
         }
     }
 
@@ -780,6 +798,8 @@ void a2_scene_destroy(a2_scene *s)
     free(s->waypoints);
     free(s->chunk_wp);
     free(s->chunk_wp_count);
+    free(s->chunk_wp0);
+    free(s->chunk_wp0_count);
     free(s->rails);
     free(s->chunk_rails);
     free(s->chunk_rail_count);
@@ -1028,23 +1048,33 @@ void a2_scene_set_anim_time(a2_scene *s, float seconds)
         s->anim_time = seconds;
 }
 
-int a2_scene_lane_count(const a2_scene *s, int chunk)
+int a2_scene_lane_count_side(const a2_scene *s, int chunk, int side)
 {
     if (!s->waypoints || chunk < 0 || chunk >= (int)s->chunk_count)
         return 0;
-    return (int)s->chunk_wp_count[chunk];
+    return (int)(side ? s->chunk_wp_count[chunk] : s->chunk_wp0_count[chunk]);
 }
 
-int a2_scene_lane_point(const a2_scene *s, int chunk, int lane, float out[3])
+int a2_scene_lane_count(const a2_scene *s, int chunk)
 {
-    int n = a2_scene_lane_count(s, chunk);
+    return a2_scene_lane_count_side(s, chunk, 1);
+}
+
+static uint32_t lane_wp(const a2_scene *s, int chunk, int lane, int side)
+{
+    return side ? s->chunk_wp[chunk][lane] : s->chunk_wp0[chunk][lane];
+}
+
+int a2_scene_lane_point_side(const a2_scene *s, int chunk, int lane, int side, float out[3])
+{
+    int n = a2_scene_lane_count_side(s, chunk, side);
     if (n <= 0)
         return 0;
     if (lane < 0)
         lane = 0;
     if (lane >= n)
         lane = n - 1;
-    uint32_t wi = s->chunk_wp[chunk][lane];
+    uint32_t wi = lane_wp(s, chunk, lane, side);
     if (wi >= s->waypoint_count)
         return 0;
     out[0] = s->waypoints[wi].x;
@@ -1056,15 +1086,21 @@ int a2_scene_lane_point(const a2_scene *s, int chunk, int lane, float out[3])
     return 1;
 }
 
-int a2_scene_nearest_lane(const a2_scene *s, int chunk, float x, float z)
+int a2_scene_lane_point(const a2_scene *s, int chunk, int lane, float out[3])
 {
-    int n = a2_scene_lane_count(s, chunk);
+    return a2_scene_lane_point_side(s, chunk, lane, 1, out);
+}
+
+int a2_scene_nearest_lane_side(const a2_scene *s, int chunk, int side, float x, float z,
+                               float *dist2)
+{
+    int n = a2_scene_lane_count_side(s, chunk, side);
     if (n <= 0)
         return -1;
     int best = 0;
     float bestd = 1e30f;
     for (int l = 0; l < n; l++) {
-        uint32_t wi = s->chunk_wp[chunk][l];
+        uint32_t wi = lane_wp(s, chunk, l, side);
         if (wi >= s->waypoint_count)
             continue;
         float dx = s->waypoints[wi].x - x, dz = s->waypoints[wi].z - z;
@@ -1074,7 +1110,14 @@ int a2_scene_nearest_lane(const a2_scene *s, int chunk, float x, float z)
             best = l;
         }
     }
+    if (dist2)
+        *dist2 = bestd;
     return best;
+}
+
+int a2_scene_nearest_lane(const a2_scene *s, int chunk, float x, float z)
+{
+    return a2_scene_nearest_lane_side(s, chunk, 1, x, z, NULL);
 }
 
 void a2_scene_stats(const a2_scene *s, char *buf, size_t buflen)

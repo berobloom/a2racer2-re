@@ -1,6 +1,7 @@
 #include "traffic.h"
 
 #include "ai_lane.h"
+#include "ai_world.h"
 #include "contact.h"
 
 #include <math.h>
@@ -70,9 +71,10 @@ typedef struct {
     float lane_mix; /* 0..1 blend from lane_from to lane */
     float recheck;  /* unused since the lane choice runs every tick */
     float chosen;   /* ai_chosen_speed (ai +0x1c), m/s */
-    float t;        /* 0..1 along the segment from `chunk` to `chunk`+1 */
+    float t;        /* 0..1 along the segment from `chunk` to the next */
     float x, y, z, yaw;
-    int alive;
+    int alive;      /* object +0x34: placed and in play; 0 while hidden */
+    int side;       /* 1 the player's carriageway (chunk order), 0 the other */
 } traffic_car;
 
 struct a2_traffic {
@@ -82,6 +84,8 @@ struct a2_traffic {
     const char *anims[TRAFFIC_KIND_COUNT];
     int kind_slot[TRAFFIC_KIND_COUNT]; /* TRAFFIC_KINDS index -> loaded slot, -1 */
     float *limit; /* per-chunk AI speed limit, m/s; NULL = none */
+    float *limit0; /* the same for the other carriageway, read against the
+                    * chunk order */
     a2_traffic_other others[16];
     int other_count;
     int limit_count;
@@ -90,6 +94,8 @@ struct a2_traffic {
     int model_count;
     unsigned seed;
     int lane_changes; /* diagnostic: how often traffic has pulled over */
+    int vchunks;      /* Game.ini visiblechunks, [0x4d9a8c] */
+    int placed;       /* diagnostic: placements by the recycler */
 };
 
 static unsigned next_rand(unsigned *seed)
@@ -98,17 +104,34 @@ static unsigned next_rand(unsigned *seed)
     return (*seed >> 16) & 0x7FFF;
 }
 
-/* Place a car at (chunk, lane, t) and work out its facing from the segment. */
+/* The chunk after `chunk` in the car's direction of travel, or -1 off the
+ * end of a stage. */
+static int next_chunk(const a2_scene *scene, int side, int chunk)
+{
+    return a2_scene_wrap_chunk(scene, chunk + (side ? 1 : -1));
+}
+
+static int lanes_at(const a2_scene *scene, int side, int chunk)
+{
+    return chunk < 0 ? 0 : a2_scene_lane_count_side(scene, chunk, side);
+}
+
+/* Lane `lane` of `chunk` on the car's carriageway, clamped to the lanes
+ * there. */
+static int lane_pt(const a2_scene *scene, int side, int chunk, int lane, float out[3])
+{
+    int n = lanes_at(scene, side, chunk);
+    if (n <= 0)
+        return 0;
+    return a2_scene_lane_point_side(scene, chunk, lane < n ? lane : n - 1, side, out);
+}
+
 /* Position on one lane's segment at `c->t`. */
 static int lane_point_at(const traffic_car *c, const a2_scene *scene, int lane, float out[3])
 {
     float a[3], b[3];
-    if (!a2_scene_lane_point(scene, c->chunk, lane, a))
-        return 0;
-    int n = a2_scene_lane_count(scene, c->chunk + 1);
-    if (n <= 0)
-        return 0;
-    if (!a2_scene_lane_point(scene, c->chunk + 1, lane < n ? lane : n - 1, b))
+    if (!lane_pt(scene, c->side, c->chunk, lane, a) ||
+        !lane_pt(scene, c->side, next_chunk(scene, c->side, c->chunk), lane, b))
         return 0;
     out[0] = a[0] + (b[0] - a[0]) * c->t;
     out[1] = a[1] + (b[1] - a[1]) * c->t;
@@ -116,16 +139,12 @@ static int lane_point_at(const traffic_car *c, const a2_scene *scene, int lane, 
     return 1;
 }
 
+/* Place a car at (chunk, lane, t) and work out its facing from the segment. */
 static int place(traffic_car *c, const a2_scene *scene)
 {
     float a[3], b[3];
-    if (!a2_scene_lane_point(scene, c->chunk, c->lane, a))
-        return 0;
-    int n = a2_scene_lane_count(scene, c->chunk + 1);
-    if (n <= 0)
-        return 0;
-    int lane_b = c->lane < n ? c->lane : n - 1;
-    if (!a2_scene_lane_point(scene, c->chunk + 1, lane_b, b))
+    if (!lane_pt(scene, c->side, c->chunk, c->lane, a) ||
+        !lane_pt(scene, c->side, next_chunk(scene, c->side, c->chunk), c->lane, b))
         return 0;
 
     c->x = a[0] + (b[0] - a[0]) * c->t;
@@ -188,15 +207,23 @@ static int gather(const a2_traffic *t, const a2_scene *scene, seen *out, int max
         const traffic_car *c = &t->cars[i];
         if (!c->alive)
             continue;
-        out[n++] = (seen){c->x, c->y, c->z, c->speed, c->chunk, c->lane, c->t};
+        out[n++] = (seen){c->x, c->y, c->z, c->speed, c->chunk, c->lane, c->t, !c->side};
     }
     for (int i = 0; i < t->other_count && n < max; i++) {
         const a2_traffic_other *o = &t->others[i];
         int ch = a2_scene_nearest_chunk(scene, o->x, o->z);
-        int ln = a2_scene_nearest_lane(scene, ch, o->x, o->z);
-        if (ch < 0 || ln < 0)
+        if (ch < 0)
             continue;
-        out[n++] = (seen){o->x, o->y, o->z, o->speed, ch, ln, 0.5f};
+        /* on whichever carriageway its nearest waypoint is (0x443da0 with
+         * both lists) */
+        float d1 = 3.4e38f, d0 = 3.4e38f;
+        int l1 = a2_scene_nearest_lane_side(scene, ch, 1, o->x, o->z, &d1);
+        int l0 = a2_scene_nearest_lane_side(scene, ch, 0, o->x, o->z, &d0);
+        int on0 = l0 >= 0 && (l1 < 0 || d0 < d1);
+        int ln = on0 ? l0 : l1;
+        if (ln < 0)
+            continue;
+        out[n++] = (seen){o->x, o->y, o->z, o->speed, ch, ln, 0.5f, on0};
     }
     return n;
 }
@@ -270,7 +297,21 @@ void a2_traffic_set_others(a2_traffic *t, const a2_traffic_other *o, int n)
     t->other_count = n > 0 ? n : 0;
 }
 
-static void spawn(a2_traffic *t, traffic_car *c, const a2_scene *scene, int chunk)
+/* 0x4426e0: a chunk index brought into the track, once round. */
+static int wrap_chunk_4426e0(int c, int n)
+{
+    if (c >= n)
+        c -= n;
+    if (c < 0)
+        c = n + c;
+    return c;
+}
+
+/* One car of the traffic spawner (0x40ca70): two rand() % 12 draws into the
+ * table, the vehicle and the behaviour, then the car is made at `chunk`, lane
+ * 0 of its carriageway, and left out of play (+0x34 = 0) for the recycler to
+ * bring in. */
+static void spawn(a2_traffic *t, traffic_car *c, int chunk, int side)
 {
     int kind = -1;
     for (int tries = 0; tries < 12 && kind < 0; tries++)
@@ -285,22 +326,29 @@ static void spawn(a2_traffic *t, traffic_car *c, const a2_scene *scene, int chun
     c->half_len = t->half_lens[kind];
     c->half_wid = t->half_wids[kind];
     c->chunk = chunk;
-    int lanes = a2_scene_lane_count(scene, chunk);
-    c->lane = lanes > 0 ? (int)(next_rand(&t->seed) % (unsigned)lanes) : 0;
-    c->t = (float)(next_rand(&t->seed) % 1000) / 1000.0f;
+    c->side = side;
+    c->lane = 0;
+    c->t = 0.0f;
     c->lane_from = c->lane;
     c->lane_mix = 1.0f;
-    c->recheck = (float)(next_rand(&t->seed) % 300) / 100.0f;
-    c->alive = place(c, scene);
+    c->alive = 0;
 }
 
+/* The spawner's two groups (0x40ca70): [0x484aa8] = 8 cars on side
+ * `DIRECTION == 0` (the player's) and [0x484aac] = 12 on the other, each
+ * half at STARTCHUNK - vchunks - 5 - 3i (behind) and half at STARTCHUNK +
+ * vchunks + 5 + 3i (ahead).  All start out of play, outside the window. */
+#define TRAFFIC_OWN_SIDE 8
+#define TRAFFIC_OTHER_SIDE 12
+
 a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_anims *anims,
-                              int count, int start_chunk)
+                              int start_chunk, int vchunks)
 {
     a2_traffic *t = calloc(1, sizeof(*t));
     if (!t)
         return NULL;
     t->seed = 12345u;
+    t->vchunks = vchunks;
 
     for (int i = 0; i < TRAFFIC_KIND_COUNT; i++) {
         t->kind_slot[i] = -1;
@@ -320,20 +368,25 @@ a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_a
         return NULL;
     }
 
-    t->cars = calloc(count ? count : 1, sizeof(traffic_car));
+    int count = TRAFFIC_OWN_SIDE + TRAFFIC_OTHER_SIDE;
+    t->cars = calloc((size_t)count, sizeof(traffic_car));
     if (!t->cars) {
         free(t);
         return NULL;
     }
     t->count = count;
-    /* Spread them down the road ahead of the player. */
-    for (int i = 0; i < count; i++)
-        spawn(t, &t->cars[i], scene, start_chunk + 3 + i * 4);
-    int alive = 0;
-    for (int i = 0; i < count; i++)
-        if (t->cars[i].alive)
-            alive++;
-    fprintf(stderr, "traffic: %d cars (%d placed), %d models\n", count, alive, t->model_count);
+    int n = a2_scene_chunk_count(scene), k = 0;
+    for (int g = 0; g < 2; g++) {
+        int side = g == 0 ? 1 : 0, half = (g == 0 ? TRAFFIC_OWN_SIDE : TRAFFIC_OTHER_SIDE) / 2;
+        for (int i = 0; i < half; i++)
+            spawn(t, &t->cars[k++], wrap_chunk_4426e0(start_chunk - vchunks - 5 - 3 * i, n),
+                  side);
+        for (int i = 0; i < half; i++)
+            spawn(t, &t->cars[k++], wrap_chunk_4426e0(start_chunk + vchunks + 5 + 3 * i, n),
+                  side);
+    }
+    fprintf(stderr, "traffic: %d cars (%d on the player's side), %d models\n", count,
+            TRAFFIC_OWN_SIDE, t->model_count);
     return t;
 }
 
@@ -343,7 +396,20 @@ void a2_traffic_free(a2_traffic *t)
         return;
     free(t->cars);
     free(t->limit);
+    free(t->limit0);
     free(t);
+}
+
+/* the AI's reading of one speed trigger (0x407ba0), or `cur` for none */
+static float trigger_limit(uint32_t trig, float cur)
+{
+    switch (trig) {
+    case 4: return 16.67f;
+    case 5: return 22.22f;
+    case 6: return 33.33f;
+    case 8: return 500.0f;
+    default: return cur;
+    }
 }
 
 void a2_traffic_set_limits(a2_traffic *t, const a2_track *track)
@@ -353,32 +419,170 @@ void a2_traffic_set_limits(a2_traffic *t, const a2_track *track)
      * limit, 10 -> stop (not used by the shipped tracks), 7 and 9 nothing.  A
      * car takes the limit as it enters the chunk and keeps it until the next
      * trigger, so this is the limit in force on each chunk for a car that has
-     * driven there from the start. */
+     * driven there from the start -- in chunk order on the player's side, and
+     * against it on the other. */
     if (!t || !track)
         return;
     int n = (int)track->pmp.chunk_count;
     free(t->limit);
+    free(t->limit0);
     t->limit = calloc(n ? (size_t)n : 1, sizeof(float));
-    if (!t->limit)
+    t->limit0 = calloc(n ? (size_t)n : 1, sizeof(float));
+    if (!t->limit || !t->limit0) {
+        free(t->limit);
+        free(t->limit0);
+        t->limit = t->limit0 = NULL;
         return;
+    }
     t->limit_count = n;
     float cur = 500.0f;
     for (int i = 0; i < n; i++) {
-        uint32_t tr[2] = {track->pmp.chunks[i].trigger0, track->pmp.chunks[i].trigger1};
-        for (int k = 0; k < 2; k++) {
-            switch (tr[k]) {
-            case 4: cur = 16.67f; break;
-            case 5: cur = 22.22f; break;
-            case 6: cur = 33.33f; break;
-            case 8: cur = 500.0f; break;
-            default: break;
-            }
-        }
+        cur = trigger_limit(track->pmp.chunks[i].trigger0, cur);
+        cur = trigger_limit(track->pmp.chunks[i].trigger1, cur);
         t->limit[i] = cur;
+    }
+    cur = 500.0f;
+    for (int i = n - 1; i >= 0; i--) {
+        cur = trigger_limit(track->pmp.chunks[i].trigger0, cur);
+        cur = trigger_limit(track->pmp.chunks[i].trigger1, cur);
+        t->limit0[i] = cur;
     }
 }
 
-void a2_traffic_update(a2_traffic *t, const a2_scene *scene, float dt, int player_chunk)
+/* 0x40b650: may a car be put on waypoint `wp` at `pos`?  The waypoint and
+ * its next and previous waypoints must have empty obstacle lists, and no car
+ * in play may overlap it (0x446a10).  The original tests the two links for
+ * -1 only on its second look, after reading through them (open question 55);
+ * the port skips a missing link, which is what that second look intends. */
+static int wp_free(const a2_traffic *t, const struct a2_aiw *aiw, int wp, const float pos[3],
+                   const traffic_car *me)
+{
+    if (aiw) {
+        if (a2_aiw_occ_count(aiw, wp) > 0)
+            return 0;
+        int next = a2_aiw_link(aiw, wp, A2_AIW_STRAIGHT);
+        int prev = a2_aiw_link(aiw, wp, A2_AIW_BACK);
+        if (next >= 0 && a2_aiw_occ_count(aiw, next) > 0)
+            return 0;
+        if (prev >= 0 && a2_aiw_occ_count(aiw, prev) > 0)
+            return 0;
+    }
+    /* LIKELY close to 0x446a10, which compares the two objects' half sizes
+     * (+0x6c, +0x74); here the centres against the sum of half lengths */
+    for (int i = 0; i < t->count; i++) {
+        const traffic_car *o = &t->cars[i];
+        if (o == me || !o->alive)
+            continue;
+        float dx = o->x - pos[0], dz = o->z - pos[2], r = o->half_len + me->half_len;
+        if (dx * dx + dz * dz < r * r)
+            return 0;
+    }
+    for (int i = 0; i < t->other_count; i++) {
+        float dx = t->others[i].x - pos[0], dz = t->others[i].z - pos[2];
+        float r = 25.0f + me->half_len;
+        if (dx * dx + dz * dz < r * r)
+            return 0;
+    }
+    return 1;
+}
+
+/* 0x40b480(car, chunk, 0): put the car on lane 0 of its carriageway at
+ * `chunk` (0x442150), or take it out of play (+0x34 = 0) when that is not
+ * possible this frame. */
+static void put_at(a2_traffic *t, traffic_car *c, const a2_scene *scene, const struct a2_aiw *aiw,
+                   float dt, int chunk)
+{
+    int n = a2_scene_chunk_count(scene);
+    chunk = wrap_chunk_4426e0(chunk, n);
+    c->alive = 0;
+    /* only on a chunk where the player's carriageway has more than one lane
+     * (+0xe8 with DIRECTION 0, whichever side the car is on) */
+    if (aiw && a2_aiw_side_count(aiw, chunk, 1) == 1)
+        return;
+    /* 0x40b650 in mode 0 goes on one call in 30 (rand() % 30); the port
+     * makes that a chance of dt a frame, the same at 30 fps.  It also refuses
+     * below 14.5 fps (1 / frame time < 14.5), which the port leaves out. */
+    if ((float)(next_rand(&t->seed) % 10000u) >= dt * 10000.0f)
+        return;
+    float pos[3];
+    int lane = 0;
+    if (aiw) {
+        int wp = a2_aiw_side_wp(aiw, chunk, 0, c->side);
+        int wch, wside;
+        if (wp < 0 || !a2_aiw_wp(aiw, wp, pos, &wch, &wside) || !wp_free(t, aiw, wp, pos, c))
+            return;
+        lane = a2_scene_nearest_lane_side(scene, chunk, c->side, pos[0], pos[2], NULL);
+    } else {
+        if (!lane_pt(scene, c->side, chunk, 0, pos) || !wp_free(t, NULL, -1, pos, c))
+            return;
+    }
+    if (lane < 0)
+        return;
+    c->chunk = chunk;
+    c->lane = c->lane_from = lane;
+    c->lane_mix = 1.0f;
+    c->t = 0.0f;
+    c->alive = place(c, scene);
+    if (c->alive) {
+        t->placed++;
+        if (getenv("A2_TRAFFIC_LOG"))
+            fprintf(stderr, "traffic: car %d placed on side %d chunk %d lane %d\n",
+                    (int)(c - t->cars), c->side, chunk, lane);
+    }
+}
+
+/* ai_check_cars_outside_handling_range, 0x40b2d0, once a frame after the
+ * objects have moved.  The window is the player's chunk +- (vchunks - 1)
+ * (0x445d70); where it runs past either end of the track it is split in two
+ * and the half-track mark tells which part a car is beyond.  A car behind
+ * the window goes to its front edge, one ahead of it to its back edge, every
+ * frame until it is placed.  (Racers are never moved; cops in state 1 and
+ * kind-5 cars have their own handlers, 0x40c640 / 0x40c5f0, not traffic.) */
+static void recycle(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw, float dt,
+                    int player_chunk)
+{
+    int n = a2_scene_chunk_count(scene);
+    if (n <= 0 || player_chunk < 0)
+        return;
+    int r = t->vchunks - 1;
+    int lo = player_chunk - r, hi = player_chunk + r, hi2 = 0, wrapped = 0;
+    if (lo < 0) {
+        hi2 = hi % n;
+        lo += n - 1;
+        hi = n - 1;
+        wrapped = 1;
+    } else if (hi > n - 1) {
+        hi2 = hi % n;
+        hi = n - 1;
+        wrapped = 1;
+    }
+    int half = n / 2;
+    for (int i = 0; i < t->count; i++) {
+        traffic_car *c = &t->cars[i];
+        int ch = c->chunk, to;
+        if (wrapped) {
+            if (ch < half) {
+                if (ch <= hi2)
+                    continue;
+                to = lo;
+            } else {
+                if (ch >= lo)
+                    continue;
+                to = hi2;
+            }
+        } else if (ch < lo) {
+            to = hi;
+        } else if (ch > hi) {
+            to = lo;
+        } else {
+            continue;
+        }
+        put_at(t, c, scene, aiw, dt, to);
+    }
+}
+
+void a2_traffic_update(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw, float dt,
+                       int player_chunk)
 {
     if (!t)
         return;
@@ -387,21 +591,15 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, float dt, int playe
     int nvis = gather(t, scene, vis, 256);
     for (int i = 0; i < t->count; i++) {
         traffic_car *c = &t->cars[i];
-        if (!c->alive) {
-            spawn(t, c, scene, player_chunk + 20 + (i % 10) * 3);
+        if (!c->alive)
             continue;
-        }
 
         /* Advance along the current segment, measuring it in world units so a
          * speed in m/s means the same thing everywhere. */
         float a[3], b[3];
-        if (!a2_scene_lane_point(scene, c->chunk, c->lane, a)) {
-            c->alive = 0;
-            continue;
-        }
-        int n = a2_scene_lane_count(scene, c->chunk + 1);
-        int lane_b = (n > 0 && c->lane < n) ? c->lane : (n > 0 ? n - 1 : 0);
-        if (n <= 0 || !a2_scene_lane_point(scene, c->chunk + 1, lane_b, b)) {
+        int nc = next_chunk(scene, c->side, c->chunk);
+        if (!lane_pt(scene, c->side, c->chunk, c->lane, a) ||
+            !lane_pt(scene, c->side, nc, c->lane, b)) {
             c->alive = 0;
             continue;
         }
@@ -417,13 +615,12 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, float dt, int playe
          * approached at the behaviour's accel/decel. */
         {
             float allowed = 500.0f;
-            if (t->limit && c->chunk >= 0 && c->chunk < t->limit_count)
-                allowed = t->limit[c->chunk];
+            const float *lim = c->side ? t->limit : t->limit0;
+            if (lim && c->chunk >= 0 && c->chunk < t->limit_count)
+                allowed = lim[c->chunk];
             float sin_a = 0.0f;
-            int n2 = a2_scene_lane_count(scene, c->chunk + 2);
             float p2[3];
-            if (n2 > 0 && a2_scene_lane_point(scene, c->chunk + 2, c->lane < n2 ? c->lane : n2 - 1,
-                                              p2)) {
+            if (lane_pt(scene, c->side, next_chunk(scene, c->side, nc), c->lane, p2)) {
                 float tx = p2[0] - c->x, tz = p2[2] - c->z;
                 float tl = sqrtf(tx * tx + tz * tz);
                 if (tl > 1e-3f)
@@ -456,12 +653,12 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, float dt, int playe
         if (c->lane_mix > 1.0f)
             c->lane_mix = 1.0f;
         {
-            int lanes = a2_scene_lane_count(scene, c->chunk);
+            int lanes = lanes_at(scene, c->side, c->chunk);
             if (lanes > 0 && c->lane < lanes) {
                 lane_info L[8];
                 if (lanes > 8)
                     lanes = 8;
-                seen self = {c->x, c->y, c->z, c->speed, c->chunk, c->lane, c->t};
+                seen self = {c->x, c->y, c->z, c->speed, c->chunk, c->lane, c->t, !c->side};
                 a2_ai_scan_lanes(&self, vis, nvis, lanes, L);
                 int want = c->lane;
                 if (lanes > 1 && c->lane_mix >= 1.0f)
@@ -491,23 +688,24 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, float dt, int playe
         c->t += c->speed * UNITS_PER_METRE * dt / seg;
         while (c->t >= 1.0f) {
             c->t -= 1.0f;
-            c->chunk++;
-            int ln = a2_scene_lane_count(scene, c->chunk);
+            int to = next_chunk(scene, c->side, c->chunk);
+            int ln = lanes_at(scene, c->side, to);
             if (ln <= 0) {
+                /* off the end of the stage: out of play until the recycler
+                 * brings it back */
                 c->alive = 0;
                 break;
             }
+            c->chunk = to;
             if (c->lane >= ln)
                 c->lane = ln - 1;
         }
         if (!c->alive)
             continue;
-
-        /* Recycle anything the player has left well behind, or that ran off
-         * the end of the stage. */
-        if (c->chunk < player_chunk - 10 || !place(c, scene))
+        if (!place(c, scene))
             c->alive = 0;
     }
+    recycle(t, scene, aiw, dt, player_chunk);
 }
 
 void a2_traffic_draw(const a2_traffic *t, const a2_scene *scene, int player_chunk, int radius)
