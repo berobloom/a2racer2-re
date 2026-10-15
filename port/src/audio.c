@@ -340,10 +340,17 @@ void a2_audio_objects(a2_audio *a, const a2_sound_src *src, int count, float lx,
 {
     if (!a)
         return;
+    /* One-shots that have ended.  Their source is still in this frame's list
+     * (the caller drops it only once it sees the sound has stopped), so they
+     * must not be started again here, or a knocked prop's sample would
+     * repeat for ever. */
+    int ended[OBJ_SLOTS], n_ended = 0;
     for (int i = 0; i < OBJ_SLOTS; i++) {
         a->slots[i].seen = 0;
-        if (a->slots[i].key >= 0 && a->slots[i].once && !a2_audio_playing(a, a->slots[i].voice))
+        if (a->slots[i].key >= 0 && a->slots[i].once && !a2_audio_playing(a, a->slots[i].voice)) {
+            ended[n_ended++] = a->slots[i].key;
             a->slots[i].key = -1; /* a one-shot that has ended */
+        }
     }
     float fl = sqrtf(fx * fx + fz * fz);
     if (fl > 0.0f) {
@@ -352,6 +359,11 @@ void a2_audio_objects(a2_audio *a, const a2_sound_src *src, int count, float lx,
     }
     for (int k = 0; k < count; k++) {
         const a2_sound_src *s = &src[k];
+        int done = 0;
+        for (int e = 0; e < n_ended && !done; e++)
+            done = ended[e] == s->key;
+        if (done)
+            continue;
         float dx = s->x - lx, dz = s->z - lz;
         int dist = (int)(fabsf(dx) + fabsf(dz));
         int pan = 0;
@@ -403,6 +415,8 @@ void a2_audio_objects(a2_audio *a, const a2_sound_src *src, int count, float lx,
             a->slots[slot].voice = h;
             a->slots[slot].sample = s->sample;
             a->slots[slot].once = s->once;
+            if (s->once && getenv("A2_AUDIO_LOG"))
+                fprintf(stderr, "audio: one-shot %d (sample %d) started\n", s->key, s->sample);
         } else {
             a2_audio_set(a, a->slots[slot].voice, 0, vol, pan);
         }

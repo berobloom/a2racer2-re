@@ -1739,7 +1739,10 @@ int main(int argc, char **argv)
     /* Sound.  The headless test runs stay silent; otherwise the levels follow
      * Raser.ini [SOUND] (ON, SFXVOLUME) and Game.ini [OPTIONS] 3dsound. */
     a2_audio *audio = NULL;
-    if (!no_sound && !drive_test && a2_ini_int(datadir, "Raser.ini", "[SOUND]", "ON", 1))
+    /* (A2_TEST_AUDIO opens it in a headless run too, to check the audio
+     * objects with SDL_AUDIODRIVER=dummy) */
+    if (!no_sound && (!drive_test || getenv("A2_TEST_AUDIO")) &&
+        a2_ini_int(datadir, "Raser.ini", "[SOUND]", "ON", 1))
         audio = a2_audio_open(&rcs, a2_ini_int(datadir, "Raser.ini", "[SOUND]", "SFXVOLUME", 100),
                               a2_ini_int(datadir, "Game.ini", "[OPTIONS]", "3dsound", 1));
     int snd_motor = -1, snd_toeren = -1, snd_scrape = -1, snd_horn = -1, snd_voice = -1;
