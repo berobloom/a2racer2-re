@@ -914,8 +914,13 @@ phrasing may not be the original's.)*
     "Unhandled exception!". debug.txt shows the exception straight after an
     AI waypoint search (object 127, chunk 281), then
     `(load_racer_info) Gm_ini.cpp(337) : Invalid nmb of racers 0 (3)` during
-    the teardown. Not investigated: it may be Wine, the prefix's reduced drive
-    mapping (c: and a d: for the test copy only, no z:), or Game.ini's
-    [RACERS] section not matching the stage set by hand. The HUD was captured
-    before it.
+    the teardown. The HUD was captured before it.
+    **Answered (session 15):** a bug in the original. 0x40b650 (is a waypoint
+    free for a recycled AI car) reads the obstacle list of the waypoint's
+    previous and next links before testing them for -1. On a lane start that
+    reads 0x2c bytes before the waypoint array, which under Wine is an
+    unmapped page (fault at 0x40b6d7, etappe2 waypoint #291). The racer-count
+    message is teardown noise after it. The Wine test copy is now patched
+    (patch_wp_guard.py); see discoveries.md "The waypoint -1 read in
+    0x40b650". Still open: what the read returned on Windows 9x (hypotheses).
 

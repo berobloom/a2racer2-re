@@ -166,3 +166,15 @@ other objects. To keep cops out it writes `ret` over 0x409060 in the
 process only. Use `ss -ltnp | grep wineserver64` for the gdb port: a stale
 `wineserver` socket from an earlier run can be listed first, and gdb then
 fails with `vMustReplyEmpty: timeout`.
+
+## G. The test copy's spel.dat is patched (session 15)
+
+`.work/menutest/spel.dat` used to be a symlink to `.work/game/spel.dat`. It is
+now a separate copy written by `reverse-engineering/tools/patch_wp_guard.py`,
+which changes 32 bytes at 0x40b6bc..0x40b6df. Without it the traffic recycler
+reads waypoint -1 and Wine kills the game, on etappe2 within about 10-20 s
+(open question 55, discoveries.md "The waypoint -1 read in 0x40b650"). The
+patch makes a missing next or previous link count as "not free". Everything
+else is byte-identical, so addresses and gdb scripts are unaffected. The
+original in `.work/game` is untouched. To go back:
+`rm .work/menutest/spel.dat && ln -s ../game/spel.dat .work/menutest/spel.dat`.

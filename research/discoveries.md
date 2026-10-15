@@ -6899,3 +6899,38 @@ Completes open question 5 (session 9), which found the driver-name scan
   drive model's -13.333 stays), lights by the force rule, and the ramp keeps
   its fraction (port choice, so the brake works at any frame rate).
 
+
+## The waypoint -1 read in 0x40b650 (session 15; open question 55)
+
+- CONFIRMED (WINEDEBUG=+seh): the "Unhandled exception!" on etappe2 under Wine
+  is an access violation at **0x40b6d7**, `mov edi,[esi+edx+0x24]`, reading
+  0x050bfff8 with edx (the waypoint array, [0x4e6628]) = 0x050c0024 and
+  ecx = -1. The waypoint was **#291** of etappe2.dmp, links (297, -1, 299,
+  -1): its previous link (+0x20, L3) is -1, and 297 is in eax as at the fault.
+- CONFIRMED: **0x40b650(wp, obj, mode)** asks whether a waypoint is free for a
+  car. Mode 0 passes only one call in 30 (`rand() % 30`). It then returns 0
+  if the waypoint's obstacle list (+0x24) is not empty, or if the list of its
+  next (+0x14) or previous (+0x20) waypoint is not empty, and finally checks
+  the objects in 0x4a64a4 (12-byte entries, to 0x4a705c) through 0x446a10.
+  **The next/previous tests run twice**: first unguarded (0x40b6bc,
+  0x40b6d1), then again with a -1 test (0x40b6df, 0x40b6f8). The first pair
+  is the bug: with a link of -1 it reads 0x2c bytes before the array.
+- CONFIRMED: its only caller is **0x40b480** (call at 0x40b52e), the
+  placement of one AI car at a chunk's lane-0 waypoint (0x442150). 0x40b480 is
+  called from the loop at 0x40b31e..0x40b46e over the same 0x4a64a4 entries:
+  cars that fall outside a chunk window around the player are moved to its
+  far end. The port's traffic does not follow this (it respawns 20+ chunks
+  ahead of the player, its own rule).
+- CONFIRMED: every track has waypoints with no previous or no next link
+  (lane starts and ends): etappe0 31 each, etappe1 38, etappe2 76, etappe3 19,
+  etappe4 30, etappe5 23, etappe6 47. Etappe2 has the most, which fits it
+  being the one that crashes.
+- CONFIRMED (gdb_count.py, 50 s of etappe2 on the patched copy): 0x40b650
+  reached its link tests 289 times; the next link was -1 four times and the
+  previous link -1 nine times. Each of those would have read waypoint -1. The
+  patched game ran on (91 s in another run) where the unpatched one died at
+  about 9 s and 20 s.
+- STRONGLY SUPPORTED: why only Wine fails: the 0x24-byte array prefix sits at
+  the start of a page (0x050c0000), so the read falls on the page before,
+  which Wine leaves unmapped for a large block. On a Windows 9x heap the same
+  read lands in heap memory and returns whatever is there (see hypotheses.md).

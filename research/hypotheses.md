@@ -87,3 +87,12 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   uninitialised leftovers of the writer's shared buffer. It "shrinks toward 23"
   only because later names are longer and overwrite more of the leftover text.
   See research/discoveries.md.
+
+## The waypoint -1 read on Windows 9x (session 15)
+
+- SPECULATIVE: on the original platform 0x40b650's read 0x2c bytes before the
+  waypoint array returned heap bookkeeping, most likely non-zero, so a lane
+  start or end was treated as "not free" and no car was placed there. The
+  patched Wine copy assumes that (patch_wp_guard.py). Nothing in the binary
+  says what the heap held there; a zero would have let the guarded test
+  decide instead. Either way it only affects where recycled cars reappear.
