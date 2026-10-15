@@ -905,3 +905,17 @@ phrasing may not be the original's.)*
     the racer's own obstacle-list entry blocking ScanPath (LIKELY).
     The chase and catch of the player and of a racer are confirmed at runtime
     (discoveries.md, "Runtime check: chases at etappe1 chunk 440").
+
+## New questions (session 15)
+
+55. **Why does the original crash on etappe2 under Wine?** With
+    .work/menutest Game.ini `[ETAPPE] etappe=2` and spel.dat started on its
+    own (RESOLUTION=3, Up held), it ran about 9 s and then stopped with
+    "Unhandled exception!". debug.txt shows the exception straight after an
+    AI waypoint search (object 127, chunk 281), then
+    `(load_racer_info) Gm_ini.cpp(337) : Invalid nmb of racers 0 (3)` during
+    the teardown. Not investigated: it may be Wine, the prefix's reduced drive
+    mapping (c: and a d: for the test copy only, no z:), or Game.ini's
+    [RACERS] section not matching the stage set by hand. The HUD was captured
+    before it.
+
