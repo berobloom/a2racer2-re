@@ -1,8 +1,10 @@
 #include "traffic.h"
 
+#include "ai_car.h"
 #include "ai_lane.h"
 #include "ai_world.h"
 #include "contact.h"
+#include "drive.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -53,9 +55,12 @@ static const int SPAWN_BEH[12] = {2, 3, 2, 3, 2, 3, 2, 2, 2, 3, 2, 3};
 static const struct {
     float brake, accel, preferred, decel;
     float rear_gap, close, follow; /* +0x1c, +0x20, +0x24, world units */
+    int ahead;    /* +0x00: how many waypoints ahead calc_speed looks */
+    float reach;  /* +0x04: the arrival test's factor (0x406e10) */
+    float turn;   /* +0x0c: the yaw-rate gain (0x406fd0), rad/s */
 } TRAFFIC_BEH[2] = {
-    {11.5f, 2.55f, 25.0f, 13.0f, 200.0f, 200.0f, 300.0f}, /* behaviour 2 */
-    {21.0f, 3.90f, 25.0f, 14.5f, 200.0f, 200.0f, 300.0f}, /* behaviour 3 */
+    {11.5f, 2.55f, 25.0f, 13.0f, 200.0f, 200.0f, 300.0f, 8, 1.0f, 5.890f}, /* behaviour 2 */
+    {21.0f, 3.90f, 25.0f, 14.5f, 200.0f, 200.0f, 300.0f, 4, 1.2f, 8.099f}, /* behaviour 3 */
 };
 #define TRAFFIC_KIND_COUNT ((int)(sizeof TRAFFIC_KINDS / sizeof TRAFFIC_KINDS[0]))
 
@@ -75,6 +80,12 @@ typedef struct {
     float x, y, z, yaw;
     int alive;      /* object +0x34: placed and in play; 0 while hidden */
     int side;       /* 1 the player's carriageway (chunk order), 0 the other */
+    /* handle_basic_ai (0x4076b0), with an a2_aiw: the car is an engine
+     * object steered at its waypoints */
+    a2_drive d;     /* position, heading, v_fwd (+0x74), yaw_rate (+0x7c) */
+    int w0;         /* AI record +0: the waypoint it is on */
+    int tlane;      /* AI record +0x14: the lane W0 is in, which change_lane
+                     * steps one at a time toward the lane it wants */
 } traffic_car;
 
 struct a2_traffic {
@@ -95,6 +106,7 @@ struct a2_traffic {
     unsigned seed;
     int lane_changes; /* diagnostic: how often traffic has pulled over */
     int vchunks;      /* Game.ini visiblechunks, [0x4d9a8c] */
+    int driven;       /* the cars are engine objects (handle_basic_ai) */
     int placed;       /* diagnostic: placements by the recycler */
 };
 
@@ -449,6 +461,159 @@ void a2_traffic_set_limits(a2_traffic *t, const a2_track *track)
     }
 }
 
+/* ---- handle_basic_ai (0x4076b0), the driving of a traffic car -----------
+ *
+ * Not a vehicle model: the car is an engine object whose velocity and yaw
+ * rate the AI sets every frame, and the engine (0x440fb0) moves it, stopping
+ * at contacts, as it moves every object.  Per frame:
+ *   - W1 = the waypoint after the one it is on (W0, record +0) and `far`
+ *     the one behaviour+0 waypoints on (0x4075f0 each time);
+ *   - calc_speed (0x407140) toward `far`; the lateral velocity is zeroed;
+ *   - the yaw rate (0x406fd0) = behaviour+0xc * (f x d) / |d|, d from the car
+ *     to W1, f its forward axis; zero below 1.5 m/s;
+ *   - W0 becomes W1 once the car is within behaviour+4 * |W1 - W0| * k of W1,
+ *     k = 1 + (8 - min(|128 - |W1 - W0||, 8)) / 16 (0x406e10; checked under
+ *     Unicorn, reverse-engineering/tools/emu_traffic.py).
+ * See research/discoveries.md, "Traffic driving: handle_basic_ai". */
+
+/* 0x4075f0: the straight link, else at a lane's end lane +1 or lane -1 by the
+ * parity of a timer reading (here a draw), else the waypoint itself. */
+static int wp_step(a2_traffic *t, const struct a2_aiw *aiw, int wp)
+{
+    int n = a2_aiw_link(aiw, wp, A2_AIW_STRAIGHT);
+    if (n >= 0)
+        return n;
+    int odd = next_rand(&t->seed) & 1;
+    int a = a2_aiw_link(aiw, wp, odd ? A2_AIW_LANE_UP : A2_AIW_LANE_DOWN);
+    int b = a2_aiw_link(aiw, wp, odd ? A2_AIW_LANE_DOWN : A2_AIW_LANE_UP);
+    return a >= 0 ? a : b >= 0 ? b : wp;
+}
+
+static int wp_pos(const struct a2_aiw *aiw, int wp, float p[3], int *chunk, int *side)
+{
+    int ch = -1, sd = 1;
+    if (wp < 0 || !a2_aiw_wp(aiw, wp, p, &ch, &sd))
+        return 0;
+    if (chunk)
+        *chunk = ch;
+    if (side)
+        *side = sd;
+    return 1;
+}
+
+/* the car's forward axis, (-sin a, cos a) in the engine's convention */
+static void drive_fwd(const a2_drive *d, float *fx, float *fz)
+{
+    float a = d->heading * (6.28318531f / 4096.0f);
+    *fx = -sinf(a);
+    *fz = cosf(a);
+}
+
+/* What the lane scans, the draw and the collisions read: the chunk and lane
+ * of W0, the position, and how far along W0 -> W1 the car is. */
+static void sync_car(a2_traffic *t, traffic_car *c, const a2_scene *scene,
+                     const struct a2_aiw *aiw)
+{
+    float p0[3], p1[3];
+    int ch, sd;
+    c->x = c->d.x;
+    c->z = c->d.z;
+    c->speed = c->d.v_fwd;
+    c->yaw = 180.0f + c->d.heading * (360.0f / 4096.0f);
+    if (!wp_pos(aiw, c->w0, p0, &ch, &sd))
+        return;
+    c->chunk = ch;
+    /* object +0x20, the waypoint nearest the car (0x4424b0 / 0x443da0),
+     * gives the lane change_lane starts from; W0's lane is the target */
+    int ln = a2_scene_nearest_lane_side(scene, ch, c->side, c->x, c->z, NULL);
+    if (ln >= 0)
+        c->lane = ln;
+    int tl = a2_scene_nearest_lane_side(scene, ch, c->side, p0[0], p0[2], NULL);
+    if (tl >= 0)
+        c->tlane = tl;
+    c->lane_from = c->lane;
+    c->lane_mix = 1.0f;
+    c->t = 0.0f;
+    c->y = p0[1];
+    int w1 = a2_aiw_link(aiw, c->w0, A2_AIW_STRAIGHT);
+    if (w1 >= 0 && wp_pos(aiw, w1, p1, NULL, NULL)) {
+        float sx = p1[0] - p0[0], sz = p1[2] - p0[2], l2 = sx * sx + sz * sz;
+        if (l2 > 1e-3f) {
+            float u = ((c->x - p0[0]) * sx + (c->z - p0[2]) * sz) / l2;
+            c->t = u < 0.0f ? 0.0f : u > 1.0f ? 1.0f : u;
+            c->y = p0[1] + (p1[1] - p0[1]) * c->t;
+        }
+    }
+    c->d.y = c->y;
+    (void)t;
+}
+
+/* One frame of handle_basic_ai after change_lane; 0 when the car ran out of
+ * road. */
+static int basic_ai(a2_traffic *t, traffic_car *c, const struct a2_aiw *aiw, float allowed,
+                    float dt)
+{
+    const float pref = TRAFFIC_BEH[c->beh].preferred;
+    int w1 = wp_step(t, aiw, c->w0);
+    int far = c->w0;
+    for (int k = 0; k < TRAFFIC_BEH[c->beh].ahead; k++)
+        far = wp_step(t, aiw, far);
+    if (w1 == c->w0)
+        return 0; /* the end of the stage */
+    float p0[3], p1[3], pf[3];
+    if (!wp_pos(aiw, c->w0, p0, NULL, NULL) || !wp_pos(aiw, w1, p1, NULL, NULL) ||
+        !wp_pos(aiw, far, pf, NULL, NULL))
+        return 0;
+    float fx, fz;
+    drive_fwd(&c->d, &fx, &fz);
+    /* 0x4078f5: a speed over four times the preferred is reset to it */
+    if (c->d.v_fwd > 4.0f * pref)
+        c->d.v_fwd = pref;
+    c->d.v_lat = 0.0f;
+    /* calc_speed: the chosen speed less brake * |sin| of the angle to `far` */
+    {
+        float dx = pf[0] - c->d.x, dz = pf[2] - c->d.z, l = sqrtf(dx * dx + dz * dz);
+        float sin_a = l > 1e-3f ? fabsf(fx * dz - fz * dx) / l : 0.0f;
+        float desired = c->chosen - TRAFFIC_BEH[c->beh].brake * sin_a * c->chosen / pref;
+        if (desired > allowed)
+            desired = allowed;
+        float v = c->d.v_fwd;
+        if (desired > v) {
+            v += TRAFFIC_BEH[c->beh].accel * dt;
+            if (v > desired)
+                v = desired;
+        } else if (desired < v) {
+            v -= TRAFFIC_BEH[c->beh].decel * dt;
+            if (v < desired)
+                v = desired;
+            if (v < 0.0f)
+                v = 0.0f;
+        }
+        c->d.v_fwd = v;
+    }
+    /* 0x406fd0: the yaw rate toward W1 */
+    {
+        float dx = p1[0] - c->d.x, dy = p1[1] - c->d.y, dz = p1[2] - c->d.z;
+        float l = sqrtf(dx * dx + dy * dy + dz * dz);
+        c->d.yaw_rate = l > 1e-3f ? TRAFFIC_BEH[c->beh].turn * (fx * dz - fz * dx) / l : 0.0f;
+        if (c->d.v_fwd < 1.5f)
+            c->d.yaw_rate = 0.0f;
+    }
+    /* 0x406e10: on to the next waypoint */
+    {
+        float sx = p1[0] - p0[0], sy = p1[1] - p0[1], sz = p1[2] - p0[2];
+        float seg = sqrtf(sx * sx + sy * sy + sz * sz);
+        float k = fabsf(128.0f - seg);
+        if (k > 8.0f)
+            k = 8.0f;
+        float reach = TRAFFIC_BEH[c->beh].reach * seg * (1.0f + (8.0f - k) / 16.0f);
+        float dx = p1[0] - c->d.x, dy = p1[1] - c->d.y, dz = p1[2] - c->d.z;
+        if (sqrtf(dx * dx + dy * dy + dz * dz) < reach)
+            c->w0 = w1;
+    }
+    return 1;
+}
+
 /* 0x40b650: may a car be put on waypoint `wp` at `pos`?  The waypoint and
  * its next and previous waypoints must have empty obstacle lists, and no car
  * in play may overlap it (0x446a10).  The original tests the two links for
@@ -505,9 +670,9 @@ static void put_at(a2_traffic *t, traffic_car *c, const a2_scene *scene, const s
     if ((float)(next_rand(&t->seed) % 10000u) >= dt * 10000.0f)
         return;
     float pos[3];
-    int lane = 0;
+    int lane = 0, wp = -1;
     if (aiw) {
-        int wp = a2_aiw_side_wp(aiw, chunk, 0, c->side);
+        wp = a2_aiw_side_wp(aiw, chunk, 0, c->side);
         int wch, wside;
         if (wp < 0 || !a2_aiw_wp(aiw, wp, pos, &wch, &wside) || !wp_free(t, aiw, wp, pos, c))
             return;
@@ -522,7 +687,29 @@ static void put_at(a2_traffic *t, traffic_car *c, const a2_scene *scene, const s
     c->lane = c->lane_from = lane;
     c->lane_mix = 1.0f;
     c->t = 0.0f;
-    c->alive = place(c, scene);
+    if (aiw) {
+        /* 0x4420f0 / 0x442230: on the waypoint, facing along its lane; the
+         * speed is the car's own (the AI record keeps it) */
+        float v = c->speed, p1[3];
+        memset(&c->d, 0, sizeof c->d);
+        c->d.x = pos[0];
+        c->d.y = pos[1];
+        c->d.z = pos[2];
+        int w1 = a2_aiw_link(aiw, wp, A2_AIW_STRAIGHT);
+        if (w1 >= 0 && wp_pos(aiw, w1, p1, NULL, NULL)) {
+            /* forward (-sin a, cos a) along W0 -> W1 */
+            float a = atan2f(-(p1[0] - pos[0]), p1[2] - pos[2]);
+            c->d.heading = a * (4096.0f / 6.28318531f);
+            if (c->d.heading < 0.0f)
+                c->d.heading += 4096.0f;
+        }
+        c->d.v_fwd = v;
+        c->w0 = wp;
+        c->alive = 1;
+        sync_car(t, c, scene, aiw);
+    } else {
+        c->alive = place(c, scene);
+    }
     if (c->alive) {
         t->placed++;
         if (getenv("A2_TRAFFIC_LOG"))
@@ -581,11 +768,15 @@ static void recycle(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *a
     }
 }
 
+static float dev_worst, dev_sum; /* A2_TRAFFIC_DEV */
+static int dev_n, dev_frames;
+
 void a2_traffic_update(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw, float dt,
                        int player_chunk)
 {
     if (!t)
         return;
+    t->driven = aiw != NULL;
     const float UNITS_PER_METRE = 10.0f;
     static seen vis[256];
     int nvis = gather(t, scene, vis, 256);
@@ -593,6 +784,66 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, const struct a2_aiw
         traffic_car *c = &t->cars[i];
         if (!c->alive)
             continue;
+
+        if (aiw) {
+            /* HANDLE_TRAFFIC_AI (0x40b770): change_lane, then handle_basic_ai,
+             * then the engine's move (0x4404a0 here; the contact pass in
+             * main.c moves it back to its first contact) */
+            int lanes = lanes_at(scene, c->side, c->chunk);
+            if (lanes > 0 && c->lane < lanes) {
+                lane_info L[8];
+                if (lanes > 8)
+                    lanes = 8;
+                seen self = {c->x, c->y, c->z, c->speed, c->chunk, c->lane, c->t, !c->side};
+                a2_ai_scan_lanes(&self, vis, nvis, lanes, L);
+                int want = lanes > 1 ? pick_lane(L, lanes, c->lane, c->beh, c->speed) : c->lane;
+                if (want < 0)
+                    want = 0;
+                if (want >= lanes)
+                    want = lanes - 1;
+                /* 0x403c36: against the target lane +0x14, one lane a tick:
+                 * 0x406d90 / 0x406d10 move W0 to the next lane's waypoint in
+                 * its chunk and step +0x14 */
+                int to = want < c->tlane ? c->tlane - 1 : want > c->tlane ? c->tlane + 1 : -1;
+                int nw = to >= 0 ? a2_scene_lane_wp_side(scene, c->chunk, to, c->side) : -1;
+                if (nw >= 0 && nw != c->w0) {
+                    /* while changing: the mean of both lanes (0x403e38) */
+                    c->chosen = 0.5f * (lane_speed(&L[c->lane], c->beh, c->chosen) +
+                                        lane_speed(&L[want], c->beh, c->chosen));
+                    c->w0 = nw;
+                    c->tlane = to;
+                    t->lane_changes++;
+                } else {
+                    c->chosen = lane_speed(&L[c->lane], c->beh, c->chosen);
+                }
+            }
+            float allowed = 500.0f;
+            const float *lim = c->side ? t->limit : t->limit0;
+            if (lim && c->chunk >= 0 && c->chunk < t->limit_count)
+                allowed = lim[c->chunk];
+            if (!basic_ai(t, c, aiw, allowed, dt)) {
+                c->alive = 0;
+                continue;
+            }
+            a2_drive_integrate(&c->d, dt);
+            sync_car(t, c, scene, aiw);
+            if (getenv("A2_TRAFFIC_DEV")) {
+                /* debug: how far the car is off its W0 -> W1 line */
+                float p0[3], p1[3];
+                int w1 = a2_aiw_link(aiw, c->w0, A2_AIW_STRAIGHT);
+                if (w1 >= 0 && wp_pos(aiw, c->w0, p0, NULL, NULL) &&
+                    wp_pos(aiw, w1, p1, NULL, NULL)) {
+                    float sx = p1[0] - p0[0], sz = p1[2] - p0[2], l = sqrtf(sx * sx + sz * sz);
+                    if (l > 1e-3f) {
+                        float dev = fabsf((c->x - p0[0]) * sz - (c->z - p0[2]) * sx) / l;
+                        dev_worst = fmaxf(dev_worst, dev);
+                        dev_sum += dev;
+                        dev_n++;
+                    }
+                }
+            }
+            continue;
+        }
 
         /* Advance along the current segment, measuring it in world units so a
          * speed in m/s means the same thing everywhere. */
@@ -706,6 +957,12 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, const struct a2_aiw
             c->alive = 0;
     }
     recycle(t, scene, aiw, dt, player_chunk);
+    if (getenv("A2_TRAFFIC_DEV") && ++dev_frames % 150 == 0 && dev_n) {
+        fprintf(stderr, "trafficdev: mean %.1f worst %.1f units over %d\n", dev_sum / dev_n,
+                dev_worst, dev_n);
+        dev_worst = dev_sum = 0.0f;
+        dev_n = 0;
+    }
 }
 
 void a2_traffic_draw(const a2_traffic *t, const a2_scene *scene, int player_chunk, int radius)
@@ -800,10 +1057,38 @@ void a2_traffic_car_push(a2_traffic *t, int i, float dvx, float dvz)
     if (!t || i < 0 || i >= t->count || !t->cars[i].alive)
         return;
     traffic_car *c = &t->cars[i];
+    if (t->driven) {
+        /* an engine object: the impulse goes into its velocity, and its
+         * own AI takes the lateral part out again next frame */
+        a2_ai_push(&c->d, dvx, dvz, 0.0f);
+        c->speed = c->d.v_fwd;
+        return;
+    }
     float r = c->yaw * (float)M_PI / 180.0f;
     c->speed += sinf(r) * dvx - cosf(r) * dvz;
     if (c->speed < 0.0f)
         c->speed = 0.0f;
+}
+
+a2_drive *a2_traffic_drive(a2_traffic *t, int i, float *hl, float *hw, const char **anim)
+{
+    if (!t || !t->driven || i < 0 || i >= t->count || !t->cars[i].alive)
+        return NULL;
+    traffic_car *c = &t->cars[i];
+    if (hl)
+        *hl = c->half_len;
+    if (hw)
+        *hw = c->half_wid;
+    if (anim)
+        *anim = c->anim;
+    return &c->d;
+}
+
+void a2_traffic_sync(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw)
+{
+    for (int i = 0; t && t->driven && aiw && i < t->count; i++)
+        if (t->cars[i].alive)
+            sync_car(t, &t->cars[i], scene, aiw);
 }
 
 int a2_traffic_occupied(const a2_traffic *t, float x, float z, float radius)

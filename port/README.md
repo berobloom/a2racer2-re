@@ -78,7 +78,12 @@ streaming (`visiblechunks=30`) falls straight out of the data.
     then brings each one in at the window's far edge (the player's chunk ±
     29), on lane 0, once that waypoint and its neighbours are free. It does
     the same whenever a car falls out of the window. So cars appear 29 chunks
-    ahead or behind, never next to the player.
+    ahead or behind, never next to the player. Each car is driven as the
+    original's handle_basic_ai does it: an engine object whose velocity and
+    yaw rate the AI sets (steering at the waypoint after the one it is on,
+    calc_speed toward one 4 or 8 waypoints on), moved with a contact pass,
+    so traffic stops at the player, the racers, the cops and the barriers
+    instead of driving through them.
   - **CPU racers**: three opponents (`Game.ini` `[RACERS] count`), each drawn
     with its own `RACER_<n+1>_ANIM` mesh and driven by the **shipped game's AI**
     (Game.ini `ai_model = 0`, see "The new AI model" below): a state machine
@@ -541,10 +546,10 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 210.3 s**, 4th (racers 200.7 / 202.1 / 210.3 s), 0 unwedges, 1 damaging impact |
-| etappe5 | **finishes in 268.3 s**, 4th (racers 259.1 / 261.4 / 261.5 s), 0 unwedges, 0 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1095.3 s (538.4 + 556.9), 3rd (racers 1037.0 / 1065.5 s); 13 unwedges on the city corners |
-| etappe1 with police | finishes in 238.6 s, 2nd (racers 238.5 / 238.6 / 238.6 s), 2 unwedges |
+| etappe1 | **finishes in 201.8 s**, 4th, 0 unwedges, 2 damaging impacts |
+| etappe5 | **finishes in 271.6 s**, 4th, 1 unwedge, 2 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1036.8 s, 3rd; 15 unwedges on the city corners |
+| etappe1 with police | finishes in 220.4 s, 4th, 1 unwedge |
 
 These are on the new AI model (session 13), rerun in session 14 with the
 ground planes, the engine's box contact (src/contact.c), the player's 8
@@ -709,9 +714,9 @@ reported before this point should be treated as a one-off sample.
   boxes"). The impulse is applied inside the step, as the original's
   0x4497f0 is, so the next step moves with the new velocity. One port
   deviation remains: a box the car is already inside and moving away from
-  does not hold it. Most of those overlaps are traffic driving into the car,
-  because the port's traffic follows its lanes without a contact pass of its
-  own. The push-out, a circle of the car's half-width, stays as a
+  does not hold it. Without it the car can still be held by a barrier slab
+  after a crash (etappe1 chunk 421); how its corner gets into the slab is
+  being looked into. The push-out, a circle of the car's half-width, stays as a
   safety net. The AI cars move in one step, as the original moves every object but the
   player, with the same 0x441490 re-test and the impulse at the contact.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn

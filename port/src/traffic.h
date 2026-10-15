@@ -20,6 +20,7 @@
 #include "anims.h"
 #include "archive.h"
 #include "audio.h"
+#include "drive.h"
 #include "render.h"
 #include "track.h"
 
@@ -77,6 +78,12 @@ int a2_traffic_car_motion(const a2_traffic *t, int i, float *vx, float *vz, cons
 /* Add a world velocity change to car i: the traffic follows its lane, so
  * only the part along its heading is kept. */
 void a2_traffic_car_push(a2_traffic *t, int i, float dvx, float dvz);
+/* With an a2_aiw the cars are engine objects (handle_basic_ai): car `i`'s
+ * drive state for the AI contact pass, NULL when it is out of play, with its
+ * half length and width (world units) and anim.  After that pass moved them,
+ * a2_traffic_sync brings the lane bookkeeping up to date. */
+a2_drive *a2_traffic_drive(a2_traffic *t, int i, float *hl, float *hw, const char **anim);
+void a2_traffic_sync(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw);
 
 /* 1 if any live traffic car is within `radius` of (x, z).  Probing a lane's
  * waypoints a few chunks ahead with this is how the autopilot decides whether

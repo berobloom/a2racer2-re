@@ -2255,10 +2255,12 @@ int main(int argc, char **argv)
                         /* stopped at the contact; at t = 0 not moved at all,
                          * the impulse below turning it away */
                         a2_drive_integrate_move(&drv, sdt, mx * best, mz * best);
+                    } else if (getenv("A2_OVERLAP_LOG") &&
+                               (fprintf(stderr, "overlap: kind %d idx %d t=%.1f n (%.2f, %.2f) "
+                                                "v (%.1f, %.1f)\n",
+                                        hit.kind, hit.idx, race_time, hit.n[0], hit.n[1], vx, vz),
+                                0)) {
                     } else if (overlap_dev) {
-                        if (getenv("A2_OVERLAP_LOG"))
-                            fprintf(stderr, "overlap: kind %d idx %d t=%.1f\n", hit.kind, hit.idx,
-                                    race_time);
                         /* Port deviation: a box already overlapping the car
                          * that it moves away from would hold it at t = 0 for
                          * ever (the overlap's "nearest side" is arbitrary).
@@ -3158,14 +3160,40 @@ int main(int argc, char **argv)
          * with the barriers (a world collision, restitution 0.2 for a racer,
          * 0.3 for a cop), with traffic and with each other, by the same
          * impulse as the player (a2_drive_impulse). */
-        if (aiw && drive_mode && (racers || cops)) {
+        if (aiw && drive_mode && (racers || cops || traffic)) {
             typedef struct {
                 a2_drive *d;
                 float hlu, hwu; /* half sizes, world units */
                 float hlm, hwm, m, e;
+                int still; /* the player: moved in its own steps, a candidate here */
             } ai_body;
             ai_body B[64];
             int nb = 0;
+            /* Traffic cars are engine objects too (handle_basic_ai sets their
+             * velocity and yaw rate; 0x440fb0 moves them, stopping at a
+             * contact), so they take part as bodies, not as fixed boxes. */
+            int traffic_bodies = 0;
+            for (int i = 0; traffic && i < a2_traffic_count(traffic) && nb < 64; i++) {
+                float thl, thw;
+                const char *tanim = NULL;
+                a2_drive *d = a2_traffic_drive(traffic, i, &thl, &thw, &tanim);
+                if (!d)
+                    continue;
+                int hi = tanim ? a2_handling_find(&handling, tanim) : -1;
+                const a2_handling *he = hi >= 0 && handling.v[hi].valid ? &handling.v[hi] : NULL;
+                B[nb++] = (ai_body){d, thl, thw, he ? he->length * 0.5f : 2.0f,
+                                    he ? he->width * 0.5f : 0.85f,
+                                    he && he->mass > 0.0f ? he->mass : 1000.0f, 0.2f, 0};
+                traffic_bodies = 1;
+            }
+            /* The player is an engine object as well: the others' moves stop
+             * at it and push it, as its own steps stop at them. */
+            if (traffic_bodies && nb < 64)
+                B[nb++] = (ai_body){&drv, car_half_len, car_half_width,
+                                    car_hand ? car_hand->length * 0.5f : 2.25f,
+                                    car_hand ? car_hand->width * 0.5f : 0.85f,
+                                    car_hand && car_hand->mass > 0.0f ? car_hand->mass : 1000.0f,
+                                    0.2f, 1};
             for (int i = 0; racers && i < a2_racers_count(racers) && nb < 64; i++) {
                 a2_drive *d = a2_racer_drive(racers, i);
                 if (!d)
@@ -3175,7 +3203,7 @@ int main(int argc, char **argv)
                 const a2_handling *he = hi >= 0 && handling.v[hi].valid ? &handling.v[hi] : NULL;
                 B[nb++] = (ai_body){d, a2_car_half_length(slot), a2_car_half_width(slot),
                                     he ? he->length * 0.5f : 2.0f, he ? he->width * 0.5f : 0.85f,
-                                    he && he->mass > 0.0f ? he->mass : 1000.0f, 0.2f};
+                                    he && he->mass > 0.0f ? he->mass : 1000.0f, 0.2f, 0};
             }
             {
                 int hi = a2_handling_find(&handling, "MPOLIZEI_ANIM");
@@ -3187,7 +3215,7 @@ int main(int argc, char **argv)
                     if (d)
                         B[nb++] = (ai_body){d, chl, chw, he ? he->length * 0.5f : 2.0f,
                                             he ? he->width * 0.5f : 0.85f,
-                                            he && he->mass > 0.0f ? he->mass : 1300.0f, 0.3f};
+                                            he && he->mass > 0.0f ? he->mass : 1300.0f, 0.3f, 0};
                 }
             }
             /* the AI car's impulse at a contact from its step */
@@ -3199,6 +3227,8 @@ int main(int argc, char **argv)
             float adt = drive_test ? 1.0f / 30.0f : dt;
             for (int i = 0; i < nb; i++) {
                 ai_body *a = &B[i];
+                if (a->still)
+                    continue;
                 float avx, avz;
                 a2_ai_world_velocity(a->d, &avx, &avz);
                 float amx = avx * adt * 10.0f, amz = avz * adt * 10.0f;
@@ -3229,7 +3259,9 @@ int main(int argc, char **argv)
                         ckind[nc] = TOI_OBJECT;
                         cidx[nc++] = sidx[k];
                     }
-                    for (int k = 0; traffic && k < a2_traffic_count(traffic) && nc < 300; k++)
+                    for (int k = 0; traffic && !traffic_bodies && k < a2_traffic_count(traffic) &&
+                                    nc < 300;
+                         k++)
                         if (a2_traffic_car_box(traffic, k, &cand[nc]) &&
                             fabsf(cand[nc].x - px) < 300.0f && fabsf(cand[nc].z - pz) < 300.0f) {
                             ckind[nc] = TOI_TRAFFIC;
@@ -3323,7 +3355,8 @@ int main(int argc, char **argv)
                                     0.0f, 1, NULL, NULL, 0.0f, 0.0f, a->d->x, a->d->z);
                 float pu[2];
                 int tw = -1;
-                if (traffic && a2_traffic_collide(traffic, &a->d->x, &a->d->z, a->hwu, pu, &tw) &&
+                if (traffic && !traffic_bodies &&
+                    a2_traffic_collide(traffic, &a->d->x, &a->d->z, a->hwu, pu, &tw) &&
                     !(ah.kind == TOI_TRAFFIC && ah.idx == tw)) {
                     float ovx = 0.0f, ovz = 0.0f, om = 1000.0f, dv2[3];
                     const char *oanim = NULL;
@@ -3362,6 +3395,8 @@ int main(int argc, char **argv)
                 }
             }
         }
+        /* the contact pass moved the traffic cars back to their contacts */
+        a2_traffic_sync(traffic, scene, aiw);
         if (audio && cops) {
             /* Pursuit chatter as a chase starts (0x403584), a give-up line as
              * one ends without a catch (0x401e88); both only when no police

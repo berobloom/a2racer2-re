@@ -1086,6 +1086,18 @@ int a2_scene_lane_point_side(const a2_scene *s, int chunk, int lane, int side, f
     return 1;
 }
 
+int a2_scene_lane_wp_side(const a2_scene *s, int chunk, int lane, int side)
+{
+    int n = a2_scene_lane_count_side(s, chunk, side);
+    if (n <= 0)
+        return -1;
+    if (lane < 0)
+        lane = 0;
+    if (lane >= n)
+        lane = n - 1;
+    return (int)lane_wp(s, chunk, lane, side);
+}
+
 int a2_scene_lane_point(const a2_scene *s, int chunk, int lane, float out[3])
 {
     return a2_scene_lane_point_side(s, chunk, lane, 1, out);

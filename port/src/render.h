@@ -97,6 +97,8 @@ int a2_scene_nearest_lane(const a2_scene *s, int chunk, float x, float z);
  * the slow lane.  `dist2`, when not NULL, gets the squared distance. */
 int a2_scene_lane_count_side(const a2_scene *s, int chunk, int side);
 int a2_scene_lane_point_side(const a2_scene *s, int chunk, int lane, int side, float out[3]);
+/* The .dmp waypoint index of that lane, or -1. */
+int a2_scene_lane_wp_side(const a2_scene *s, int chunk, int lane, int side);
 int a2_scene_nearest_lane_side(const a2_scene *s, int chunk, int side, float x, float z,
                                float *dist2);
 /* Human-readable summary for the status line. */

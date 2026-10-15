@@ -7150,3 +7150,68 @@ Completes open question 5 (session 9), which found the driver-name scan
     the port, so a corner can swing into a slab. How the original then gets
     free (if it does) was not traced.
 
+## Traffic driving: handle_basic_ai (session 15)
+
+- CONFIRMED (code): HANDLE_TRAFFIC_AI (0x40b770) calls the body (0x40ece0,
+  0x40ebd0), the trigger check (0x407fc0), change_lane (0x403660),
+  **handle_basic_ai (0x4076b0)** and the sample player. handle_basic_ai is
+  **not a vehicle model**. It sets the object's velocity and yaw rate, and
+  the engine (0x440fb0) moves the object in one step, stopping at its first
+  contact and applying the impulse, as it moves every object. Per frame:
+  - **W0** is AI record +0 (the waypoint the car is on) and **W1** =
+    0x4075f0(W0). **far** = W0 advanced behaviour+0 times (8 for behaviour
+    2, 4 for behaviour 3).
+  - 0x4075f0(wp) gives the straight link (+0x14). At a lane's end it gives
+    lane +1 (+0x18) or lane -1 (+0x1c), picked by the parity of a timer
+    reading (0x441cd0 / _ftol), and failing those the waypoint itself. Its
+    second argument is never written, so the record's +0x14 (the target
+    lane, below) gains nothing from it.
+  - The speed +0x74 is reset to the preferred speed if it is over four
+    times that (0x4078f5). The lateral velocity +0x6c / +0x70 is zeroed.
+    **calc_speed(far, ai, obj)** (0x407140) adds its change, so the corner
+    term looks at `far`.
+  - **The yaw rate +0x7c = behaviour+0xc x (fx dz - fz dx) / |d|** (0x406fd0;
+    symbolic run in reverse-engineering/tools/emu_traffic.py), with d =
+    W1 - car (3D), f the car's forward axis (matrix +0x20) and the gain
+    5.890 (behaviour 2) or 8.099 (behaviour 3). It is zeroed below
+    1.5 m/s (and for the player's car in game mode 7).
+  - **Arrival** (0x406e10, bisected under Unicorn): W0 becomes W1, and
+    record +4 steps on, when |W1 - car| < behaviour+4 x |W1 - W0| x
+    (1 + (8 - min(|128 - |W1 - W0||, 8)) / 16). behaviour+4 is 1.0 / 1.2,
+    so on a regular 128-unit segment that is 192 / 230 units: W1 stays one
+    to two segments ahead.
+  - At a dead end (W1 or far = -1, only when W0 is -1 since 0x4075f0 falls
+    back to the waypoint itself) the speed drops by behaviour+0x18 a frame
+    until 0.
+- CONFIRMED (code), the lane change: change_lane passes the chooser the
+  **physical lane**, the index of object +0x20 (the nearest waypoint, kept
+  by 0x4424b0 as objects move) in the chunk's side list (0x403844..0x403873).
+  It compares the wanted lane with AI record **+0x14, the target lane**
+  (0x403c36). One step a tick: 0x406d90 (down) or 0x406d10 (up) moves W0 to
+  the neighbouring lane's waypoint in W0's chunk (W0's back link, then that
+  waypoint's lane link), zeroes record +0xc and steps +0x14. So a change is
+  made once and steered out, and it is undone only if the chooser changes
+  its mind.
+- Port (traffic.c `basic_ai`, `sync_car`; main.c): each traffic car is now
+  an a2_drive driven this way. The engine's integrator moves it, and it
+  takes part in the AI contact pass as a body: it stops at barriers,
+  objects, racers, cops, other traffic and **the player**, who is now a
+  still body of that pass (the others stop at it and push it). The player's
+  own steps treat traffic as boxes, as before, and their impulses go into the
+  traffic car's velocity.
+  - Lane hold (A2_TRAFFIC_DEV): with lane changes off, a mean of 3-5 units
+    off the W0 -> W1 line, worst 12-40 in curves; with the yaw sign flipped
+    the cars leave the road, which confirms the sign.
+  - The traffic now weaves about as much as the original measured in
+    question 50 (6.9 % of traffic ticks change lane): about 7400 lane
+    changes on an etappe1 run, roughly 8 % of the ticks. The port's old
+    1.2 s slide had damped that.
+  - Regressions: etappe1 201.8 s, 0 unwedges; etappe5 271.6 s, 1; etappe2
+    1036.8 s, 15; etappe1 with police 220.4 s, 1. All finish.
+  - The overlap deviation is still needed. Without it etappe2 and etappe1
+    with police stall. On etappe1 the car is held by a barrier slab (chunk
+    421, 77086 sub-steps), entered just after a crash at 108 s (178 -> 43
+    km/h). How the car's corner got into the slab (the unswept turn, an
+    impulse, or the port's circular push-out, which can leave a box corner
+    inside a slab) is the next thing to settle.
+
