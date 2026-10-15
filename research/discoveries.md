@@ -7295,7 +7295,24 @@ Completes open question 5 (session 9), which found the driver-name scan
 - CONFIRMED (debug trace, session 6): spel.dat shows **e0N_w_hi.tga**
   (640x480; w_lo 320x200) while it loads ("Loading wait screen for 16-bit
   mode"). For etappe1 it is the route map "Amsterdam / Den Haag".
-- Port (game mode): the same picture with a load bar while it loads, then
-  "DRUK OP ENTER OM DE RACE TE STARTEN" until Enter. The bar and prompt are
-  port additions.
+- CONFIRMED (code + Wine capture): **the progress bar is the original's
+  own.** handle_progress_bar (0x41c410, "Calling 'handle_progress_bar'" at
+  0x4316d7) takes the step's percentage from a table at 0x4ab9e8 (indexed
+  by the step counter 0x4ab9e4; with [0x4ac98c] set it instead records the
+  steps' times into 0x4aaa40, a calibration mode). It calls **0x41c4c0
+  (percent)**, which:
+  1. redraws the wait screen (0x41bde0(1, etappe));
+  2. blits the anim of the resolution's entry at 0x4885b8 (stride 0x3f0;
+     lores anim 18 at (246, 177), **hires anim 19 at (489, 425)**) 1:1,
+     cut to width * percent / 100 (at least 2 pixels), with 0x4697c0.
+
+  Anim 19 is surface 430 = **RC.IMG sprite 429, 124x33: ten blocks from
+  dark red to yellow**. The picture's bottom-right box is drawn to hold it.
+  The Wine capture shows it 90 % full on etappe1's map. The picture is
+  24-bit, so it goes through the gamma square (0x468380) like the sky.
+- Port (game mode): the same picture with the gamma, and sprite 429 revealed
+  at (489, 425) as the port loads. The sprites need the track palette, so
+  the bar appears from the 65 % step on. Then "DRUK OP ENTER OM DE RACE TE
+  STARTEN" blinks between the title and the map until Enter. The prompt is
+  the port's own.
 

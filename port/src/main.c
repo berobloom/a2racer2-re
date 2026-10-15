@@ -860,7 +860,8 @@ typedef struct {
 } load_screen_t;
 
 static void load_screen(load_screen_t *ls, SDL_Window *win, const a2_archive *rcs,
-                        const char *prefix, float frac, const a2_font *font, const char *msg)
+                        const char *prefix, float frac, const a2_sprites *hud,
+                        const a2_font *font, const char *msg)
 {
     int w = 640, h = 480;
     SDL_GL_GetDrawableSize(win, &w, &h);
@@ -873,6 +874,9 @@ static void load_screen(load_screen_t *ls, SDL_Window *win, const a2_archive *rc
         const uint8_t *data = idx >= 0 ? a2_archive_data(rcs, idx, &size) : NULL;
         a2_image im;
         if (data && a2_image_decode(&im, data, size, name) == 0) {
+            /* 24-bit, so squared by the gamma as 0x468380 does (Game.ini
+             * gamma=1) */
+            a2_gfx_gamma_rgba(im.rgba, (size_t)im.width * im.height);
             ls->tex = a2_gfx_texture_from_image(&im, 1);
             a2_image_free(&im);
         }
@@ -901,41 +905,25 @@ static void load_screen(load_screen_t *ls, SDL_Window *win, const a2_archive *rc
         glVertex2f(x0, y0 + 480.0f * k);
         glEnd();
     }
-    /* the bar: a dark frame, the fill in the HUD's orange */
-    float bx = x0 + 120.0f * k, by = y0 + 440.0f * k, bw = 400.0f * k, bh = 12.0f * k;
-    glDisable(GL_TEXTURE_2D);
-    glColor4f(0.0f, 0.0f, 0.0f, 0.75f);
-    glBegin(GL_QUADS);
-    glVertex2f(bx - 2.0f * k, by - 2.0f * k);
-    glVertex2f(bx + bw + 2.0f * k, by - 2.0f * k);
-    glVertex2f(bx + bw + 2.0f * k, by + bh + 2.0f * k);
-    glVertex2f(bx - 2.0f * k, by + bh + 2.0f * k);
-    glEnd();
-    if (frac > 1.0f)
-        frac = 1.0f;
-    glColor4f(1.0f, 0.55f, 0.1f, 1.0f);
-    glBegin(GL_QUADS);
-    glVertex2f(bx, by);
-    glVertex2f(bx + bw * frac, by);
-    glVertex2f(bx + bw * frac, by + bh);
-    glVertex2f(bx, by + bh);
-    glEnd();
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glEnable(GL_TEXTURE_2D);
+    /* the bar, 0x41c4c0: anim 19 (RC.IMG sprite 429, 124x33, red to yellow
+     * blocks) at (489, 425), blitted 1:1 and cut at width * percent / 100,
+     * at least 2 pixels; it fills the box in the picture's corner */
+    int sw = 0, sh = 0;
+    if (hud && a2_sprite_size(hud, 429, &sw, &sh) && sw > 0) {
+        if (frac > 1.0f)
+            frac = 1.0f;
+        int cw = (int)(sw * frac);
+        if (cw < 2)
+            cw = 2;
+        if (cw > sw)
+            cw = sw;
+        a2_sprite_draw_sub(hud, 429, 0, 0, cw, sh, x0 + 489.0f * k, y0 + 425.0f * k, cw * k,
+                           sh * k);
+    }
+    /* port addition: the prompt, between the title and the map */
     if (font && msg) {
         float tw = a2_font_text_width(font, msg, k);
-        float th = a2_font_height(font, k);
-        glDisable(GL_TEXTURE_2D);
-        glColor4f(0.0f, 0.0f, 0.0f, 0.6f);
-        glBegin(GL_QUADS);
-        glVertex2f(x0 + 320.0f * k - tw * 0.5f - 8.0f * k, by - th - 18.0f * k);
-        glVertex2f(x0 + 320.0f * k + tw * 0.5f + 8.0f * k, by - th - 18.0f * k);
-        glVertex2f(x0 + 320.0f * k + tw * 0.5f + 8.0f * k, by - 6.0f * k);
-        glVertex2f(x0 + 320.0f * k - tw * 0.5f - 8.0f * k, by - 6.0f * k);
-        glEnd();
-        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        glEnable(GL_TEXTURE_2D);
-        a2_font_draw(font, msg, x0 + 320.0f * k - tw * 0.5f, by - th - 12.0f * k, k);
+        a2_font_draw(font, msg, x0 + 320.0f * k - tw * 0.5f, y0 + 88.0f * k, k);
     }
     a2_sprites_end();
     SDL_GL_SwapWindow(win);
@@ -1058,11 +1046,13 @@ int main(int argc, char **argv)
     }
     fprintf(stderr, "GL %s / %s\n", (const char *)glGetString(GL_VERSION),
             (const char *)glGetString(GL_RENDERER));
+    a2_sprites *hud = NULL;
     load_screen_t lscr = {0, 0};
+    a2_gfx_set_gamma(a2_ini_int(datadir, "Game.ini", "[GFX OPTIONS]", "gamma", 1));
 #define LOAD_STEP(frac)                                                                            \
     do {                                                                                           \
         if (game_mode)                                                                             \
-            load_screen(&lscr, win, &rcs, prefix, (frac), NULL, NULL);                             \
+            load_screen(&lscr, win, &rcs, prefix, (frac), hud, NULL, NULL);                        \
     } while (0)
     LOAD_STEP(0.05f);
 
@@ -1171,7 +1161,6 @@ int main(int argc, char **argv)
     /* HUD art is 8-bit and needs a palette; the game takes the per-track one
      * named by Raser.ini [PALET] (e00_pal.pcx for etappe0), which is a 16x16
      * PCX acting purely as a palette carrier. */
-    a2_sprites *hud = NULL;
     /* The HUD's own bitmap fonts.  The labels are drawn with one of the 17
      * fonts in the table at VA 0x486D08 (see font.h) and the big readouts with
      * the 3D mesh font, which is why the numbers are bevelled and the labels
@@ -1817,7 +1806,7 @@ int main(int argc, char **argv)
         Uint32 t0 = SDL_GetTicks();
         while (waiting && running) {
             int blink = ((SDL_GetTicks() - t0) / 500) % 2 == 0;
-            load_screen(&lscr, win, &rcs, prefix, 1.0f, fnt_label,
+            load_screen(&lscr, win, &rcs, prefix, 1.0f, hud, fnt_label,
                         blink ? "DRUK OP ENTER OM DE RACE TE STARTEN" : NULL);
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {
