@@ -24,8 +24,8 @@ the files the game saves (Game.ini, Raser.ini, menu.ini, SLOTS.RAS,
 options.ras, CARS.DAT, garage.ini) are real copies, so careers persist
 between runs.
 
-Each race opens on the original's loading screen for the stage
-(`e0N_w_hi.tga`, the route map), with its own progress bar: RC.IMG sprite
+Each race opens on the original's loading screen for the stage (the map
+Raser.ini `[wait_hi]` names, as a .tga), with its own progress bar: RC.IMG sprite
 429, the red-to-yellow blocks in the box at the bottom right. It then waits
 for **Enter** ("DRUK OP ENTER OM DE RACE TE STARTEN", a port addition; the
 original starts the race as soon as it has loaded).

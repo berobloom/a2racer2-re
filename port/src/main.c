@@ -860,15 +860,13 @@ typedef struct {
 } load_screen_t;
 
 static void load_screen(load_screen_t *ls, SDL_Window *win, const a2_archive *rcs,
-                        const char *prefix, float frac, const a2_sprites *hud,
+                        const char *name, float frac, const a2_sprites *hud,
                         const a2_font *font, const char *msg)
 {
     int w = 640, h = 480;
     SDL_GL_GetDrawableSize(win, &w, &h);
     if (!ls->tried) {
         ls->tried = 1;
-        char name[32];
-        snprintf(name, sizeof name, "%s_w_hi.tga", prefix);
         long idx = a2_archive_find(rcs, name);
         uint32_t size = 0;
         const uint8_t *data = idx >= 0 ? a2_archive_data(rcs, idx, &size) : NULL;
@@ -1048,13 +1046,41 @@ int main(int argc, char **argv)
             (const char *)glGetString(GL_RENDERER));
     a2_sprites *hud = NULL;
     load_screen_t lscr = {0, 0};
+    /* Gm_ini.cpp (0x4220e6) reads Raser.ini [wait_hi] <etappe> (etappe 0
+     * shows e06's Amsterdam map); in 16-bit mode the extension becomes .TGA.
+     * [progress] percent0..10 are the bar's steps (calculate=0). */
+    char wait_name[32];
+    {
+        char key[8], v[32] = "";
+        snprintf(key, sizeof key, "%d", (int)(stem[strlen(stem) - 1] - '0'));
+        snprintf(wait_name, sizeof wait_name, "%s_w_hi.tga", prefix);
+        if (a2_ini_string(datadir, "Raser.ini", "[wait_hi]", key, v, sizeof v) && v[0]) {
+            char *dot = strrchr(v, '.');
+            if (dot)
+                *dot = '\0';
+            char *sp = strchr(v, ' ');
+            if (sp)
+                *sp = '\0';
+            snprintf(wait_name, sizeof wait_name, "%s.tga", v);
+        }
+    }
+    float load_pct[4];
+    {
+        static const int idx[4] = {0, 2, 5, 8};
+        static const int def[4] = {10, 72, 91, 94};
+        for (int i = 0; i < 4; i++) {
+            char key[16];
+            snprintf(key, sizeof key, "percent%d", idx[i]);
+            load_pct[i] = a2_ini_int(datadir, "Raser.ini", "[progress]", key, def[i]) / 100.0f;
+        }
+    }
     a2_gfx_set_gamma(a2_ini_int(datadir, "Game.ini", "[GFX OPTIONS]", "gamma", 1));
 #define LOAD_STEP(frac)                                                                            \
     do {                                                                                           \
         if (game_mode)                                                                             \
-            load_screen(&lscr, win, &rcs, prefix, (frac), hud, NULL, NULL);                        \
+            load_screen(&lscr, win, &rcs, wait_name, (frac), hud, NULL, NULL);                     \
     } while (0)
-    LOAD_STEP(0.05f);
+    LOAD_STEP(load_pct[0]);
 
     a2_anims *anims = a2_anims_load(datadir);
     if (anims)
@@ -1148,7 +1174,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "failed to build scene\n");
         return 1;
     }
-    LOAD_STEP(0.55f);
+    LOAD_STEP(load_pct[1]);
     char stats[256];
     a2_scene_stats(scene, stats, sizeof stats);
     fprintf(stderr, "scene: %s\n", stats);
@@ -1242,7 +1268,7 @@ int main(int argc, char **argv)
         sky_back = (int)(time(NULL) % 7) + 1;
     a2_sky *sky = a2_sky_load(&rcs, sky_back);
     a2_lang *lang = a2_lang_load(datadir, -1);
-    LOAD_STEP(0.65f);
+    LOAD_STEP(load_pct[2]);
 
     /* Checkpoints are the .pmp trigger slot value 45.  Across all 7 tracks
      * these are 1:1 with the A_CHECK* overhead gantries (11 triggers, 11
@@ -1650,7 +1676,7 @@ int main(int argc, char **argv)
     /* The scripted path objects: boats, trains, helicopter, aeroplane and
      * scripted traffic (.pth). */
     a2_paths *paths = a2_paths_create(scene, &rcs, anims, &track);
-    LOAD_STEP(0.85f);
+    LOAD_STEP(load_pct[3]);
     int scene_chunks = (int)track.rmp.chunk_count;
     finish_progress = circuit ? (float)(start_chunk + nr_laps * scene_chunks)
                               : (float)finish_chunk;
@@ -1806,7 +1832,7 @@ int main(int argc, char **argv)
         Uint32 t0 = SDL_GetTicks();
         while (waiting && running) {
             int blink = ((SDL_GetTicks() - t0) / 500) % 2 == 0;
-            load_screen(&lscr, win, &rcs, prefix, 1.0f, hud, fnt_label,
+            load_screen(&lscr, win, &rcs, wait_name, 1.0f, hud, fnt_label,
                         blink ? "DRUK OP ENTER OM DE RACE TE STARTEN" : NULL);
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {

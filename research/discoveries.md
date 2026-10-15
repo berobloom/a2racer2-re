@@ -7310,9 +7310,18 @@ Completes open question 5 (session 9), which found the driver-name scan
   dark red to yellow**. The picture's bottom-right box is drawn to hold it.
   The Wine capture shows it 90 % full on etappe1's map. The picture is
   24-bit, so it goes through the gamma square (0x468380) like the sky.
+- CONFIRMED (code + data): the picture's name is **Raser.ini [wait_hi]
+  <etappe>** (read into the 13-byte table 0x4aa9b0 by Gm_ini.cpp 0x4220e6;
+  [wait_lo] for 320x200). In 16-bit mode the extension is replaced with
+  .TGA. The shipped list maps 0 -> **e06** (there is no e00_w_hi; etappe 0
+  and 6 are both Amsterdam), 1-6 -> e01..e06, 7 and 8 -> e01. The bar's
+  percentages per load step are **[progress] percent0..10**: 10, 23, 72,
+  74, 75, 91, 91, 91, 94, 94, 100. They were written by a calibration run
+  (calculate=1 records the steps' times into 0x4aaa40).
 - Port (game mode): the same picture with the gamma, and sprite 429 revealed
-  at (489, 425) as the port loads. The sprites need the track palette, so
-  the bar appears from the 65 % step on. Then "DRUK OP ENTER OM DE RACE TE
+  at (489, 425) as the port loads. The port's four steps take percent0, 2,
+  5 and 8 from [progress], then 100. The sprites need the track palette,
+  so the bar appears from the third step on. Then "DRUK OP ENTER OM DE RACE TE
   STARTEN" blinks between the title and the map until Enter. The prompt is
   the port's own.
 
