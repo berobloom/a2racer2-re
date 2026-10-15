@@ -6784,10 +6784,17 @@ Completes open question 5 (session 9), which found the driver-name scan
   0x3b), then POSITIE (38). Every HUD label is font 10 (SCHADE 0x41a4d7,
   TURBO 0x41a438, SNELHEID 0x41a487, POSITIE 0x419d5a). The circuit panel
   is 0x419e00 (RONDE INFO).
-- CONFIRMED (code): the checkpoint panel 0x41a5f0 also has a literal
-  **"EXTRA TIJD"** (0x488300, not language.ini) at element 0x4c, timed off
-  0x4dcaa0. This is separate from the banner slot's 44. Not ported; the timing is
-  not read.
+- CONFIRMED (code): the time panels (0x41a5f0 highway, 0x41a780 circuit)
+  have a flasher of their own. The checkpoint handler sets **0x4dcaa0**
+  (0x42a62b) right after raising banner 44 (0x42a621). The panel latches it
+  with GetTickCount (0x4a7d7c) and for **2000 ms** draws the literal
+  **"EXTRA TIJD"** (0x488300, not language.ini) at element 0x4c in font 10,
+  while (ticks / 100) is odd. That is the banner's own place, time and blink
+  phase, so in Dutch the two coincide exactly. With the English or German
+  strings, banner 44 (EXTENDED TIME) is overprinted by the Dutch literal
+  (LIKELY visible; not seen at runtime). Ported.
+- MEASURED: the banners are olfnt01 at **0.8** as well: COP MODE is 85 px
+  wide in the capture against the font's 100, centred at about (318, 80).
 - The port had no RACE RECORD row on the highway stages and placed POSITIE
   as on a circuit. Both are fixed. The bottom group is refitted to the
   capture, in 800x600 units (capture px x 1.25).

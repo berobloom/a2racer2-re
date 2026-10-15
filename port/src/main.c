@@ -1146,6 +1146,13 @@ int main(int argc, char **argv)
      * 31, 44, 45, 46, 47, 48, 49, 50, 51.  A new raise replaces the old. */
     int banner_id = 0;
     Uint32 banner_ms = 0;
+    /* The time panels' own flasher (0x41a6f1 / 0x41a780): the checkpoint
+     * handler sets 0x4dcaa0 (0x42a62b) right after raising banner 44, and the
+     * panel shows the literal "EXTRA TIJD" (0x488300, not language.ini) at the
+     * banner's place, 2000 ms, blinking in the same phase.  In Dutch the two
+     * coincide; in English and German it overprints EXTENDED TIME. */
+    Uint32 extra_lit_ms = 0;
+    int extra_lit = 0;
 #define RAISE_BANNER(id) (banner_id = (id), banner_ms = SDL_GetTicks())
     int finished = 0;
     int arrested = 0;         /* the police ended it; not the same as finishing */
@@ -2813,6 +2820,8 @@ int main(int argc, char **argv)
                 if (timed && !arrested) {
                     time_left += cp_bonus;
                     RAISE_BANNER(44); /* 0x42a621 */
+                    extra_lit = 1;
+                    extra_lit_ms = SDL_GetTicks();
                 }
                 if (audio)
                     a2_audio_play(audio, 83, 0); /* checkp.wav, 0x42a5a8 */
@@ -3733,10 +3742,23 @@ int main(int argc, char **argv)
                             [49] = "EERSTE WAARSCHUWING", [50] = "LAATSTE WAARSCHUWING",
                             [51] = "RADAR BONUS"};
                         const char *txt = a2_lang_get(lang, banner_id, fb[banner_id]);
-                        float sc = win_h / 480.0f;
+                        float sc = win_h / 600.0f, py = win_h / 480.0f; /* olfnt01 at 0.8; (320, 80) of 480 */
                         a2_font_draw(fnt_label, txt,
                                      win_w * 0.5f - a2_font_text_width(fnt_label, txt, sc) * 0.5f,
-                                     80.0f * sc - a2_font_height(fnt_label, sc) * 0.5f, sc);
+                                     80.0f * py - a2_font_height(fnt_label, sc) * 0.5f, sc);
+                    }
+                }
+
+                if (extra_lit && fnt_label) {
+                    Uint32 now = SDL_GetTicks();
+                    if (now - extra_lit_ms > 2000) {
+                        extra_lit = 0;
+                    } else if ((now / 100) & 1) {
+                        float sc = win_h / 600.0f, py = win_h / 480.0f; /* olfnt01 at 0.8; (320, 80) of 480 */
+                        const char *txt = "EXTRA TIJD";
+                        a2_font_draw(fnt_label, txt,
+                                     win_w * 0.5f - a2_font_text_width(fnt_label, txt, sc) * 0.5f,
+                                     80.0f * py - a2_font_height(fnt_label, sc) * 0.5f, sc);
                     }
                 }
 
