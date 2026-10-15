@@ -1778,7 +1778,6 @@ int main(int argc, char **argv)
     int last_rail_hit = 0, last_obj_hit = 0;
     int was_hitting_car = 0;
     float race_time = 0.0f;
-    int next_camera = 0;
     float flash_at = -100.0f;
     /* a triggered flash held back while the car may still hit the pole */
     float flash_pending = -1.0f;
@@ -1789,8 +1788,6 @@ int main(int argc, char **argv)
     int next_checkpoint = 0;
     while (next_checkpoint < checkpoint_count && checkpoint_chunk[next_checkpoint] < player_chunk0)
         next_checkpoint++;
-    while (next_camera < camera_count && camera_chunk[next_camera] < player_chunk0)
-        next_camera++;
     float split_time = 0.0f;
     int cop_banner_done = 0; /* COP MODE, raised once as the race starts */
     int cop_msg_seen = 0;
@@ -1881,8 +1878,11 @@ int main(int argc, char **argv)
      * up.  A digit (style 1: phases 2, 3) flies 90% of the way to the car in
      * 0.8 s turning once (0x417da0), then holds 0.2 s (0x417ec0); "GO"
      * (style 2: phases 4, 3) turns its letters once round their centre in 1 s
-     * (0x417f50 / 0x418050), then holds 0.2 s.  The start camera's fly-in
-     * itself is not ported. */
+     * (0x417f50 / 0x418050), then holds 0.2 s.  Before it, the start camera
+     * (ev_stcam, 0x416ce0 / 0x416e00) looks at the car + (0, 20, 0) from the
+     * offset (-120, 100, 200) in the car's frame for 1000 ms, then moves in
+     * equal steps over 2 s to (0, 20, -60): CD_FLY seconds in all. */
+    const float CD_FLY = 3.0f;
     float cd_time = game_mode ? 0.0f : 100.0f;
     int cd_next = 0;                     /* the next text to launch, 0..3 */
     float cd_launch[4] = {-1, -1, -1, -1};
@@ -2035,7 +2035,7 @@ int main(int argc, char **argv)
         last = now;
         if (dt > 0.1f)
             dt = 0.1f;
-        if (cd_time < 6.0f && !halt) {
+        if (cd_time < CD_FLY + 6.0f && !halt) {
             if (cd_time == 0.0f) {
                 /* where the letters come from: the player's car and heading */
                 float a = drv.heading * (6.28318531f / 4096.0f);
@@ -2050,14 +2050,14 @@ int main(int argc, char **argv)
                 cd_time = (float)atof(getenv("A2_CD_AT"));
             if (getenv("A2_CD_LOG"))
                 fprintf(stderr, "cd: %.3f at %u ms (dt %.3f)\n", cd_time, SDL_GetTicks(), dt);
-            while (cd_next < 4 && cd_time >= (float)(cd_next + 1)) {
-                cd_launch[cd_next] = (float)(cd_next + 1);
+            while (cd_next < 4 && cd_time >= CD_FLY + (float)(cd_next + 1)) {
+                cd_launch[cd_next] = CD_FLY + (float)(cd_next + 1);
                 if (audio)
                     a2_audio_play(audio, cd_next < 3 ? 42 : 43, 0); /* getset / go */
                 cd_next++;
             }
         }
-        if (tweak.open || halt || cd_time < 4.0f)
+        if (tweak.open || halt || cd_time < CD_FLY + 4.0f)
             dt = 0.0f; /* the menu is modal in the original: the race stands still */
         /* Fixed step for headless runs, so they are reproducible.  It has to be
          * set here, before anything reads `dt`: when it was applied further
@@ -3103,6 +3103,7 @@ int main(int argc, char **argv)
                     stamp_traffic_sign(scene, hud, etappe_no, (int)track.pmp.chunks[c].trigger1, !circuit);
                 }
             a2_paths_update(paths, dt);
+            int ch_was = prev_ch; /* for the triggers below */
             prev_ch = ch;
 
             if (flash_pending >= 0.0f) {
@@ -3117,7 +3118,12 @@ int main(int argc, char **argv)
                     flash_pending = -1.0f;
                 }
             }
-            if (next_camera < camera_count && ch >= camera_chunk[next_camera]) {
+            for (int cam_k = 0; cam_k < camera_count; cam_k++) {
+                /* trigger 1 (0x42a2e0) fires as the car enters the chunk going
+                 * forwards (record +0x1c < +0x18): every time, so on every
+                 * lap of a circuit */
+                if (!crossed_chunk(ch_was, ch, camera_chunk[cam_k], scene_chunks))
+                    continue;
                 /* The game keeps the posted limit in a single global, 0x48C480,
                  * whose **static initial value is -1** and which only the
                  * trigger-4/5/6/8 handlers ever write.  The camera compares
@@ -3138,24 +3144,17 @@ int main(int argc, char **argv)
                  * one or two past it, so a car that hits the pole is flashed
                  * too.  Here the flash waits up to 0.5 s (or two chunks) and
                  * is dropped if the pole goes down meanwhile. */
-                if (kmh > limit && a2_scene_camera_down(scene, camera_chunk[next_camera])) {
+                if (kmh > limit && a2_scene_camera_down(scene, camera_chunk[cam_k])) {
                     fprintf(stderr, "FLITS at chunk %d skipped: the camera is down\n", ch);
                 } else if (kmh > limit) {
                     flash_pending = race_time;
-                    flash_pending_chunk = camera_chunk[next_camera];
+                    flash_pending_chunk = camera_chunk[cam_k];
                     if (limit < 0)
                         fprintf(stderr, "FLITS at chunk %d: %d km/h, no limit posted\n", ch, kmh);
                     else
                         fprintf(stderr, "FLITS at chunk %d: %d km/h in a %d zone\n", ch, kmh,
                                 limit);
                 }
-                /* The original's second gate is `prev_chunk < current_chunk` on
-                 * the car's record (+0x1c and +0x18), i.e. it fires on the frame
-                 * the car advances a chunk forwards -- a direction check and a
-                 * once-per-crossing guard in one.  The port instead fires each
-                 * camera once per race, which differs only on a circuit, where
-                 * the original would flash again on the next lap. */
-                next_camera++;
             }
 
             /* The service station, trigger 2 (0x42a4d0).  The handler runs
@@ -3348,6 +3347,19 @@ int main(int argc, char **argv)
                     cam_eye[2] = tz + off[2];
                     memcpy(cam_look, look, sizeof look);
                 }
+                if (cd_time < CD_FLY) {
+                    /* the start camera's fly-in (0x416ce0 / 0x416e00) */
+                    float u = cd_time < 1.0f ? 0.0f : (cd_time - 1.0f) / (CD_FLY - 1.0f);
+                    float fo[3] = {-120.0f + 120.0f * u, 100.0f - 80.0f * u, 200.0f - 260.0f * u};
+                    CAM_TURN(off, fo[0], fo[1], fo[2]);
+                    cam_eye[0] = tx + off[0];
+                    cam_eye[1] = ty + off[1];
+                    cam_eye[2] = tz + off[2];
+                    CAM_TURN(off, 0.0f, 20.0f, 0.0f);
+                    cam_look[0] = tx + off[0];
+                    cam_look[1] = ty + off[1];
+                    cam_look[2] = tz + off[2];
+                }
                 float dx = cam_look[0] - cam_eye[0], dy = cam_look[1] - cam_eye[1],
                       dz = cam_look[2] - cam_eye[2];
                 memcpy(cam.pos, cam_eye, sizeof cam_eye);
@@ -3374,7 +3386,8 @@ int main(int argc, char **argv)
             char title[160];
             snprintf(title, sizeof title, "A2 Racer II - drive - %3.0f km/h - gear %d - chunk %d",
                      car.speed * 3.6f, car.gear + 1, ch);
-            SDL_SetWindowTitle(win, title);
+            if (!game_mode)
+                SDL_SetWindowTitle(win, title);
         }
         float speed = (k[SDL_SCANCODE_LSHIFT] ? 6000.0f : 1200.0f) * dt;
         float fwd[3];

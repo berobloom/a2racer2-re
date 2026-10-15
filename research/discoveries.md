@@ -7436,3 +7436,45 @@ Completes open question 5 (session 9), which found the driver-name scan
   pump: etappe1 (chunk 549) and etappe2 (chunk 315) both give QUICK
   SERVICE.
 
+## The start camera fly-in (session 15)
+
+- CONFIRMED (code), ev_stcam.cpp, game mode 1:
+  - **Begin (0x416ce0):** the start camera ([0x4a707c], in the camera array
+    [0x4e66a0], 0x160 bytes each) targets the player's car with offset (0, 20,
+    0) (0x4477f0). It stands at **offset (-120, 100, 200)** in the car's
+    frame (0x4476f0; x across, y up, z forward, so ahead of the car and up),
+    and becomes active (0x4142b0(1)).
+  - **Tick (0x416e00):** state 0 holds for **1000 ms**. State 1 takes
+    frames = 2.0 / frame time, a step = ((0, 20, -60) - offset) / frames
+    (0x447720 reads the current offset), and moves the offset one step a
+    frame (0x447770). After **2 s** it is at **(0, 20, -60)**, 60 behind and
+    20 up, and the sequence ends.
+  - **End (0x416fe0):** starts the countdown (above).
+- Seen in a Wine capture (etappe1): the gantry in front of the camera with
+  the car beyond it, a close view of the car's front, then the countdown
+  from behind.
+- Port (game mode): the same offsets and timing through the race camera's
+  car-frame transform. The countdown now starts after these 3 s, so the race
+  stands still for 7 s in all.
+
+## The speed cameras fire on every lap (session 15)
+
+- The port fired each camera once per race (a `next_camera` index). The
+  original's trigger 1 (0x42a2e0) fires on every forward entry into the
+  chunk (+0x1c < +0x18), so on a circuit every lap. The port now checks
+  every camera's chunk for a forward crossing each frame. On etappe0, two
+  laps gave 6 flashes a lap; a camera knocked over stays quiet on the later
+  lap.
+- The same mistake had disabled the old service-station check: both used
+  `crossed_chunk(prev_ch, ch, ...)` after `prev_ch = ch`, comparing a chunk
+  with itself. The cameras now use the chunk from before the update.
+
+## The career loop checked end to end (session 15)
+
+- Through the menu with a wrapper that adds the autopilot (and Enter pressed
+  as a player would): START, load screen, Enter, fly-in, countdown,
+  etappe0's two laps (4th, 1174.7 s), Enter after the finish, back to the
+  menu. The menu showed budget 39000 (35000, no prize for 4th, + 2 x 2000
+  radar bonus), damage 30 % and next stage "Kwalificatie AMSTERDAM - DEN
+  HAAG". STANDEN TOTAAL listed the three racers and the player at 19:34.
+
