@@ -42,6 +42,10 @@ typedef struct a2_font a2_font;
 a2_font *a2_font_load(const a2_archive *rcs, const char *name, const uint8_t palette[768]);
 void a2_font_free(a2_font *f);
 
+/* Letter spacing added to every glyph's advance, in the font's own pixels:
+ * the original's 0x469f70 / 0x4182f0, set per font at load (0x4183c0 ..
+ * 0x418737); at 640x480 olfnt01 -2, olfnt02 -4, olfnt04 -3, olfnt03 -8. */
+void a2_font_set_spacing(a2_font *f, int px);
 /* Width and height of `text` at `scale`, in pixels. */
 float a2_font_text_width(const a2_font *f, const char *text, float scale);
 float a2_font_height(const a2_font *f, float scale);

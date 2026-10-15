@@ -548,21 +548,6 @@ static int crossed_chunk(int prev, int now, int target, int total)
     return off > 0 && off <= span;
 }
 
-/* One of the HUD's white brackets.
- *
- * RC.IMG sprite 425 holds the top-right pieces and 426 the bars, the speed
- * bracket and the "km/h" mark, each sheet packing several pieces with gaps
- * between them.  Every piece is a rounded left cap with a rail that runs out to
- * the piece's own right edge, and the original simply stretches the whole piece
- * to the size the element needs -- which is why a wide bracket has a thicker
- * rail than a narrow one, exactly as the original's do. */
-static void hud_bracket(const a2_sprites *s, int idx, int sx, int sy, int sw, int sh, float x,
-                        float y, float w, float h, float u)
-{
-    (void)u;
-    a2_sprite_draw_sub(s, idx, sx, sy, sw, sh, x, y, w, h);
-}
-
 static void camera_forward(const camera *c, float out[3])
 {
     float cy = cosf(c->yaw * (float)M_PI / 180.0f);
@@ -1123,11 +1108,15 @@ int main(int argc, char **argv)
                 fnt_value = a2_font_load(&rcs, "olfnt04.fnt", pal);
                 if (!fnt_value)
                     fnt_value = a2_font_load(&rcs, "lo_fnt4.fnt", pal);
-                /* The damage percentage needs a '%', which none of the four
-                 * carries; slider13 is the small white face that has one. */
-                fnt_pct = a2_font_load(&rcs, "slider13.fnt", pal);
-                if (!fnt_pct)
-                    fnt_pct = a2_font_load(&rcs, "lo_fnt4.fnt", pal);
+                /* The hires set's letter spacing (0x4183c0..0x418737, through
+                 * 0x469f70 / 0x4182f0): fonts 10, 11, 12 and 0. */
+                a2_font_set_spacing(fnt_label, -2);
+                a2_font_set_spacing(fnt_time, -4);
+                a2_font_set_spacing(fnt_value, -3);
+                a2_font_set_spacing(fnt_speed, -8);
+                /* The damage percentage is font 16, lo_fnt1 in both sets,
+                 * with "%2d@": its '@' glyph is the percent sign (0x41ab44). */
+                fnt_pct = a2_font_load(&rcs, "lo_fnt1.fnt", pal);
             }
         }
     }
@@ -3537,9 +3526,10 @@ int main(int argc, char **argv)
                  *
                  * Labels are language.ini strings 33..39 and 52..55 in olfnt01;
                  * the numbers are olfnt02/03/04, whose glyph sets say what each
-                 * is for.  The white brackets and the two bars are RC.IMG art:
-                 * sprite 425 holds the top-right pieces and 426 the bar frames,
-                 * the speed bracket and the "km/h" mark. */
+                 * is for.  The white brackets and the two bars are RC.IMG art.
+                 * At 640x480 the original blits each group's brackets as one
+                 * whole panel (311 / 313 top right, 312 bottom right, 412 the
+                 * checkpoint); 425-427 are the lores pieces. */
                 char line[64], val[64];
                 float s = win_h / 600.0f;
                 float right = win_w - 16.0f * s;
@@ -3547,8 +3537,24 @@ int main(int argc, char **argv)
                 /* The viewport the measurements come from is 607 of the art's
                  * pixels tall, so the bottom group hangs off that. */
                 float bot = win_h;
-                float lsc = s;
+                /* The brackets are whole RC.IMG panels drawn 1:1 at 640x480
+                 * (0x41c0f0, mode 0: no anchor) at the hires element positions
+                 * 0x41b860 fills in at run time; here kept to the right edge. */
+                float k640 = win_h / 480.0f, ox640 = win_w - 640.0f * k640;
+                /* The text is 1:1 at 640x480 too: the glyph loop 0x46a180
+                 * blits each glyph unscaled and advances by its width plus the
+                 * font's spacing (a2_font_set_spacing), which is what makes it
+                 * narrower than the art. */
+                float lsc = k640;
                 float lh = fnt_label ? a2_font_height(fnt_label, lsc) : 17.0f * s;
+#define HUD_PANEL(idx, px, py) a2_sprite_draw(hud, (idx), ox640 + (px) * k640, (py) * k640, k640)
+/* Text drawn top-left at a hires element (0x41bfc0 mode 0), the 640x480
+ * coordinates 0x41b860 writes and the running game was read back with. */
+#define HUD_AT(fnt, txt, ex, ey)                                                                   \
+    do {                                                                                           \
+        if (fnt)                                                                                   \
+            a2_font_draw((fnt), (txt), ox640 + (ex) * k640, (ey) * k640, lsc);                     \
+    } while (0)
 
 /* Labels and values are both right-aligned to the same edge; the label macro
  * yields its width so the bracket beside it knows where to stop. */
@@ -3567,29 +3573,31 @@ int main(int argc, char **argv)
             a2_font3d_draw(font, scene, (txt),                                                     \
                            rval - a2_font3d_width(font, (txt)) * lh, (yy), lh);                    \
     } while (0)
-/* A bracket `w` wide and `h` tall whose right edge is at `xr`. */
-#define HUD_BRACKET(idx, sx, sy, sw, sh, xr, yy, w, h)                                             \
-    hud_bracket(hud, (idx), (sx), (sy), (sw), (sh), (xr) - (w) * s, (yy), (w) * s, (h) * s, s)
 
                 /* --- top right: race time, lap info, position, lap --- */
-                HUD_LABEL(a2_lang_get(lang, 33, "RACE TIJD"), 6.0f * s);
-                /* sprite 427's time bracket, at 1.62 per art pixel on the 640x480 capture (2.03 units) */
-                a2_sprite_draw_sub(hud, 427, 0, 0, 28, 15, right - 176.5f * s, 20.0f * s, 56.8f * s,
-                                   30.4f * s);
+                HUD_AT(fnt_label, a2_lang_get(lang, 33, "RACE TIJD"), 546, 4); /* element 38 */
+                /* the panel: element 57, anim 12 = sprite 313 at (485, 15) on
+                 * the highways (0x419b10), element 51, anim 9 = sprite 311 at
+                 * (474, 15) on the circuits (0x419e00) -- every bracket of the
+                 * top-right group in one image */
+                if (circuit)
+                    HUD_PANEL(311, 474.0f, 15.0f);
+                else
+                    HUD_PANEL(313, 485.0f, 15.0f);
                 int rm = (int)(race_time / 60.0f);
                 snprintf(line, sizeof line, "%02d:%02d:%d", rm, ((int)race_time) % 60,
                          (int)((race_time - (int)race_time) * 10.0f));
-                HUD_VALUE(fnt_time, line, 31.0f * s);
+                HUD_AT(fnt_time, line, 502, 24); /* element 39 */
 
                 if (overlay_detail >= 3 && circuit) {
-                    HUD_LABEL(a2_lang_get(lang, 34, "RONDE INFO"), 73.0f * s);
-                    HUD_BRACKET(425, 0, 22, 27, 7, right - 131.0f * s, 73.0f * s, 79.0f, 25.0f);
+                    HUD_AT(fnt_label, a2_lang_get(lang, 34, "RONDE INFO"), 532, 54); /* 40 */
                     /* TIJD / RECORD / LAATSTE: the label sits left of the
                      * value, which stays flush with the right-hand edge. */
                     static const int row_id[3] = { 35, 36, 37 };
                     const char *row_fb[3] = { "TIJD", "RECORD", "LAATSTE" };
                     float row_t[3] = { race_time - lap_start, best_lap, last_lap };
-                    float rowy[3] = { 97.0f * s, 120.0f * s, 142.0f * s };
+                    /* elements 41..46: labels at x 484, values at 553 */
+                    static const float rowy[3] = { 75.0f, 92.0f, 109.0f };
                     for (int r = 0; r < 3; r++) {
                         if (row_t[r] > 0.0f)
                             snprintf(val, sizeof val, "%02d:%02d:%d", (int)(row_t[r] / 60.0f),
@@ -3597,19 +3605,9 @@ int main(int argc, char **argv)
                                      (int)((row_t[r] - (int)row_t[r]) * 10.0f));
                         else
                             snprintf(val, sizeof val, "--:--:-");
-                        HUD_VALUE(fnt_value, val, rowy[r]);
-                        if (fnt_label)
-                            a2_font_draw(fnt_label, a2_lang_get(lang, row_id[r], row_fb[r]),
-                                         right - 182.0f * s, rowy[r], lsc);
+                        HUD_AT(fnt_value, val, 553, rowy[r]);
+                        HUD_AT(fnt_label, a2_lang_get(lang, row_id[r], row_fb[r]), 484, rowy[r]);
                     }
-                    /* The box closes with a long rule under the last row, and a
-                     * plain vertical joins it to the bracket above -- the stub
-                     * at the foot of the one and the one at the head of the
-                     * other both point into it. */
-                    hud_bracket(hud, 425, 0, 51, 78, 7, right - 197.0f * s, 147.0f * s, 190.0f * s,
-                                20.0f * s, s);
-                    a2_sprite_draw_sub(hud, 425, 0, 26, 4, 1, right - 197.0f * s, 95.0f * s,
-                                       3.0f * s, 56.0f * s);
                 }
 
                 /* The highway panel (0x41a5f0): the literal word CHECKPOINT --
@@ -3619,20 +3617,22 @@ int main(int argc, char **argv)
                  * the race).  Not gated on overlay_detail.  Drawn here as the
                  * RACE TIJD block moved so that its middle sits mid-screen. */
                 if (timed) {
-                    float save_right = right, save_rval = rval;
-                    float shift = (float)win_w * 0.5f - (right - 92.0f * s);
-                    right += shift;
-                    rval += shift;
-                    HUD_LABEL("CHECKPOINT", 6.0f * s);
-                    /* sprite 427's time bracket, at 1.62 per art pixel on the 640x480 capture (2.03 units) */
-                a2_sprite_draw_sub(hud, 427, 0, 0, 28, 15, right - 176.5f * s, 20.0f * s, 56.8f * s,
-                                   30.4f * s);
+                    /* element 73, anim 0 = sprite 412, the two-sided bracket,
+                     * at (235, 15); the label (element 74) and the clock
+                     * (element 75) are drawn centred (mode 1) on x = 320 */
+                    float cx = win_w * 0.5f;
+                    a2_sprite_draw(hud, 412, cx - 85.0f * k640, 15.0f * k640, k640);
                     snprintf(line, sizeof line, "%02d:%02d:%d", (int)(time_left / 60.0f),
                              ((int)time_left) % 60,
                              (int)((time_left - (int)time_left) * 10.0f));
-                    HUD_VALUE(fnt_time, line, 31.0f * s);
-                    right = save_right;
-                    rval = save_rval;
+                    if (fnt_label && fnt_time) {
+                        a2_font_draw(fnt_label, "CHECKPOINT",
+                                     cx - 0.5f * a2_font_text_width(fnt_label, "CHECKPOINT", lsc),
+                                     6.0f * s, lsc);
+                        a2_font_draw(fnt_time, line,
+                                     cx - 0.5f * a2_font_text_width(fnt_time, line, lsc), 31.0f * s,
+                                     lsc);
+                    }
                 }
 
                 /* The highway panel's second row (0x419b10, detail 3):
@@ -3645,35 +3645,32 @@ int main(int argc, char **argv)
                  * POSITIE 103 px under RACE TIJD (on a circuit RONDE INFO
                  * sits between). */
                 if (overlay_detail >= 3 && !circuit) {
-                    HUD_LABEL(a2_lang_get(lang, 52, "RACE RECORD"), 71.0f * s);
-                    a2_sprite_draw_sub(hud, 427, 2, 24, 11, 15, right - 177.75f * s, 82.5f * s,
-                                       22.3f * s, 30.4f * s); /* 427's record bracket */
+                    HUD_AT(fnt_label, a2_lang_get(lang, 52, "RACE RECORD"), 522, 56); /* 58 */
                     int rr = save.race_record;
                     if (rr >= A2_NO_RECORD || rr <= 0)
                         snprintf(line, sizeof line, "--:--:-");
                     else
                         snprintf(line, sizeof line, "%02d:%02d:%d", rr / 1000 / 60,
                                  rr / 1000 % 60, rr / 100 % 10);
-                    HUD_VALUE(fnt_time, line, 97.0f * s);
+                    HUD_AT(fnt_time, line, 514, 76); /* element 59 */
                 }
                 if (racers) {
-                    float py = circuit ? 178.0f : 135.0f;
-                    HUD_LABEL(a2_lang_get(lang, 38, "POSITIE"), py * s);
+                    /* elements 47 / 48 on a circuit, 60 / 61 on a highway */
                     if (circuit)
-                        HUD_BRACKET(425, 37, 91, 17, 11, right - 87.0f * s, (py + 15.0f) * s,
-                                    26.0f, 28.0f);
-                    else /* 427's position bracket */
-                        a2_sprite_draw_sub(hud, 427, 31, 48, 11, 15, right - 117.75f * s,
-                                           146.25f * s, 22.3f * s, 30.4f * s);
+                        HUD_AT(fnt_label, a2_lang_get(lang, 38, "POSITIE"), 567, 139);
+                    else
+                        HUD_AT(fnt_label, a2_lang_get(lang, 38, "POSITIE"), 564, 107);
                     snprintf(line, sizeof line, "%d/%d", PLAYER_POSITION(),
                              a2_racers_count(racers) + 1);
-                    HUD_VALUE(fnt_time, line, (py + 26.0f) * s);
+                    if (circuit)
+                        HUD_AT(fnt_time, line, 571, 159);
+                    else
+                        HUD_AT(fnt_time, line, 567, 127);
                 }
                 if (circuit) {
-                    HUD_LABEL(a2_lang_get(lang, 39, "RONDE"), 238.0f * s);
-                    HUD_BRACKET(425, 37, 91, 17, 11, right - 71.0f * s, 252.0f * s, 29.0f, 30.0f);
+                    HUD_AT(fnt_label, a2_lang_get(lang, 39, "RONDE"), 580, 189); /* 49 */
                     snprintf(line, sizeof line, "%d/%d", lap, nr_laps);
-                    HUD_VALUE(fnt_time, line, 264.0f * s);
+                    HUD_AT(fnt_time, line, 571, 209); /* element 50 */
                 }
 
                 /* --- bottom right: damage, turbo, speed.  Every offset is
@@ -3684,21 +3681,20 @@ int main(int argc, char **argv)
                 float save_right_b = right;
                 right = win_w - 11.25f * s; /* the labels' right edge, x = 631 */
                 float kmh = car.speed < 0.0f ? -car.speed * 3.6f : car.speed * 3.6f;
-                snprintf(line, sizeof line, "%d", (int)(kmh + 0.5f));
+                /* 0x41a535: "%03d" of |[0x4d9e34]|, which 0x425eb1 builds as
+                 * (int)(v * 3.6), truncated (_ftol) */
+                snprintf(line, sizeof line, "%03d", (int)kmh);
                 /* The digits stop 44 pixels short of the edge: that is the room
                  * the "km/h" mark beside them needs. */
                 /* digits x 507..597, y 430..466; "km/h" 602..630 x 461..471;
                  * the bracket x 486..546, y 422..443 */
                 if (fnt_speed)
-                    a2_font_draw(fnt_speed, line,
-                                 win_w - 53.75f * s - a2_font_text_width(fnt_speed, line, lsc),
-                                 bot - 65.0f * s, lsc);
+                    a2_font_draw(fnt_speed, line, ox640 + 505.0f * k640, 428.0f * k640, k640); /* 56 */
                 else
                     HUD_VALUE(fnt_speed, line, bot - 65.0f * s);
-                a2_sprite_draw_sub(hud, 426, 63, 53, 16, 6, win_w - 47.5f * s, bot - 23.75f * s,
-                                   35.0f * s, 12.5f * s);
-                hud_bracket(hud, 426, 0, 37, 34, 12, win_w - 192.5f * s, bot - 72.5f * s,
-                            75.0f * s, 26.0f * s, s);
+                /* element 52, anim 11 = sprite 312 at (484, 340): both bar
+                 * frames, the speed bracket and the "km/h" mark */
+                HUD_PANEL(312, 484.0f, 340.0f);
 
                 if (overlay_detail >= 3) {
                     /* Both bars are an 11-frame 91x8 ladder in RC.IMG, in 10%
@@ -3723,10 +3719,11 @@ int main(int argc, char **argv)
                     /* frames x 532..630 (98 x 22-23), fills 91 x 8 at 1:1 from
                      * x 540, 7 below the frame's top; damage frame y 342,
                      * turbo 380; labels' tops 330 and 370 */
-                    float bar_w = 122.5f * s, bar_h = 27.5f * s;
-                    float fill_w = 113.75f * s, fill_h = 10.0f * s;
-                    static const float bar_y[2] = { 125.0f, 172.5f };  /* turbo, damage */
-                    static const float lab_y[2] = { 136.25f, 186.25f };
+                    /* the fills 1:1 at their elements (turbo 54 (540, 388),
+                     * damage 3 (541, 349)); the labels at 53 and 7 */
+                    float fill_w = 91.0f * k640, fill_h = 8.0f * k640;
+                    static const float fill_xy[2][2] = { { 540, 388 }, { 541, 349 } };
+                    static const float lab_xy[2][2] = { { 582, 368 }, { 571, 329 } };
                     for (int b = 0; b < 2; b++) {
                         /* TURBO sits above SNELHEID and SCHADE above that. */
                         int is_turbo = (b == 0);
@@ -3740,28 +3737,24 @@ int main(int argc, char **argv)
                         /* frame = level * (frames - 1) / 100, truncated
                          * (0x41aad1, _ftol 0x4700e0) */
                         int step = (int)(frac * 10.0f);
-                        float bx = win_w - 135.0f * s, by = bot - bar_y[b] * s;
-                        hud_bracket(hud, 426, 25, is_turbo ? 19 : 0, 55, 13, bx, by, bar_w, bar_h,
-                                    s);
                         /* 431, the all-dark bar, backs both: the frame carries a
                          * placeholder fill of its own and the chevrons are
                          * transparent between the arrows. */
-                        float fx = bx + 10.0f * s, fy = by + 8.75f * s;
+                        float fx = ox640 + fill_xy[b][0] * k640, fy = fill_xy[b][1] * k640;
                         a2_sprite_draw_sub(hud, 431, 0, 0, 91, 8, fx, fy, fill_w, fill_h);
                         a2_sprite_draw_sub(hud, is_turbo ? chevron[step] : solid[step], 0, 0, 91, 8,
                                            fx, fy, fill_w, fill_h);
-                        if (!is_turbo && fnt_pct) {
-                            /* The damage percentage is centred in its bar. */
-                            snprintf(val, sizeof val, "%d%%", (int)(frac * 100.0f + 0.5f));
-                            a2_font_draw(fnt_pct, val,
-                                         fx + (fill_w - a2_font_text_width(fnt_pct, val, s)) * 0.5f,
-                                         fy + fill_h * 0.5f - a2_font_height(fnt_pct, s) * 0.5f, s);
+                        if (!is_turbo) {
+                            /* element 83 (580, 349): "%2d@" of the damage
+                             * [0x4d9e30] */
+                            snprintf(val, sizeof val, "%2d@", (int)damage);
+                            HUD_AT(fnt_pct, val, 580, 349);
                         }
-                        HUD_LABEL(label, bot - lab_y[b] * s);
+                        HUD_AT(fnt_label, label, lab_xy[b][0], lab_xy[b][1]);
                     }
                 }
                 /* Last, so the turbo bar's bottom rail passes behind it. */
-                HUD_LABEL(a2_lang_get(lang, 54, "SNELHEID"), bot - 83.75f * s);
+                HUD_AT(fnt_label, a2_lang_get(lang, 54, "SNELHEID"), 559, 409); /* element 55 */
                 right = save_right_b;
 
                 /* --- bottom left: the radar --- */
@@ -3832,7 +3825,7 @@ int main(int argc, char **argv)
                             [49] = "EERSTE WAARSCHUWING", [50] = "LAATSTE WAARSCHUWING",
                             [51] = "RADAR BONUS"};
                         const char *txt = a2_lang_get(lang, banner_id, fb[banner_id]);
-                        float sc = win_h / 600.0f, py = win_h / 480.0f; /* olfnt01 at 0.8; (320, 80) of 480 */
+                        float sc = win_h / 480.0f, py = sc; /* olfnt01 1:1 at 640x480, centred on (320, 80) */
                         a2_font_draw(fnt_label, txt,
                                      win_w * 0.5f - a2_font_text_width(fnt_label, txt, sc) * 0.5f,
                                      80.0f * py - a2_font_height(fnt_label, sc) * 0.5f, sc);
@@ -3844,7 +3837,7 @@ int main(int argc, char **argv)
                     if (now - extra_lit_ms > 2000) {
                         extra_lit = 0;
                     } else if ((now / 100) & 1) {
-                        float sc = win_h / 600.0f, py = win_h / 480.0f; /* olfnt01 at 0.8; (320, 80) of 480 */
+                        float sc = win_h / 480.0f, py = sc; /* olfnt01 1:1 at 640x480, centred on (320, 80) */
                         const char *txt = "EXTRA TIJD";
                         a2_font_draw(fnt_label, txt,
                                      win_w * 0.5f - a2_font_text_width(fnt_label, txt, sc) * 0.5f,

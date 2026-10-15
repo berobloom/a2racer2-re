@@ -725,12 +725,19 @@ reported before this point should be treated as a one-off sample.
 - The HUD follows the game's own layout: a right-aligned stack of RACE TIJD,
   then RACE RECORD and POSITIE on the highway stages (0x419b10) or RONDE
   INFO, POSITIE and RONDE on the circuits (0x419e00), with SCHADE, TURBO and
-  SNELHEID lower down. On the highway stages CHECKPOINT sits top centre. The
-  layout is in 800x600 units scaled to the window, as the original's is (it
-  draws the labels at 0.8 at 640x480). It was checked against 640x480 Wine
-  captures of etappe1 and etappe2 (session 15).
+  SNELHEID lower down. On the highway stages CHECKPOINT sits top centre.
+  Every piece sits where the original's 640x480 layout puts it: the hires
+  element table that 0x41b860 fills at run time, read back from the running
+  game. The brackets are the original's **whole panel sprites** (RC.IMG 313 or
+  311 top right, 312 bottom right, 412 for CHECKPOINT), not stretched pieces.
+  The text is drawn **1:1 with each font's negative letter spacing** (olfnt01
+  -2, olfnt02 -4, olfnt04 -3, olfnt03 -8), as the original's glyph loop does.
+  The speed is `%03d` of the truncated km/h and the damage `%2d@` in lo_fnt1,
+  whose '@' is the percent sign. The whole is scaled by window height / 480
+  and kept to the right edge. It matches 640x480 Wine captures of etappe1 and
+  etappe2 (session 15).
   It draws with the game's **bitmap fonts** (`olfnt01..04` for labels, times,
-  speed and lap info, `slider13` for the bar percentages; the `lo_fnt*` set as
+  speed and lap info, `lo_fnt1` for the damage percentage; the `lo_fnt*` set as
   fallback, the 3D mesh font only if neither loads) and the **radar**
   bottom-left as gfx_radr.cpp makes it. It is a north-up map of the whole
   track at 60 units a pixel, built once. Each frame a 128x128 window around

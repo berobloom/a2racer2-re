@@ -22,6 +22,7 @@ struct a2_font {
     int atlas_w, atlas_h;
     glyph g[GLYPH_COUNT];
     int height; /* tallest glyph */
+    int spacing; /* added to each glyph's advance, in font pixels */
 };
 
 static uint16_t rd16(const uint8_t *p)
@@ -144,11 +145,17 @@ float a2_font_text_width(const a2_font *f, const char *text, float scale)
     float w = 0.0f;
     for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
         if (f->g[*p].w)
-            w += f->g[*p].w;
+            w += f->g[*p].w + f->spacing;
         else if (*p == ' ')
             w += f->height * 0.4f; /* no space glyph in these fonts */
     }
     return w * scale;
+}
+
+void a2_font_set_spacing(a2_font *f, int px)
+{
+    if (f)
+        f->spacing = px;
 }
 
 void a2_font_draw(const a2_font *f, const char *text, float x, float y, float scale)
@@ -185,7 +192,7 @@ void a2_font_draw_tinted(const a2_font *f, const char *text, float x, float y, f
         glVertex2f(cx + w, y + h);
         glTexCoord2f(g->u0, v1);
         glVertex2f(cx, y + h);
-        cx += w;
+        cx += w + f->spacing * scale;
     }
     glEnd();
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);

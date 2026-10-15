@@ -6686,12 +6686,20 @@ back to the list).
 - Element 76 in the 12-byte layout table at 0x488510 (`{anim, x, y}`): the
   reader picks the half at +84 elements when the lores flag [0x4d9a70] is
   **0** (0x41c018: `sete`), and that half has the 640x480 coordinates
-  (element 0: (380, 431) against (190, 180)). But that half holds **zeros
-  from element 50 on**, element 76 included. The first half has (-1, 160,
-  40). How the banner then lands where it does is **not resolved**: the
-  [0x4d9a6c] +320 adjustment, or a scale inside the font draw 0x46a270, are
-  candidates. **MEASURED:** the Wine capture (RESOLUTION=3) puts the text's
-  centre at about (320, 80) of 640x480, and the port uses that.
+  (element 0: (380, 431) against (190, 180)). In the file that half holds
+  **zeros from element 50 on**, element 76 included. The first half has (-1,
+  160, 40).
+- CONFIRMED (session 15): **the hires half from element 118 on (elements
+  34..83) is filled at run time by 0x41b860**, which is referenced only from
+  the data word at 0x482034 (LIKELY an init table). It writes immediates and
+  values derived from the screen size [0x49e72c] / [0x49e730] (640 / 480 at
+  RESOLUTION=3, read from the running game), so it is a hand-made 640x480
+  layout, not twice the lores one: 46 of the 50 entries differ from a plain
+  doubling. Element 160 (76 + 84) is written at 0x41bc61..0x41bc6c as **(-1,
+  width / 2, 80)**, read back as (-1, 320, 80) from the running game. So the
+  banner is centred at **(width / 2, 80) in screen pixels**, which is the
+  (320, 80) measured from the Wine capture. The port's position is therefore
+  exact at 640x480. (The [0x4d9a6c] +320 adjustment only applies in lores.)
 - The font is **font 10** of the 148-byte font records at 0x486d08:
   **olfnt01.fnt** (hires) / lo_fnt1.fnt (lores), the HUD's label font.
 - **0x429860** (Tr_finis.cpp, lap completion) raises **31 NIEUW RONDE
@@ -6772,11 +6780,12 @@ Completes open question 5 (session 9), which found the driver-name scan
 
 ## The HUD at 640x480: 800x600 units, and the highway panel (session 15)
 
-- MEASURED (Wine capture, RESOLUTION=3, 640x480): the HUD labels are drawn
-  at **0.8 of olfnt01's size**: SCHADE 58 px against the font's 72,
-  RACE TIJD 80 against 100, SNELHEID 71 against 90. So the HUD is laid out
-  for **800x600** and scaled to the screen, which is what the port's
-  `s = win_h / 600` assumed. The bar fills come out 91-92 px wide on screen
+- MEASURED (Wine capture, RESOLUTION=3, 640x480): the HUD labels come out
+  narrower than the font: SCHADE 58 px against the font's 72, RACE TIJD 80
+  against 100, SNELHEID 71 against 90. **The reading below that this is a 0.8
+  scale and an 800x600 layout is wrong** (corrected later in session 15, see
+  "The 640x480 HUD: element table, panel sprites, letter spacing"): the text
+  is 1:1 with a negative letter spacing. The bar fills come out 91-92 px wide on screen
   (113.75 units). The frames are 55x13 regions of sprite 426, stretched
   to about 98x22 px.
 - CONFIRMED (code): the highway top-right panel is **0x419b10** (overlay
@@ -6796,16 +6805,18 @@ Completes open question 5 (session 9), which found the driver-name scan
   phase, so in Dutch the two coincide exactly. With the English or German
   strings, banner 44 (EXTENDED TIME) is overprinted by the Dutch literal
   (LIKELY visible; not seen at runtime). Ported.
-- MEASURED: the banners are olfnt01 at **0.8** as well: COP MODE is 85 px
-  wide in the capture against the font's 100, centred at about (318, 80).
+- MEASURED: COP MODE is 85 px wide in the capture against the font's 100,
+  centred at about (318, 80). (Not a 0.8 scale: olfnt01 1:1 with its -2
+  letter spacing, see "The 640x480 HUD".)
 - CONFIRMED (data): the panels' brackets are **whole sprites**, one anim
   each: the highway panel's element 0x39 is anim 13 = **sprite 427**
   (42x63, the time, record and position brackets in one image), the circuit
   panel's element 0x33 is anim 8 = sprite 425, and the bottom group's element
   52 is anim 10 = sprite 426. On the capture the pieces come out at about 1.6
   of their art size, but no single stretch of the whole of 427 fits (best 49%
-  of its white pixels), so how they are scaled is not resolved. The port draws
-  427's three pieces into the boxes measured on the capture.
+  of its white pixels). **Resolved later in session 15:** those are the
+  lores entries. At 640x480 the elements' hires halves name anims 12, 9 and 11,
+  the whole panels 313, 311 and 312, drawn 1:1 (see "The 640x480 HUD").
 - The circuit panel (0x419e00) was checked against a Wine capture of
   etappe2. RONDE INFO, TIJD, RECORD, LAATSTE, POSITIE and RONDE sit within
   2 px of the port's rows, so they are unchanged. (The original then stopped
@@ -7046,4 +7057,62 @@ Completes open question 5 (session 9), which found the driver-name scan
   obstacle-list entry. 0x40c3a0 makes no exception for the asking object.
 - The port's ScanPath (ai_world.c) also rejects any occupied waypoint, and
   the racers register on their own waypoints, so it behaves the same.
+
+## The 640x480 HUD: element table, panel sprites, letter spacing (session 15)
+
+- CONFIRMED (code + runtime): every HUD piece at 640x480 is placed by the
+  hires half of the element table (0x488510, 12-byte `{anim, x, y}`,
+  element + 84), filled at run time by 0x41b860 for elements 34..83 (see the
+  banner entry above). Read back from the running game, the ones the HUD
+  uses:
+
+  | element | what | (x, y) | mode |
+  |---|---|---|---|
+  | 57 (0x39) | highway panel, anim 12 = sprite 313 (67x127) | (485, 15) | sprite |
+  | 51 (0x33) | circuit panel, anim 9 = sprite 311 (153x211) | (474, 15) | sprite |
+  | 52 (0x34) | bottom group, anim 11 = sprite 312 (148x134) | (484, 340) | sprite |
+  | 73 (0x49) | CHECKPOINT bracket, anim 0 = sprite 412 (170x26) | (235, 15) | sprite |
+  | 38 / 39 | RACE TIJD label / race time | (546, 4) / (502, 24) | 0 |
+  | 40 | RONDE INFO | (532, 54) | 0 |
+  | 41..46 | TIJD, RECORD, LAATSTE labels / values | (484 / 553, 75, 92, 109) | 0 |
+  | 47 / 48 | POSITIE / value, circuit | (567, 139) / (571, 159) | 0 |
+  | 49 / 50 | RONDE / value | (580, 189) / (571, 209) | 0 |
+  | 58 / 59 | RACE RECORD / value, highway | (522, 56) / (514, 76) | 0 |
+  | 60 / 61 | POSITIE / value, highway | (564, 107) / (567, 127) | 0 |
+  | 74 / 75 | CHECKPOINT label / clock | (320, 12) / (320, 24) | 1 (centred) |
+  | 7 / 53 / 55 | SCHADE / TURBO / SNELHEID labels | (571, 329) / (582, 368) / (559, 409) | 0 |
+  | 56 | speed, `%03d` of abs [0x4d9e34] | (505, 428) | 0 |
+  | 3 | damage bar, anim 23 | (541, 349) | sprite |
+  | 54 | turbo bar, anim 21 | (540, 388) | sprite |
+  | 83 | damage, `"%2d@"` of [0x4d9e30], font 16 | (580, 349) | 0 |
+
+- CONFIRMED (code): sprites go through **0x41c0f0(surface, element, frame,
+  mode, dx, dy)**. With mode 0 it blits with flags 3 (0x41c1ca), which skips
+  the anchor, so the element is the top-left. The blit 0x468db0 is a 1:1
+  software copy (0x415990) of the 2D surface record ([0x4eff90], 32 bytes:
+  pixels, width +8, height +0xc, anchor +0x10 / +0x14). The surfaces are RC.IMG
+  sprite + 1 (anim 21's surfaces 450, 434... are sprites 449, 433...). At
+  640x480 the lores anims (8, 10, 13: sprites 425-427) are not even loaded
+  (0x0 surfaces in the running game).
+- So the brackets are **whole hand-drawn panels**. That answers why no
+  single stretch of 427 fitted the capture: the hires HUD never uses it.
+- CONFIRMED (code): **text is blitted 1:1**. The glyph loop 0x46a180 copies
+  each glyph unscaled (0x4693e0) and advances by its width plus
+  [0x4ead00], the current font's letter spacing (+0x88; the line spacing is
+  +0x8c), set through 0x469f70 / 0x4182f0(font, lores, hires) at load
+  (0x4183c0..0x418737). In the hires set: font 10 (olfnt01) -2, 11
+  (olfnt02) -4, 12 (olfnt04) -3, **0 (olfnt03, the speed) -8**, 13 -2, 14
+  -14, 15 -2, 2 -4, 3 -4 (line -3), 5 -4 (line -2), 6 -2. Checked on the
+  speed: "048" is 114 px of glyphs, 114 - 3 x 8 = 90, and the capture's
+  digits span 90 px and 40 rows, which the port's olfnt03 at 1:1 also gives
+  (at 0.8 it gave 31 rows).
+- CONFIRMED (code): the speed is `"%03d"` (0x4882f8, at 0x41a535) of
+  |[0x4d9e34]|, which 0x425eb1 builds as `(int)(v * 3.6)`, truncated. The
+  damage percentage is `"%2d@"` (0x488364) in font 16 (lo_fnt1 in both
+  sets), whose '@' glyph is the percent sign.
+- The port now draws all of this from the table at height / 480 and kept to
+  the right edge. Compared with Wine captures of etappe1 and etappe2 the
+  brackets, labels and values sit on the original's to within a pixel or two.
+  The CHECKPOINT label and clock heights are still the capture fit: mode 1
+  centres on a height read through [0x4ead08] + 0x68 that was not traced.
 
