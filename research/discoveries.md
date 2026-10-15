@@ -6119,8 +6119,9 @@ chase. Logs (one line per frame):
 - CONFIRMED: **every racer is listed on its own waypoint's obstacle list**
   (the logged list of the leader's waypoint always holds the leader, plus
   the player 368 when they share it).
-- LIKELY: with the player **directly behind** (SIDE 0) the racer instead
-  swerved about 2.6 m *out of* the lane and back. The ScanPath from the
+- CONFIRMED in session 15 (see "Runtime check: the swerve with the player
+  straight behind" below; was LIKELY): with the player **directly behind**
+  (SIDE 0) the racer instead swerved about 2.6 m *out of* the lane and back. The ScanPath from the
   player's waypoint rejects any occupied waypoint (0x40c3a0), and the racer's own
   waypoint ahead is occupied by the racer itself, so the path goes round it.
   The reasoning chain is confirmed piece by piece but not traced for this case.
@@ -7023,3 +7024,26 @@ Completes open question 5 (session 9), which found the driver-name scan
   chunks of a stopped player, 0x40113d..0x401183); only the game-state flags
   [0x4d9a9c] / [0x4d9a78] gate it. What was meant to switch it on is not in
   the binary.
+
+## Runtime check: the swerve with the player straight behind (session 15; question 54)
+
+- Setup: gdb_cutin.py with SIDE=0 and the new SCAN=True option. The player
+  is held 75 units straight behind the leader. SCAN logs every ScanPath
+  (0x409670) that a racer in state 2 runs, and every waypoint it tests at the
+  three returns of 0x40c3a0 (0x40986d, 0x4098ce, 0x409917), with the list
+  copied to 0x4a5bd8.
+- CONFIRMED (frame 21): player on waypoint 318, leader (object 394) on 324,
+  straight ahead.
+  - ScanPath from 318 tests **324 first, and its list is [394], the racer
+    itself**, so the waypoint is rejected.
+  - The path goes on through 322 (lane -1), 328, 334, 340 and 346.
+  - The racer's target (+0x1c) becomes 322, it steers 100, and its side
+    offset grows 0 → -2.5 → -9.1 units over the next frames.
+  - At frame 24 the same happens with 330 [394] → 328.
+- CONFIRMED (whole run, 107 state-2 ScanPaths): the first tested waypoint
+  was blocked by **the racer's own entry 50 times**, by any other vehicle 0
+  times, and clear 57 times. The swerve is the racer steering round its own
+  obstacle-list entry. 0x40c3a0 makes no exception for the asking object.
+- The port's ScanPath (ai_world.c) also rejects any occupied waypoint, and
+  the racers register on their own waypoints, so it behaves the same.
+

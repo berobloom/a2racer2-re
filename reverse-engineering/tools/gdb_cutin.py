@@ -16,7 +16,7 @@ gdb.execute("set pagination off")
 gdb.execute("set confirm off")
 gdb.execute("target remote localhost:%s" % PORT)
 for name, default in (('BACK', 75.0), ('SIDE', 0.0), ('FREE', 90), ('STEP', 40.0),
-                      ('NOCOPS', True)):
+                      ('NOCOPS', True), ('SCAN', False)):
     if name not in globals():
         globals()[name] = default
 inf = gdb.selected_inferior()
@@ -157,6 +157,47 @@ class Frame(gdb.Breakpoint):
 
 
 bp = Frame()
+
+# SCAN=True (session 15, question 54): log every ScanPath (0x409670) a racer
+# in state 2 runs, and each waypoint it tests with the obstacle-list read
+# 0x40c3a0 (returns at 0x40986d, 0x4098ce, 0x409917; the waypoint is in esi,
+# ebp, ebp) with the ids copied to 0x4a5bd8.
+scan_rec = [0]
+
+
+class ScanEntry(gdb.Breakpoint):
+    def stop(self):
+        try:
+            rec = u32(int(gdb.parse_and_eval('$esp')) + 4)
+            if rec < 15:  # an index rather than a pointer
+                rec = 0x4a55a0 + rec * 0x60
+            scan_rec[0] = rec if 0x4a55a0 <= rec < 0x4a55a0 + 3 * 0x60 and i32(rec + 4) == 2 else 0
+            if scan_rec[0]:
+                out.write('scan f%d rec %d from wp %d\n' % (
+                    bp.n, (rec - 0x4a55a0) // 0x60, i32(int(gdb.parse_and_eval('$esp')) + 16)))
+        except Exception as e:
+            out.write('scan err %s\n' % e)
+        return False
+
+
+class ScanTest(gdb.Breakpoint):
+    def __init__(self, addr, reg):
+        super().__init__('*0x%x' % addr, internal=False)
+        self.reg = reg
+
+    def stop(self):
+        if scan_rec[0]:
+            n = int(gdb.parse_and_eval('$eax'))
+            wp = int(gdb.parse_and_eval('$' + self.reg)) & 0xffffffff
+            ids = [i32(0x4a5bd8 + 4 * j) for j in range(max(0, min(n, 10)))]
+            out.write('  test wp %d list %s\n' % (wp, ids))
+        return False
+
+
+if SCAN:
+    ScanEntry('*0x409670', internal=False)
+    for a, r in ((0x40986d, 'esi'), (0x4098ce, 'ebp'), (0x409917, 'ebp')):
+        ScanTest(a, r)
 
 
 def timer():

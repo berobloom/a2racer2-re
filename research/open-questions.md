@@ -900,9 +900,11 @@ phrasing may not be the original's.)*
     (12-13 m/s; no margin over the limit) are confirmed at runtime; see
     discoveries.md "Runtime check: the speeding threshold, obstacle lists,
     state 16". The racer cut-in (state 2) is confirmed at runtime too
-    (session 14, "Runtime check: the racer cut-in"). Still open: only
-    whether the "swerve out of the lane" with the player straight behind is
-    the racer's own obstacle-list entry blocking ScanPath (LIKELY).
+    (session 14, "Runtime check: the racer cut-in"). The "swerve out of the
+    lane" with the player straight behind is confirmed in session 15: the
+    racer's own obstacle-list entry blocks the first waypoint of ScanPath
+    (discoveries.md "Runtime check: the swerve with the player straight
+    behind"). **Answered.**
     The chase and catch of the player and of a racer are confirmed at runtime
     (discoveries.md, "Runtime check: chases at etappe1 chunk 440").
 
