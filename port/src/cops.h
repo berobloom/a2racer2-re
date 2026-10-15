@@ -74,6 +74,8 @@ int a2_cops_in_pursuit(const a2_cops *c);
 int a2_cops_message(const a2_cops *c, float *age);
 /* World position of cop `i`, for the radar.  Returns 0 if it is not out. */
 int a2_cops_car_xz(const a2_cops *c, int i, float out[2]);
+/* Non-zero while cop `i`'s siren is on (it is then in 0x40c640's list). */
+int a2_cops_siren(const a2_cops *c, int i);
 int a2_cops_count(const a2_cops *c);
 /* The radio line due this frame, then cleared: 1 a chase began (0x4150f0,
  * 13 lines), 2 one was given up (0x415170, 5 lines); 0 none.  Always for the

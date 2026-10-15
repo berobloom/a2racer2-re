@@ -6819,3 +6819,48 @@ Completes open question 5 (session 9), which found the driver-name scan
   by a simple x2 (RACE RECORD's label sits at about (522, 57)), so the port's
   numbers are measured, not read from the table.
 
+## The radar, gfx_radr.cpp (session 15)
+
+- CONFIRMED (code): **init_radar 0x41cf20** picks the radar texture record
+  ([0x48e1c8] / [0x48e1d4] by [0x4d9a6c]) into 0x4ac99c, builds the quad
+  (0x41c5a0) and creates the map (create_radar 0x41cda0).
+- CONFIRMED (code): **the map is the whole track, north up, at 60 units a
+  pixel.** get_road_bounding_box 0x41cc90 takes the chunk positions'
+  (runtime chunk +0x24, 388-byte records) min and max and pads them by 3840
+  units (0xf00) on every side. A chunk at (x, z) is pixel
+  `((int)x - minx) / 60, (maxz - (int)z) / 60` (0x41c790), clamped to the
+  map. draw_road_in_radar_surface 0x41c9a0 marks each chunk. On a 16-bit
+  screen it draws a 7x7 square of palette colour 0 that leaves pixels already
+  in the road colour alone, then a 3x3 square of colour 13 (0xd); both go
+  through the gamma converter. In 8-bit mode it is 5x5 / 3x3. With 128 units
+  between chunks this makes a solid 3-pixel road with a 2-pixel black edge.
+  The rest of the surface is the key colour 0xfe.
+- CONFIRMED (code), **each frame (0x41d360 -> 0x41d040)**:
+  - a 128x128 window (the 640x480 rectangle at 0x489050) is cut from the map,
+    centred on the **player's chunk** and clamped to the map's edges
+    (0x41cf90), and copied into the radar surface;
+  - **dots** are added with 0x41c880, 8x8 frames of sprite anim 44 (43 lores)
+    centred on a point and dropped within 4 pixels of the edge, all at the
+    cars' **chunks**, not their positions:
+    - the three racers, frame 0, sprite 114 (red);
+    - every cop in the siren list 0x4a5ce0, frame 2, sprite 305 (green);
+    - the player, frame 1, sprite 303 (yellow).
+  - **Traffic and parked cops are not shown.**
+  - 0x45bae0 uploads the surface to its texture, and 0x41d360 draws it as a
+    4-vertex TLVERTEX fan (DrawPrimitive 6, 3, 0x4ac9a8, 4).
+- CONFIRMED (code): **the quad (0x41c5a0)** starts at the rectangle's corner
+  (30, 361) and is **0.7** of its size: an 89.6-pixel square centred on
+  (74.8, 405.8), with UVs 0..1 and white diffuse colour. **0x41d280** turns
+  its corners about that centre by the **active camera's** view (look - eye
+  of camera [0x4a70c8], height dropped, normalised; cos = vz, sin = -vx),
+  so the camera's forward is up.
+- MEASURED (Wine captures): the player's dot is at (72, 402) (top-left) on
+  etappe1 and etappe2, which is the quad's centre. The visible road runs
+  about 105 px. Fitting the port's map to the captures gave a turn about
+  16 degrees short of the camera's yaw + 180; that is not explained (the
+  original's start heading or camera may differ slightly from the port's).
+- The port had drawn its own radar: a short heading-up ribbon of the 15
+  nearest chunks with large dots, traffic included. It now builds the map and
+  draws it as above (main.c radar_build / hud_radar), and the result matches
+  the etappe1 capture.
+

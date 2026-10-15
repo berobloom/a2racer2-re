@@ -366,124 +366,168 @@ static float drive_yaw_deg(const a2_drive *d)
     return d->heading * (360.0f / 4096.0f) + 180.0f;
 }
 
-/* The radar, bottom-left.
+/* The radar, bottom-left: gfx_radr.cpp (session 15).
  *
- * `hiradar.tga` and `loradar.tga` are blank 128x128 and 64x64 canvases filled
- * with the (255,0,127) key colour, so the original paints them at runtime --
- * gfx_radr.cpp has `create_radar` and `draw_road_in_radar_surface`, and the
- * result on screen is the road as a white ribbon with a black edge, the player
- * a yellow dot at the middle of it and the other cars red ones.  The port draws
- * the same picture straight into the overlay instead of into a surface.
+ * create_radar (0x41cda0) takes the chunks' bounding box (0x41cc90), padded by
+ * 3840 units on every side, and makes a surface of it at 60 units a pixel,
+ * north up: a chunk at (x, z) is pixel ((x - minx) / 60, (maxz - z) / 60)
+ * (0x41c790, clamped to the map).  draw_road_in_radar_surface (0x41c9a0)
+ * marks every chunk: on a 16-bit screen a 7x7 square of palette colour 0
+ * that leaves pixels already in the road colour alone, then a 3x3 square of
+ * colour 13 (0xd, both through the gamma converter 0x468380); 128 units
+ * between chunks make it a solid line.  The rest is the key colour.
  *
- * The road's centre line comes from the lane points of the chunks around the
- * player, turned into the player's frame so that the way ahead points up. */
-static void hud_radar(const a2_scene *scene, const a2_traffic *traffic, const a2_racers *racers,
-                      const a2_cops *cops, float cx, float cy, float half, float px, float pz,
-                      float yaw_deg)
+ * Each frame (0x41d040) a 128x128 window of the map (0x489050), centred on
+ * the player's chunk and clamped to the map's edges (0x41cf90), is copied to
+ * the radar surface, and 8x8 dots from sprite anim 44 (0x41c880: centred,
+ * dropped within 4 pixels of the edge) are put on it at each car's *chunk*:
+ * the three racers frame 0 (sprite 114, red), the cops with their siren on
+ * (0x4a5ce0, frame 2, sprite 305, green), then the player (frame 1, 303,
+ * yellow).  Traffic is not shown.  The surface is then shown at 0.7 on a
+ * turned quad (below). */
+typedef struct {
+    const a2_scene *scene;
+    unsigned tex;
+    int w, h;
+    float minx, maxz;
+} radar_map;
+
+static void radar_build(radar_map *m, const a2_scene *scene, const uint8_t road[3])
 {
-    enum { AHEAD = 10, BEHIND = 4 };
-    const float range = 1600.0f; /* world units mapped onto `half` pixels */
-    float sc = half / range;
-    float a = yaw_deg * 3.14159265f / 180.0f;
-    float ca = cosf(a), sa = sinf(a);
-    /* World -> radar.  The car's heading vector is (sin yaw, -cos yaw), so its
-     * right-hand side is (cos yaw, sin yaw); rotating into that frame and
-     * flipping y puts the way ahead at the top of the radar. */
-#define RADAR_XY(wx, wz, ox, oy)                                                                   \
-    do {                                                                                           \
-        float ddx = (wx)-px, ddz = (wz)-pz;                                                        \
-        float fwd = ddx * sa - ddz * ca, side = ddx * ca + ddz * sa;                               \
-        (ox) = cx + side * sc;                                                                     \
-        (oy) = cy - fwd * sc;                                                                      \
-    } while (0)
-
-    int here = a2_scene_nearest_chunk(scene, px, pz);
-    int total = a2_scene_chunk_count(scene);
-    float pts[(AHEAD + BEHIND + 1) * 2];
-    int n = 0;
-    for (int d = -BEHIND; d <= AHEAD; d++) {
-        int c = here + d;
-        if (c < 0 || c >= total)
+    memset(m, 0, sizeof *m);
+    m->scene = scene;
+    int n = a2_scene_chunk_count(scene);
+    float lo[2] = {1e30f, 1e30f}, hi[2] = {-1e30f, -1e30f};
+    for (int c = 0; c < n; c++) {
+        float p[3];
+        if (!a2_scene_chunk_point(scene, c, p))
             continue;
-        int lanes = a2_scene_lane_count(scene, c);
-        if (lanes <= 0)
-            continue;
-        float sum[2] = { 0.0f, 0.0f };
-        int got = 0;
-        for (int l = 0; l < lanes; l++) {
-            float q[3];
-            if (!a2_scene_lane_point(scene, c, l, q))
-                continue;
-            sum[0] += q[0];
-            sum[1] += q[2];
-            got++;
-        }
-        if (!got)
-            continue;
-        RADAR_XY(sum[0] / got, sum[1] / got, pts[n * 2], pts[n * 2 + 1]);
-        n++;
+        lo[0] = fminf(lo[0], p[0]);
+        hi[0] = fmaxf(hi[0], p[0]);
+        lo[1] = fminf(lo[1], p[2]);
+        hi[1] = fmaxf(hi[1], p[2]);
     }
-    if (n < 2)
+    if (lo[0] > hi[0])
         return;
-
-    glDisable(GL_TEXTURE_2D);
-    /* The ribbon is a dark edge with a white core drawn over it. */
-    for (int pass = 0; pass < 2; pass++) {
-        glLineWidth(pass == 0 ? 9.0f : 5.0f);
-        if (pass == 0)
-            glColor4f(0.0f, 0.0f, 0.0f, 0.85f);
-        else
-            glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        glBegin(GL_LINE_STRIP);
-        for (int i = 0; i < n; i++)
-            glVertex2f(pts[i * 2], pts[i * 2 + 1]);
-        glEnd();
-    }
-    glLineWidth(1.0f);
-
-    /* Dots: the other cars first, then the player over them. */
-    float dot = half * 0.085f;
-    for (int kind = 0; kind < 4; kind++) {
-        int count = kind == 0   ? a2_traffic_count(traffic)
-                    : kind == 1 ? a2_racers_count(racers)
-                    : kind == 2 ? a2_cops_count(cops)
-                                : 1;
-        for (int i = 0; i < count; i++) {
-            float w[2], ox, oy;
-            if (kind == 0) {
-                if (!a2_traffic_car_xz(traffic, i, w))
-                    continue;
-            } else if (kind == 1) {
-                if (!a2_racers_car_xz(racers, i, w))
-                    continue;
-            } else if (kind == 2) {
-                if (!a2_cops_car_xz(cops, i, w))
-                    continue;
-            } else {
-                w[0] = px;
-                w[1] = pz;
-            }
-            RADAR_XY(w[0], w[1], ox, oy);
-            if (ox < cx - half || ox > cx + half || oy < cy - half || oy > cy + half)
-                continue;
-            if (kind == 3)
-                glColor4f(1.0f, 0.85f, 0.0f, 1.0f); /* the player */
-            else if (kind == 2)
-                glColor4f(0.25f, 0.45f, 1.0f, 1.0f); /* a cop */
-            else
-                glColor4f(0.88f, 0.09f, 0.09f, 1.0f);
-            glBegin(GL_TRIANGLE_FAN);
-            glVertex2f(ox, oy);
-            for (int k = 0; k <= 10; k++) {
-                float th = (float)k / 10.0f * 6.2831853f;
-                glVertex2f(ox + cosf(th) * dot, oy + sinf(th) * dot);
-            }
-            glEnd();
+    float minx = (float)(int)lo[0] - 3840.0f, maxx = (float)(int)hi[0] + 3840.0f;
+    float minz = (float)(int)lo[1] - 3840.0f, maxz = (float)(int)hi[1] + 3840.0f;
+    m->w = (int)((maxx - minx) / 60.0f);
+    m->h = (int)((maxz - minz) / 60.0f);
+    m->minx = minx;
+    m->maxz = maxz;
+    if (m->w <= 0 || m->h <= 0 || m->w > 4096 || m->h > 4096)
+        return;
+    a2_image im = {m->w, m->h, calloc((size_t)m->w * m->h, 4)};
+    if (!im.rgba)
+        return;
+    uint8_t col[2][4] = {{0, 0, 0, 255}, {road[0], road[1], road[2], 255}};
+    a2_gfx_gamma_rgba(col[1], 1);
+    for (int c = 0; c < n; c++) {
+        float p[3];
+        if (!a2_scene_chunk_point(scene, c, p))
+            continue;
+        int px = ((int)p[0] - (int)minx) / 60, py = ((int)maxz - (int)p[2]) / 60;
+        px = px < 0 ? 0 : px >= m->w ? m->w - 1 : px;
+        py = py < 0 ? 0 : py >= m->h ? m->h - 1 : py;
+        for (int pass = 0; pass < 2; pass++) {
+            int r = pass == 0 ? 3 : 1;
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++) {
+                    int x = px + dx, y = py + dy;
+                    if (x < 0 || y < 0 || x >= m->w || y >= m->h)
+                        continue;
+                    uint8_t *q = im.rgba + ((size_t)y * m->w + x) * 4;
+                    if (pass == 0 && q[3] && !memcmp(q, col[1], 3))
+                        continue; /* leaves the road colour alone */
+                    memcpy(q, col[pass], 4);
+                }
         }
     }
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    m->tex = a2_gfx_texture_from_image_nearest(&im, 1);
+    free(im.rgba);
+}
+
+static void radar_xy(const radar_map *m, const a2_scene *scene, int chunk, int *x, int *y)
+{
+    float p[3] = {0.0f, 0.0f, 0.0f};
+    a2_scene_chunk_point(scene, chunk, p);
+    int px = ((int)p[0] - (int)m->minx) / 60, py = ((int)m->maxz - (int)p[2]) / 60;
+    *x = px < 0 ? 0 : px >= m->w ? m->w - 1 : px;
+    *y = py < 0 ? 0 : py >= m->h ? m->h - 1 : py;
+}
+
+static void hud_radar(radar_map *m, const a2_scene *scene, const a2_sprites *hud,
+                      const a2_racers *racers, const a2_cops *cops, int player_chunk, float ox,
+                      float oy, float k, float yaw_deg)
+{
+    if (!m->tex || !hud)
+        return;
+    enum { W = 128, H = 128 };
+    int cx, cy;
+    radar_xy(m, scene, player_chunk, &cx, &cy);
+    /* 0x41cf90: the window, centred and clamped */
+    int x0 = cx - W / 2, y0 = cy - H / 2;
+    if (x0 < 0)
+        x0 = 0;
+    else if (x0 + W >= m->w)
+        x0 = m->w - 1 - W;
+    if (y0 < 0)
+        y0 = 0;
+    else if (y0 + H >= m->h)
+        y0 = m->h - 1 - H;
+    if (x0 < 0)
+        x0 = 0;
+    if (y0 < 0)
+        y0 = 0;
+    /* The surface is a texture (0x45bae0 uploads it) on a screen-space quad
+     * of 4 TLVERTEXes drawn as a fan (0x41d360).  0x41d280 turns the quad's
+     * corners about its centre (0x4ac998, 0x4ac9a0) by the active camera's
+     * view (look - eye, height dropped, normalised: cos = vz, sin = -vx), which
+     * puts the camera's forward straight up.  `yaw_deg` is the camera's yaw. */
+    glPushMatrix();
+    glTranslatef(ox + W * k * 0.5f, oy + H * k * 0.5f, 0.0f);
+    glRotatef(yaw_deg + 180.0f, 0.0f, 0.0f, 1.0f);
+    glTranslatef(-W * k * 0.5f, -H * k * 0.5f, 0.0f);
+    ox = 0.0f;
+    oy = 0.0f;
     glEnable(GL_TEXTURE_2D);
-#undef RADAR_XY
+    glBindTexture(GL_TEXTURE_2D, m->tex);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    float u0 = (float)x0 / m->w, v0 = (float)y0 / m->h;
+    float u1 = (float)(x0 + W) / m->w, v1 = (float)(y0 + H) / m->h;
+    glBegin(GL_QUADS);
+    glTexCoord2f(u0, v0);
+    glVertex2f(ox, oy);
+    glTexCoord2f(u1, v0);
+    glVertex2f(ox + W * k, oy);
+    glTexCoord2f(u1, v1);
+    glVertex2f(ox + W * k, oy + H * k);
+    glTexCoord2f(u0, v1);
+    glVertex2f(ox, oy + H * k);
+    glEnd();
+    /* the dots, 0x41c880: an 8x8 frame centred on the point, kept 4 pixels
+     * inside the window */
+#define RADAR_DOT(chunk, sprite)                                                                   \
+    do {                                                                                           \
+        int mx_, my_;                                                                              \
+        radar_xy(m, scene, (chunk), &mx_, &my_);                                                   \
+        int dx_ = mx_ - x0 - 4 + 1, dy_ = my_ - y0 - 4 + 1;                                        \
+        if (dx_ >= 4 && dy_ >= 4 && dx_ + 8 <= W - 4 && dy_ + 8 <= H - 4)                          \
+            a2_sprite_draw(hud, (sprite), ox + dx_ * k, oy + dy_ * k, k);                          \
+    } while (0)
+    for (int i = 0; racers && i < a2_racers_count(racers); i++) {
+        float w[2];
+        if (a2_racers_car_xz(racers, i, w))
+            RADAR_DOT(a2_scene_nearest_chunk(scene, w[0], w[1]), 114);
+    }
+    for (int i = 0; cops && i < a2_cops_count(cops); i++) {
+        float w[2];
+        if (a2_cops_siren(cops, i) && a2_cops_car_xz(cops, i, w))
+            RADAR_DOT(a2_scene_nearest_chunk(scene, w[0], w[1]), 305);
+    }
+    RADAR_DOT(player_chunk, 303);
+#undef RADAR_DOT
+    glPopMatrix();
 }
 
 /* Did the car pass chunk `target` between last frame and this one?
@@ -1026,6 +1070,9 @@ int main(int argc, char **argv)
      * fonts in the table at VA 0x486D08 (see font.h) and the big readouts with
      * the 3D mesh font, which is why the numbers are bevelled and the labels
      * are flat. */
+    uint8_t radar_road[3] = {255, 255, 255};
+    radar_map radar;
+    memset(&radar, 0, sizeof radar);
     a2_font *fnt_label = NULL, *fnt_time = NULL, *fnt_speed = NULL, *fnt_value = NULL,
             *fnt_pct = NULL;
     {
@@ -1051,6 +1098,7 @@ int main(int argc, char **argv)
             uint8_t pal[768];
             if (pd && a2_pcx_palette(pal, pd, psz) == 0) {
                 hud = a2_sprites_load(datadir, pal);
+                memcpy(radar_road, pal + 13 * 3, 3); /* the radar's road, colour 0xd */
                 fprintf(stderr, "hud: palette %s\n", palname);
                 /* The HUD's four faces, and their glyph sets say exactly what
                  * each one is for -- a font carries nothing it does not need:
@@ -3694,8 +3742,18 @@ int main(int argc, char **argv)
                 right = save_right_b;
 
                 /* --- bottom left: the radar --- */
-                hud_radar(scene, traffic, racers, cops, 72.0f * s, bot - 72.0f * s, 56.0f * s,
-                          car.x, car.z, car.yaw);
+                if (radar.scene != scene)
+                    radar_build(&radar, scene, radar_road);
+                {
+                    /* 0x41c5a0: the quad starts at the 640x480 rectangle's
+                     * corner (30, 361) and is 0.7 of its 128 pixels: an
+                     * 89.6-pixel square centred on (74.8, 405.8), where the
+                     * captures put the player's dot */
+                    float k = win_h / 480.0f;
+                    hud_radar(&radar, scene, hud, racers, cops,
+                              a2_scene_nearest_chunk(scene, car.x, car.z), 30.0f * k,
+                              win_h - 119.0f * k, 0.7f * k, cam.yaw);
+                }
 
                 float small = 14.0f * s; /* 3D font, the centre-screen banners */
 #undef HUD_BRACKET

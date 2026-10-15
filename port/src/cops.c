@@ -158,6 +158,11 @@ int a2_cops_car_xz(const a2_cops *c, int i, float out[2])
     return 1;
 }
 
+int a2_cops_siren(const a2_cops *c, int i)
+{
+    return c && i >= 0 && i < c->count && !c->cops[i].retired && c->cops[i].siren;
+}
+
 void a2_cops_register(const a2_cops *c, a2_aiw *w)
 {
     for (int i = 0; c && i < c->count; i++) {
