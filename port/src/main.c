@@ -3698,8 +3698,11 @@ int main(int argc, char **argv)
                  * RACE TIJD block moved so that its middle sits mid-screen. */
                 if (timed) {
                     /* element 73, anim 0 = sprite 412, the two-sided bracket,
-                     * at (235, 15); the label (element 74) and the clock
-                     * (element 75) are drawn centred (mode 1) on x = 320 */
+                     * at (235, 15); the label (element 74, (320, 12)) and the
+                     * clock (element 75, (320, 24)) are drawn centred (mode 1):
+                     * x less half the width, y less half the height of the
+                     * font's 'A' (0x41c097: glyph table +0x30c), 17 in
+                     * olfnt01 and none in olfnt02, which has no letters */
                     float cx = win_w * 0.5f;
                     a2_sprite_draw(hud, 412, cx - 85.0f * k640, 15.0f * k640, k640);
                     snprintf(line, sizeof line, "%02d:%02d:%d", (int)(time_left / 60.0f),
@@ -3708,10 +3711,10 @@ int main(int argc, char **argv)
                     if (fnt_label && fnt_time) {
                         a2_font_draw(fnt_label, "CHECKPOINT",
                                      cx - 0.5f * a2_font_text_width(fnt_label, "CHECKPOINT", lsc),
-                                     6.0f * s, lsc);
+                                     (12.0f - 8.0f) * k640, lsc);
                         a2_font_draw(fnt_time, line,
-                                     cx - 0.5f * a2_font_text_width(fnt_time, line, lsc), 31.0f * s,
-                                     lsc);
+                                     cx - 0.5f * a2_font_text_width(fnt_time, line, lsc),
+                                     24.0f * k640, lsc);
                     }
                 }
 

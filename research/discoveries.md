@@ -7113,8 +7113,13 @@ Completes open question 5 (session 9), which found the driver-name scan
 - The port now draws all of this from the table at height / 480 and kept to
   the right edge. Compared with Wine captures of etappe1 and etappe2 the
   brackets, labels and values sit on the original's to within a pixel or two.
-  The CHECKPOINT label and clock heights are still the capture fit: mode 1
-  centres on a height read through [0x4ead08] + 0x68 that was not traced.
+- CONFIRMED (code): mode 1 centres on x less half the string width and y
+  less half of `[[[0x4ead08] + 0x68] + 0x30c] + 8` (0x41c097..0x41c0cd). That
+  is the current font's glyph table (12 bytes a character, as the glyph loop
+  0x46a180 reads it), entry 0x30c / 12 = 65, **'A'**, and its height. olfnt01's
+  'A' is 17 high, so the CHECKPOINT label's top is 12 - 8 = 4. olfnt02 has
+  no letters (LIKELY height 0 for the missing glyph), so the clock's top is
+  24, which the capture fit (24.8) agrees with. The port uses 4 and 24.
 
 ## The two collision deviations re-tested (session 15, after the traffic change)
 
