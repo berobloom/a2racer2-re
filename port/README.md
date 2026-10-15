@@ -39,6 +39,16 @@ Two port choices differ from the original on purpose:
   that camera goes down meanwhile.
 - The Enter prompt above.
 
+The race then opens with the original's countdown: "3", "2" and "1" fly in
+as 3D letters one second apart (getset.wav), then "GO!" (go.wav) turns in
+over the car. Everything stands still for those 4 s. (The original's start
+camera fly-in before it is not ported.)
+
+The career has the original's seven stages: Amsterdam, Amsterdam - Den Haag,
+Den Haag, Den Haag - Rotterdam, Rotterdam, Rotterdam - Amsterdam and
+Amsterdam again. Raser.ini also names a "München - Berlin" and a "Berlin",
+but their tracks were never shipped.
+
 In the race (`a2view --game`, as the menu starts it) the keys are the
 original's:
 

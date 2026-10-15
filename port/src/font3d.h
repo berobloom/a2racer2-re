@@ -35,4 +35,8 @@ float a2_font3d_width(const a2_font3d *f, const char *text);
 void a2_font3d_draw(const a2_font3d *f, const a2_scene *scene, const char *text, float x, float y,
                     float size);
 
+/* The scene model handle of character `c`'s glyph mesh, or -1, for drawing
+ * a glyph in the world (the start countdown's flying letters). */
+int a2_font3d_glyph(const a2_font3d *f, char c);
+
 #endif /* A2_FONT3D_H */

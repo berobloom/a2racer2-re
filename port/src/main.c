@@ -1851,6 +1851,21 @@ int main(int argc, char **argv)
     Uint32 last = SDL_GetTicks();
     Uint32 over_since = 0; /* when the finish or the game over began */
     int halt = 0;          /* [0x4d9ab4]: 1 the pause (P), 2 the quit question (Esc) */
+    /* The start countdown (game mode).  After the start camera, ev_stcam's
+     * end (0x416fe0) runs a sequence (0x416b00 / 0x416bd0 / 0x416cb0) that
+     * every 1000 ms launches "3", "2", "1" and "GO?" (table 0x4869d8; the
+     * font's off-by-one makes '?' the '!' mesh) with getset.wav (42) or
+     * go.wav (43), and after the fourth sets game mode 0: the race stands
+     * still for 4 s.  The letters start 400 units ahead of the player and 30
+     * up.  A digit (style 1: phases 2, 3) flies 90% of the way to the car in
+     * 0.8 s turning once (0x417da0), then holds 0.2 s (0x417ec0); "GO"
+     * (style 2: phases 4, 3) turns its letters once round their centre in 1 s
+     * (0x417f50 / 0x418050), then holds 0.2 s.  The start camera's fly-in
+     * itself is not ported. */
+    float cd_time = game_mode ? 0.0f : 100.0f;
+    int cd_next = 0;                     /* the next text to launch, 0..3 */
+    float cd_launch[4] = {-1, -1, -1, -1};
+    float cd_px = 0.0f, cd_py = 0.0f, cd_pz = 0.0f, cd_fx = 0.0f, cd_fz = 1.0f;
 
     while (running) {
         SDL_Event ev;
@@ -1999,7 +2014,29 @@ int main(int argc, char **argv)
         last = now;
         if (dt > 0.1f)
             dt = 0.1f;
-        if (tweak.open || halt)
+        if (cd_time < 6.0f && !halt) {
+            if (cd_time == 0.0f) {
+                /* where the letters come from: the player's car and heading */
+                float a = drv.heading * (6.28318531f / 4096.0f);
+                cd_px = car.x;
+                cd_py = car.y;
+                cd_pz = car.z;
+                cd_fx = -sinf(a);
+                cd_fz = cosf(a);
+            }
+            cd_time += dt;
+            if (getenv("A2_CD_AT")) /* debug: hold the countdown at a moment */
+                cd_time = (float)atof(getenv("A2_CD_AT"));
+            if (getenv("A2_CD_LOG"))
+                fprintf(stderr, "cd: %.3f at %u ms (dt %.3f)\n", cd_time, SDL_GetTicks(), dt);
+            while (cd_next < 4 && cd_time >= (float)(cd_next + 1)) {
+                cd_launch[cd_next] = (float)(cd_next + 1);
+                if (audio)
+                    a2_audio_play(audio, cd_next < 3 ? 42 : 43, 0); /* getset / go */
+                cd_next++;
+            }
+        }
+        if (tweak.open || halt || cd_time < 4.0f)
             dt = 0.0f; /* the menu is modal in the original: the race stands still */
         /* Fixed step for headless runs, so they are reproducible.  It has to be
          * set here, before anything reads `dt`: when it was applied further
@@ -3766,6 +3803,56 @@ int main(int argc, char **argv)
         if (cops)
             a2_cops_draw(cops, scene, near_chunk, radius);
         a2_paths_draw(paths, scene);
+        /* the countdown's letters, in the world */
+        for (int k = 0; font && k < 4; k++) {
+            if (cd_launch[k] < 0.0f)
+                continue;
+            float t = cd_time - cd_launch[k];
+            if (t < 0.0f || t >= (k < 3 ? 1.0f : 1.2f))
+                continue;
+            static const char *const cd_text[4] = {"3", "2", "1", "GO!"};
+            const char *txt = cd_text[k];
+            int n = (int)strlen(txt);
+            float rx = cd_fz, rz = -cd_fx; /* across the road */
+            float sx = cd_px + cd_fx * 400.0f, sz = cd_pz + cd_fz * 400.0f, sy = cd_py + 30.0f;
+            float face = atan2f(cd_fx, cd_fz) * 57.29578f; /* the glyphs face the car */
+            for (int i = 0; i < n; i++) {
+                int h = a2_font3d_glyph(font, txt[i]);
+                float lo[3], hi[3];
+                if (h < 0 || !a2_scene_model_bounds(scene, h, lo, hi))
+                    continue;
+                if (getenv("A2_CD_LOG"))
+                    fprintf(stderr, "cd glyph %c: lo (%.1f %.1f %.1f) hi (%.1f %.1f %.1f)\n",
+                            txt[i], lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]);
+                float off = ((float)i - 0.5f * (float)(n - 1)) * 12.5f;
+                float x = sx + rx * off, z = sz + rz * off, yaw = face, pitch = 0.0f;
+                if (k < 3) {
+                    float u = t < 0.8f ? t / 0.8f : 1.0f;
+                    x += (cd_px - x) * 0.9f * u;
+                    z += (cd_pz - z) * 0.9f * u;
+                    pitch = 360.0f * u;
+                } else {
+                    /* 0x418050: the centre closes on the player by what is
+                     * left over the frames left, so it arrives at the end of
+                     * the second; the letters turn once round it */
+                    float u = t < 1.0f ? t : 1.0f;
+                    float cx = sx + (cd_px - sx) * u, cz = sz + (cd_pz - sz) * u;
+                    float ang = -6.28318531f * u;
+                    float ox = rx * off, oz = rz * off;
+                    x = cx + ox * cosf(ang) - oz * sinf(ang);
+                    z = cz + ox * sinf(ang) + oz * cosf(ang);
+                    yaw = face - 360.0f * u;
+                }
+                glPushMatrix();
+                glTranslatef(x, sy, z);
+                glRotatef(yaw, 0.0f, 1.0f, 0.0f);
+                glRotatef(pitch, 1.0f, 0.0f, 0.0f);
+                glTranslatef(-0.5f * (lo[0] + hi[0]), -0.5f * (lo[1] + hi[1]),
+                             -0.5f * (lo[2] + hi[2]));
+                a2_scene_draw_model_scaled(scene, h, 0.0f, 0.0f, 0.0f, 1.0f);
+                glPopMatrix();
+            }
+        }
         a2_smoke_draw(smoke);
         if (drive_mode) {
             /* Car meshes are authored nose-toward +Z, and the model rotation

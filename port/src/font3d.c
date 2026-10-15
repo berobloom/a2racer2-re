@@ -137,3 +137,12 @@ void a2_font3d_draw(const a2_font3d *f, const a2_scene *scene, const char *text,
         pen += (f->width[g] / f->height + TRACKING) * size;
     }
 }
+
+int a2_font3d_glyph(const a2_font3d *f, char c)
+{
+    if (!f)
+        return -1;
+    int g = glyph_index((unsigned char)c);
+    return g < 0 ? -1 : f->handle[g];
+}
+

@@ -7325,3 +7325,71 @@ Completes open question 5 (session 9), which found the driver-name scan
   STARTEN" blinks between the title and the map until Enter. The prompt is
   the port's own.
 
+## The start countdown, 3-2-1-GO (session 15)
+
+- CONFIRMED (code): the start camera's end (ev_stcam.cpp, 0x416fe0)
+  registers a sequence 0x416b00 / 0x416bd0 / 0x416cb0.
+  - **Begin:** it notes the time and puts the start point **400 units ahead
+    of the player along its forward axis, 30 up**, with the forward axis as
+    the text's direction.
+  - **Tick:** every **1000 ms** it launches the next entry of the table at
+    0x4869d8 (18 bytes: text, sample, style) through 0x417140: "3", "2", "1"
+    with **42 getset.wav**, style 1, then **"GO?"** with **43 go.wav**, style
+    2. After the fourth it ends.
+  - **End:** it sets game mode 0 (the race), selects camera 1 (0x414b70) and
+    raises COP MODE for copland. So the race stands still for 4 s from the
+    start of the countdown.
+- CONFIRMED (runtime, gdb_countdown.py, etappe1): all four texts spawn at
+  (-62939.6, 30.0, 6667.1) with direction (0.8, 0, 0.5) while the player
+  stands at (-63278.6, 0, 6454.7), i.e. 400 ahead and 30 up.
+- CONFIRMED (code), 0x417140 lays a text out as one engine object per letter,
+  **12.5 units apart, centred**, across the direction, facing the player. Its
+  glyph comes through the table 0x486b68 ("0123456789A..Z" ÄÖßÜ =\"-*+.!?)
+  into FONT3D_ANIM. That anim has LTR_T twice (frame 36), so every index from
+  36 on is one glyph late, and '?' (47) shows **LTR_UITR, the '!'**. That is
+  why "GO?" reads "GO!" on screen. The glyph meshes are 9 x 13.6 x 5 units.
+- CONFIRMED (code + runtime), the styles (0x486ae0, 44 bytes: phase count,
+  then phase ids) and the phases (init / update pairs at 0x486ab8):
+  - **Style 1 (digits), phase 2** (0x417da0 / 0x417d50): for 0.8 s
+    (frames = 0.8 / frame time) the letter moves each frame by (letter -
+    player) x -0.9 / frames. It ends 90 % of the way to the car, about 40
+    units ahead, and pitches one full turn (+0x68, 4096 / frames a frame).
+    Runtime: "3" went from 400 to about 50 units ahead in a straight line.
+  - **Style 2 ("GO"), phase 4** (0x417f50 / 0x418050): for 1 s each letter
+    turns round the text's centre at its own distance (once, -4096 /
+    frames), and spins on its vertical axis with it (+0x6c). Meanwhile the
+    centre closes on the player by (player - centre) / frames left, so it
+    reaches the car (30 up) at the end. Runtime: the three letters G, O, !
+    moved in from 400 ahead.
+  - **Phase 3** (both, 0x417ec0 / 0x417f10): holds still for 0.2 s, then
+    0x4179e0 removes the letter.
+- Port (game mode): the same countdown, with the same timing, motions and
+  sounds, drawn with the 3D font's meshes in the world. The race (clock,
+  cars, input) stands still for the 4 s. The start camera's fly-in before it
+  is not ported. A2_CD_AT pins the countdown for screenshots.
+
+## How many stages (session 15)
+
+- CONFIRMED (data): the game has **7 playable stages**, `etappe0` to
+  `etappe6`, and the career runs through them in order. Stage 6 is the
+  final, with the prize x4.
+
+  | stage | name | type |
+  |---|---|---|
+  | 0 | Amsterdam | city |
+  | 1 | Amsterdam - Den Haag | highway |
+  | 2 | Den Haag | city |
+  | 3 | Den Haag - Rotterdam | highway |
+  | 4 | Rotterdam | city |
+  | 5 | Rotterdam - Amsterdam | highway |
+  | 6 | Amsterdam | city |
+
+- Raser.ini [MAPS] also lists **7 MÜNCHEN - BERLIN** (highway, e03's
+  textures) and **8 BERLIN** (city, e02's). [wait_hi] / [wait_lo] give them
+  e01's map. But neither the CD data nor RCS.IMG has any etappe7.* or
+  etappe8.* file, and the career ends after stage 6. LIKELY leftovers of a
+  planned German edition (the predecessor was "Autobahn Raser"), not
+  playable.
+- The port loads and drives all seven (etappe0, 3, 4 and 6 checked under the
+  autopilot for 40 s; 1, 2 and 5 are the regression races).
+
