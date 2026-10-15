@@ -814,7 +814,7 @@ phrasing may not be the original's.)*
 
 ## New questions (session 13)
 
-50. **Does the original's traffic flip lanes as often as the port's now
+50. **Answered (session 13): does the original's traffic flip lanes as often as the port's now
     does?** The port follows ai_lane.cpp's traffic arm (see discoveries.md
     "Traffic lane choice and following") and makes about 2100 lane changes
     per motorway race, against 84 with its old periodic rule.
@@ -911,7 +911,7 @@ phrasing may not be the original's.)*
 
 ## New questions (session 15)
 
-55. **Why does the original crash on etappe2 under Wine?** With
+55. **Answered (session 15): why does the original crash on etappe2 under Wine?** With
     .work/menutest Game.ini `[ETAPPE] etappe=2` and spel.dat started on its
     own (RESOLUTION=3, Up held), it ran about 9 s and then stopped with
     "Unhandled exception!". debug.txt shows the exception straight after an
