@@ -957,6 +957,49 @@ reads the results back.
 
 See reverse-engineering/menu.md for everything found in menu.dat.
 
+## Settings and debug switches
+
+Environment variables the port reads. Only the first group is meant for
+playing; the rest are debugging and test aids, each tied to an experiment
+recorded in research/discoveries.md.
+
+**For playing**
+
+| variable | effect |
+|---|---|
+| `A2_FULLSCREEN=1` | menu and race fill the screen (`play.sh --fullscreen` sets it) |
+| `A2_WIN=<w>x<h>` | the race window's size (default 1280x960 from the menu, 1280x720 standalone) |
+| `A2_FOV=<deg>` | the vertical view angle |
+
+**Test helpers**
+
+| variable | effect |
+|---|---|
+| `A2_START_AT_PUMP=1` | start the car on the first service station's pump |
+| `A2_CD_AT=<s>` | pin the start sequence (fly-in 0-3 s, countdown 3-8 s) at a moment, for screenshots |
+| `A2_HANDBRAKE_AT=<frame>` | hold the handbrake for a second from that frame |
+| `A2_TEST_AUDIO=1` | open audio in a `--drive-test` run (with `SDL_AUDIODRIVER=dummy`) |
+| `A2_FAITHFUL_OVERLAP=1` | turn off the overlap deviation (a car inside a box it moves away from is held) |
+| `A2_CAR_CAM=<deg>`, `A2_CAR_CAM_DIST` | watch the player's car from that angle off its nose |
+| `A2_PATH_CAM=1`, `A2_PATH_CAM_DIST` | watch the first active path object (boats, trains, planes) |
+
+**Logs (to stderr)**
+
+| variable | logs |
+|---|---|
+| `A2_SPEED_LOG` | the keyboard inputs and the speed, twice a second |
+| `A2_COL_LOG` | collision contacts |
+| `A2_OVERLAP_LOG` | every sub-step taking the overlap deviation |
+| `A2_SLAB_TRACE` | each time the car's box gets a corner into a barrier slab, and why |
+| `A2_TRAFFIC_LOG` | traffic lane changes and placements |
+| `A2_TRAFFIC_DEV` | how far traffic runs off its lane line |
+| `A2_AI_LOG` | the racers' and cops' AI state once a second |
+| `A2_AUDIO_LOG` | each one-shot sound started |
+| `A2_CD_LOG` | the start sequence's clock and the 3D glyphs' sizes |
+| `A2_SKID_DEBUG` | skid mark strips (and draws them red) |
+| `A2_DUMP_NEAR` | (a2_dump) the objects near a chunk |
+| `A2_MENU_AUDIO_DUMP=<file>` | (a2menu) writes the menu's sound mix to a file |
+
 ## a2tools usage
 
 Pure Python 3 (stdlib only). Point it at the game's `data/` directory from
