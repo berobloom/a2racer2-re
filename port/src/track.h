@@ -114,6 +114,8 @@ typedef struct {
 
 typedef struct {
     uint32_t type;
+    uint32_t flag;    /* .dmp field 1, runtime +4: 2 on the service stations'
+                       * pump waypoints (two per station), 0 elsewhere */
     float x, y, z;    /* world position; y matches the owning chunk's for all
                        * but 9 of the 28461 waypoints, which sit off-centre */
     int32_t links[4]; /* waypoint indices, -1 = none */

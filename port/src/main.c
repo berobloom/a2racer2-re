@@ -1344,7 +1344,7 @@ int main(int argc, char **argv)
      * 0x4d9eb8 that add_damage (0x428390) tests before adding anything, and
      * raises banner 46 INVINCIBLE. */
     int invincible = 0;
-    float turbo_left = 1.0f;  /* the turbo reserve, full at the start */
+    float turbo_left = 1.0f;  /* the turbo reserve, full at the start (with TURBO) */
     float finish_time = 0.0f;
     int result_booked = 0; /* the finish has been booked into `save` */
     int track_ms = 0;
@@ -1406,6 +1406,7 @@ int main(int argc, char **argv)
      * QUICK SERVICE is this banner rather than a cheat label. */
     int service_chunk[16];
     int service_count = 0;
+    int was_at_pump = 0; /* the car stood at a pump last frame */
     for (uint32_t i = 0; i < track.pmp.chunk_count && service_count < 16; i++) {
         uint32_t tg[2] = {track.pmp.chunks[i].trigger0, track.pmp.chunks[i].trigger1};
         if (tg[0] == 2 || tg[1] == 2)
@@ -1540,6 +1541,11 @@ int main(int argc, char **argv)
     int up_banden = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "BANDEN", 0);
     int up_abs = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "ABS", 0);
     int up_gearbox = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "VERSNELLINGSBAK", 0);
+    /* TURBO (0x4d9ec8): only with it is the turbo tank filled at the start
+     * (0x428563) and at a service station (0x42a4f6) */
+    int up_turbo = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "TURBO", 0);
+    if (!up_turbo)
+        turbo_left = 0.0f;
     /* The 0x484B18 physics table.  It drives only the old Autobahn Raser I
      * model (stuur_model = 1), which the shipped game never runs; the port
      * still reads it for two things the shipped game does use from it: the
@@ -1702,6 +1708,18 @@ int main(int argc, char **argv)
         car.y = cam.pos[1] - 60.0f;
         car.z = cam.pos[2];
         car.yaw = cam.yaw;
+    }
+    /* Debug: A2_START_AT_PUMP=1 starts the car on the first service
+     * station's pump waypoint (.dmp flag 2), to test the station. */
+    if (getenv("A2_START_AT_PUMP")) {
+        for (uint32_t w = 0; w < track.waypoint_count; w++)
+            if (track.waypoints[w].flag == 2) {
+                car.x = track.waypoints[w].x;
+                car.y = track.waypoints[w].y;
+                car.z = track.waypoints[w].z;
+                fprintf(stderr, "debug: car on pump waypoint %u\n", w);
+                break;
+            }
     }
     int drive_mode = (have_cars && car_model >= 0);
     /* The driving model: the original's shipped "new (A2 Racer II)" model,
@@ -3140,20 +3158,40 @@ int main(int argc, char **argv)
                 next_camera++;
             }
 
-            /* The service station.  Unlike the camera this is not a one-shot
-             * per race: the original's handler runs every time the trigger is
-             * crossed, so a circuit can be serviced each lap. */
-            for (int si = 0; si < service_count; si++) {
-                if (!crossed_chunk(prev_ch, ch, service_chunk[si], scene_chunks))
-                    continue;
-                int repaired = damage;
-                turbo_left = 1.0f;   /* set_turbo_tank(100) */
-                damage = 0;          /* reset the damage */
-                RAISE_BANNER(48); /* 0x42a51d */
-                if (audio)
-                    a2_audio_play(audio, 47, 0); /* repair.wav, 0x42a515 */
-                fprintf(stderr, "QUICK SERVICE at chunk %d: turbo refilled, %d damage repaired\n",
-                        service_chunk[si], repaired);
+            /* The service station, trigger 2 (0x42a4d0).  The handler runs
+             * while the car is in the trigger's chunk, and services it only
+             * when the car's waypoint (object +0x20, the nearest one on its
+             * side, 0x443da0) is a pump: runtime record +4 == 2, the .dmp's
+             * f1 -- two waypoints per station, off the road on the forecourt
+             * or the slip road, both in the trigger chunk's list.  So it takes
+             * driving in to the pump; passing on the road does nothing.
+             * Then: the tank refilled if TURBO is owned, the damage reset,
+             * 47 repair.wav and banner 48 QUICK SERVICE.  The original repeats
+             * that every frame at the pump; the port services every frame and
+             * plays the sound and raises the banner once per arrival. */
+            {
+                int at_pump = 0;
+                for (int si = 0; aiw && si < service_count && !at_pump; si++) {
+                    if (ch != service_chunk[si])
+                        continue;
+                    int wp = a2_aiw_nearest(aiw, ch, car.x, car.y, car.z, 1);
+                    at_pump = wp >= 0 && (uint32_t)wp < track.waypoint_count &&
+                              track.waypoints[wp].flag == 2;
+                }
+                if (at_pump) {
+                    int repaired = damage;
+                    if (up_turbo)
+                        turbo_left = 1.0f; /* set_turbo_tank(100) */
+                    damage = 0;            /* reset the damage */
+                    if (!was_at_pump) {
+                        RAISE_BANNER(48); /* 0x42a51d */
+                        if (audio)
+                            a2_audio_play(audio, 47, 0); /* repair.wav, 0x42a515 */
+                        fprintf(stderr, "QUICK SERVICE at chunk %d: %s, %d damage repaired\n", ch,
+                                up_turbo ? "turbo refilled" : "no turbo to refill", repaired);
+                    }
+                }
+                was_at_pump = at_pump;
             }
 
             /* The finish, as the game books it: the track time and the race

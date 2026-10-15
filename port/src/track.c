@@ -208,7 +208,7 @@ static int parse_dmp(a2_track *tr, const uint8_t *data, size_t size)
     for (uint32_t i = 0; i < n; i++) {
         a2_waypoint *w = &tr->waypoints[i];
         w->type = a2_u32(&c);
-        a2_skip(&c, 4); /* unidentified; 0 in all but 4 of the 28461 waypoints */
+        w->flag = a2_u32(&c); /* 2 at the pumps (16 waypoints, 2 per station) */
         w->x = a2_f32(&c);
         w->y = a2_f32(&c);
         w->z = a2_f32(&c);

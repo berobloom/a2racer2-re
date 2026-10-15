@@ -49,6 +49,11 @@ Den Haag, Den Haag - Rotterdam, Rotterdam, Rotterdam - Amsterdam and
 Amsterdam again. Raser.ini also names a "München - Berlin" and a "Berlin",
 but their tracks were never shipped.
 
+**Service stations** (one per stage, two on Rotterdam - Amsterdam): drive in
+and stop at the pump. QUICK SERVICE repairs the car and, if you own the
+TURBO upgrade, refills the turbo. Driving past does nothing. Without TURBO the
+turbo tank is empty, as in the original.
+
 In the race (`a2view --game`, as the menu starts it) the keys are the
 original's:
 

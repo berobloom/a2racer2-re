@@ -3390,7 +3390,11 @@ is not.
       0x0042a51d  [0x4882c0] = 48            ; banner 48 = "QUICK SERVICE"
 
   So the `TRIGGER_BENZINE_STATION` **refills the turbo tank, repairs the car,
-  plays `repair.wav` and raises the QUICK SERVICE banner**. The eight of them in
+  plays `repair.wav` and raises the QUICK SERVICE banner**. **Correction
+  (session 15):** only when the car stands at a pump. 0x42a4d0 first takes the
+  car's waypoint (object +0x20, the nearest on its side) and returns unless
+  its runtime record **+4 == 2**. See "The service station needs the pump"
+  below. The eight of them in
   the track data are service stops.
 - **This corrects an earlier reading.** QUICK SERVICE was listed among "the
   cheat labels" alongside INVINCIBLE and COP MODE, and hypotheses.md had all
@@ -7392,4 +7396,43 @@ Completes open question 5 (session 9), which found the driver-name scan
   playable.
 - The port loads and drives all seven (etappe0, 3, 4 and 6 checked under the
   autopilot for 40 s; 1, 2 and 5 are the regression races).
+
+## The service station needs the pump (session 15)
+
+- CONFIRMED (code): 0x42a4d0, the trigger-2 handler, reads the car's
+  waypoint (object +0x20) and compares the runtime waypoint's **+4** with 2
+  (0x42a4ef). Only then does it refill the turbo (and only if TURBO,
+  [0x4d9ec8], is owned), reset the damage, play 47 repair.wav and raise
+  banner 48. Like every chunk trigger it runs while the car is in the chunk,
+  so it repeats every frame at the pump.
+- CONFIRMED (data): runtime +4 is the `.dmp` field 1 (record +4), which is 2
+  on **16 waypoints, two per station** (this corrects the session-7 count of
+  "4"). Both of a station's pump waypoints are in the trigger chunk's
+  right-hand (player side) list. On the city stages they have no links (the
+  forecourt); on the highways they are on the slip road:
+
+  | stage | trigger chunk | pump waypoints | distance to the chunk point |
+  |---|---|---|---|
+  | 0 | 764 | 3256, 3257 | 152, 229 |
+  | 1 | 549 | 3594, 3595 | 261, 304 |
+  | 2 | 315 | 1645, 1646 | 138, 198 |
+  | 3 | 397 | 2361, 2362 | 198, 255 |
+  | 4 | 72 | 326, 327 | 210, 285 |
+  | 5 | 399 / 642 | 2391, 2392 / 3943, 3944 | 256-309 |
+  | 6 | 764 | 3113, 3114 | 149, 226 |
+
+  At every pump the trigger chunk is the nearest chunk point, so the car
+  standing there is in that chunk.
+- So **driving past a station does nothing; you have to drive in to the
+  pump.**
+- CONFIRMED (code): the turbo tank is filled at the start only with TURBO
+  (0x428563); without it the tank is empty.
+- Port: it used to service on crossing the chunk, which in the regressions
+  never fired at all, and it refilled the turbo regardless. Now it services
+  while the car's nearest player-side waypoint in the trigger chunk is a
+  pump (a2_aiw_nearest), refills only with TURBO, and starts the tank empty
+  without it. The sound and banner play once per arrival (the original
+  repeats them each frame). A2_START_AT_PUMP=1 starts the car on the first
+  pump: etappe1 (chunk 549) and etappe2 (chunk 315) both give QUICK
+  SERVICE.
 
