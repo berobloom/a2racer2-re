@@ -6993,3 +6993,33 @@ Completes open question 5 (session 9), which found the driver-name scan
   - a -1 link is skipped instead of read through (question 55);
   - the overlap test is centre distance against the sum of half lengths
     (LIKELY close to 0x446a10, which was not traced).
+
+## The recycler's cop and ADAC arms are dead in the shipped game (session 15)
+
+- CONFIRMED (code): the recycler's kind-4 arm (0x40b3c3 / 0x40b40b) tests the
+  cop's `t_cop` state ([0x4a5238] + 32 * [ai + 0x44], +0x00) for 1 and then
+  only calls **0x40c640(obj, 0), the siren off** ("COP: object = %d. ai = %d.
+  ON/OFF = %d."); the cop is not moved. The only writers of `t_cop` +0x00 are
+  0x402755 (0, init), 0x402ad4 (1, the old lookout) and 0x40290b (3, the old
+  pursuit). Under ai_model 0, HANDLE_COP_AI takes the new path at 0x4029d2,
+  so STRONGLY SUPPORTED: **state 1 never happens and the arm never fires**.
+- CONFIRMED (code): **the ADAC (wegenwacht) car** is made at init by
+  0x40c4f0 ("Initing adac-car.", called from 0x410b9b). It is vehicle 8,
+  object kind 5, at `0x4426e0(0)`, lane 4 (0x442730) on side
+  `DIRECTION == 0`, behaviour 15, handler **0x401000** ("Handling Adac AI."),
+  index in [0x4a5ccc]. +0x2c and +0x34 are set to 0 and the flag [0x4a5cc8]
+  ("has arrived") to 0. The recycler's kind-5 arm calls **0x40c5f0
+  `turn_off_adac`**, which takes it out of the obstacle lists and sets +0x2c
+  and +0x34 to 0 again. Nothing in the binary writes the ADAC car's +0x34 = 1:
+  the only writer of 1 is 0x40b61d in 0x40b480, which the recycler never calls
+  for kind 5.
+- CONFIRMED (runtime, gdb_count.py, 40 s of etappe1 under Wine): **the ADAC
+  handler 0x401000 ran 0 times** and `turn_off_adac` 1872 times (once a frame;
+  the car stands at chunk 0, outside the window). In the same run 0x40b480
+  was called 3614 times and placed a car (0x40b61d) 55 times.
+- So the roadside-assistance car is **never seen in the shipped game**; the
+  port leaves it out. Its handler would follow the player
+  (AI_ADAC_RANGE, "Adac chunk = %d. Player chunk = %d.", stopping within 3
+  chunks of a stopped player, 0x40113d..0x401183); only the game-state flags
+  [0x4d9a9c] / [0x4d9a78] gate it. What was meant to switch it on is not in
+  the binary.
