@@ -490,6 +490,15 @@ mode:
 | 41 TIJD IS OM | the checkpoint clock runs out |
 | 42 GEARRESTEERD | caught by the police a third time |
 
+**Reversing**, as the original's drive function does it (0x40f0d0): hold
+the brake until the car stops, keep holding, and it rolls backwards up to
+13.333 m/s (48 km/h). The brake lights light only while the force opposes the
+motion, so not when reversing on the brake. The original builds the
+keyboard brake up as `(int)(brake + 40 * dt)` per frame. Above 40 fps that
+never rises, so on a fast machine it brakes only by engine braking and
+cannot reverse; at the 20-30 fps of its day it worked. The port keeps the
+fraction, so the brake builds at its intended 40 a second at any frame rate.
+
 **Cheats**, the original's: **Ctrl + Space + I** gives INVINCIBLE (no more
 damage), and **Ctrl + Space + T** adds 180 s to the clock on a highway stage.
 
@@ -526,10 +535,10 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 312.5 s**, 4th (racers 301.8 / 303.5 / 308.3 s), 2 unwedges, 5 damaging impacts |
-| etappe5 | **finishes in 351.2 s**, 4th (racers 337.8 / 337.8 / 339.3 s), 1 unwedge, 3 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1144.2 s (545.6 + 598.6), 4th (racers 1118.4 / 1119.0 / 1136.7 s); 7 unwedges on the city corners |
-| etappe1 with police | finishes in 344.2 s, 4th (racers 310.4 / 326.8 / 330.4 s), 1 unwedge; every cop chased a racer, none the player |
+| etappe1 | **finishes in 286.4 s**, 4th (racers all 286.4 s), 1 unwedge, 2 damaging impacts |
+| etappe5 | **finishes in 346.9 s**, 4th (racers 334.5 / 334.9 / 336.2 s), 1 unwedge, 2 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1108.7 s (532.9 + 575.8), 3rd (racers 1106.5 / 1108.5 s); 16 unwedges on the city corners |
+| etappe1 with police | finishes in 321.9 s, 4th (racers 310.3 / 315.2 / 316.7 s), 5 unwedges; every cop chased a racer, none the player |
 
 These are on the new AI model (session 13), rerun in session 14 with the
 ground planes, the engine's box contact (src/contact.c), the player's 8
@@ -692,9 +701,10 @@ reported before this point should be treated as a one-off sample.
   contact normal is set to 10 away from it, and the car moves by that, so the
   car never sinks into a slab (see discoveries.md "The contact geometry, for
   boxes"). The impulse is applied inside the step, as the original's
-  0x4497f0 is, so the next step moves with the new velocity. One port
-  deviation remains: a box the car is already inside and moving away from does
-  not hold it. The original never gets into such an overlap. The push-out, a circle of the car's half-width, stays as a
+  0x4497f0 is, so the next step moves with the new velocity. Two port
+  deviations keep a car steered into a wall from pinning itself. The re-test
+  also runs at t = 0, and a box the car is already inside and moving away
+  from does not hold it. The push-out, a circle of the car's half-width, stays as a
   safety net. The AI cars move in one step, as the original moves every object but the
   player, with the same 0x441490 re-test and the impulse at the contact.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn

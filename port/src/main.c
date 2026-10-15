@@ -68,8 +68,6 @@
 /* Maps our impact measure (m/s x how square the hit was) onto the game's own
  * 18000..35000 damage band.  The band is the game's; this scale is ours. */
 #define IMPACT_SCALE 900.0f
-/* How far back a square-on impact can throw the car, in m/s. */
-#define REVERSE_MAX 6.0f
 
 typedef struct {
     float pos[3];
@@ -2233,7 +2231,14 @@ int main(int argc, char **argv)
                      * the move x t). The real velocity is left alone; the
                      * impulse changes it. */
                     float vn = vx * hit.n[0] + vz * hit.n[1];
-                    if (best > 0.0f && vn >= 0.0f) {
+                    /* Port deviation: the original skips the re-test at
+                     * t = 0 (0x441490 returns 0) and leaves the escape to
+                     * the impulse that follows in the step.  In the port a
+                     * car steered into a barrier can stay pinned at t = 0
+                     * at full throttle (etappe1 chunk 330, with the police
+                     * on), the impulse undone by the grip each step, so the
+                     * port re-tests at t = 0 too. */
+                    if (vn >= 0.0f) {
                         float k = -10.0f - vn; /* the normal part becomes -10 */
                         float wx = vx + k * hit.n[0], wz = vz + k * hit.n[1];
                         float wmx = 10.0f * sdt * wx, wmz = 10.0f * sdt * wz;
@@ -2332,11 +2337,15 @@ int main(int argc, char **argv)
                 }
             }
             /* The lights come on when the drive function's force opposes the
-             * motion (0x4a63cc, set at 0x40ddee) -- braking -- or while
-             * 0x4d9df4 is set, LIKELY reversing (0x425f0b..0x425faa); they are
-             * re-stamped only when the state changes, as the original does. */
+             * motion (0x4a63cc = force / velocity < 0, set at 0x40ddee, 0 at
+             * rest): braking forward, or the gas while still rolling back.
+             * Reversing on the brake does not light them.  The other
+             * condition, 0x4d9df4, is dead: every write stores 0 (0x4266b3,
+             * 0x426ae8).  Re-stamped only when the state changes, as the
+             * original does. */
             {
-                int lit = drv.braking || car.speed < 0.0f;
+                int lit = (drv.v_fwd > 0.0f && brake > 0.0f) ||
+                          (drv.v_fwd < 0.0f && throttle > 0.0f);
                 if (lit != brake_lit) {
                     brake_lit = lit;
                     if (brake_light_model < 0) /* the stamp is the other path */
@@ -2661,9 +2670,10 @@ int main(int argc, char **argv)
                     hit_mag = fmaxf(hit_mag, j);
                 }
             }
+            /* (A -6 m/s cap here, from the port's old invented impulse, also
+             * held reversing to 21.6 km/h; the drive model's own limit,
+             * -13.333 m/s from 0x40f0d0, is the original's.) */
             car.speed = drv.v_fwd;
-            if (car.speed < -REVERSE_MAX)
-                car.speed = -REVERSE_MAX;
             if (getenv("A2_COL_LOG") && (touching || last_obj_hit || was_hitting_car))
                 fprintf(stderr, "col t=%.2f chunk %d rail %d obj %d (type %d) car %d v_fwd %.1f v_lat %.1f w %.2f\n",
                         race_time, ch, last_rail_hit, last_obj_hit, obj_type, was_hitting_car,

@@ -48,11 +48,21 @@ void a2_drive_keys(a2_drive *d, unsigned keys, float dt)
     } else {
         d->throttle = 0.0f;
     }
-    /* brake: +40 per second up to 100, kept as a truncated integer */
+    /* brake: +40 per second up to 100, an integer.  The original adds
+     * (int)(brake + 40 * dt) each frame (0x426725..0x426763), which above
+     * 40 frames a second truncates every step to nothing: the brake never
+     * rises, only the engine braking slows the car, and it cannot reverse
+     * (seen under Wine; with a debugger slowing the frames it brakes and
+     * reverses to -13.333 m/s).  At the 20-30 fps of its day it ramped at
+     * 20-30 a second.  Port choice: keep the fraction, so the ramp runs at its
+     * intended 40 a second at any frame rate. */
     if (keys & A2_KEY_DOWN) {
-        int b = (int)((float)d->brake + 40.0f * dt);
-        d->brake = b > 100 ? 100 : b;
+        d->brake_ramp += 40.0f * dt;
+        if (d->brake_ramp > 100.0f)
+            d->brake_ramp = 100.0f;
+        d->brake = (int)d->brake_ramp;
     } else {
+        d->brake_ramp = 0.0f;
         d->brake = 0;
     }
     /* steering: from centre it starts at +-15 and moves at 200 * k per

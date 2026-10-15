@@ -1002,7 +1002,10 @@ int a2_scene_start_pose_on_lane(const a2_scene *s, int chunk, int lane, float ou
         int nc = chunk + 1;
         if (nc < (int)s->chunk_count && s->chunk_wp_count[nc]) {
             uint32_t nn = s->chunk_wp_count[nc];
-            uint32_t nwi = s->chunk_wp[nc][nn / 2];
+            /* the same lane (it aimed at the middle one, which from a side
+             * lane turned the car about 17 degrees off the road: 40 units
+             * across over the 128 to the next chunk) */
+            uint32_t nwi = s->chunk_wp[nc][(uint32_t)lane < nn ? (uint32_t)lane : nn - 1];
             if (nwi < s->waypoint_count) {
                 float dx = s->waypoints[nwi].x - w->x;
                 float dz = s->waypoints[nwi].z - w->z;

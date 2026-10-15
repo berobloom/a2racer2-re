@@ -55,6 +55,7 @@ typedef struct {
     /* inputs, as 0x4269c0 keeps them */
     float throttle;      /* 0x4d9cdc, 0..100 */
     int brake;           /* 0x4d9e08, 0..100 */
+    float brake_ramp;    /* port: the brake ramp with its fraction kept */
     float steer;         /* 0x4d9cd8, -100..100 */
     unsigned rng;
 } a2_drive;

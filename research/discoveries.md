@@ -6856,11 +6856,44 @@ Completes open question 5 (session 9), which found the driver-name scan
   so the camera's forward is up.
 - MEASURED (Wine captures): the player's dot is at (72, 402) (top-left) on
   etappe1 and etappe2, which is the quad's centre. The visible road runs
-  about 105 px. Fitting the port's map to the captures gave a turn about
-  16 degrees short of the camera's yaw + 180; that is not explained (the
-  original's start heading or camera may differ slightly from the port's).
+  about 105 px. Fitting the port's map to the captures first gave a turn
+  about 16 degrees short of the camera's yaw + 180. **Explained:** the
+  port's own start heading was 17 degrees off the road. It aimed from the
+  car's lane at the middle lane of the next chunk, 40 units across over 128
+  along. The original starts the car along its lane (Wine capture, etappe1).
+  With that fixed (render.c a2_scene_start_pose_on_lane), the port's radar
+  matches the capture at the start.
 - The port had drawn its own radar: a short heading-up ribbon of the 15
   nearest chunks with large dots, traffic included. It now builds the map and
   draws it as above (main.c radar_build / hud_radar), and the result matches
   the etappe1 capture.
+
+## Reversing, and the keyboard brake ramp (session 15)
+
+- CONFIRMED (runtime, Wine + gdb, `reverse-engineering/tools/gdb_reverse.py`
+  on 0x40f0d0): **the car reverses on the brake.** It was logged rolling at
+  14.4 m/s with Down held. The stop latch [0x4a63e4] set at |v| < 0.4 and v
+  went to 0, then on through **negative to -13.333 m/s**, the clamp at
+  0x40f39f, and held there. After release it coasted back toward 0 by the
+  engine braking. The latch is cleared only by a positive throttle (0x40f1ab).
+- CONFIRMED (same log): **reversing on the brake does not light the brake
+  lights.** 0x4a63cc ("force opposes motion") stayed 0 throughout, because
+  0x40f38b clears it whenever v <= 0. The other light condition **0x4d9df4
+  is dead**: its only writes store 0 (0x4266b3, 0x426ae8).
+- CONFIRMED (runtime, Wine, no debugger): **on a fast machine the keyboard
+  brake does nothing.** With Down held, the car slowed from 26 km/h to 0 in
+  about 2 s and then stayed at 000 with the scene still, twice. The keyboard
+  handler ramps the brake as an integer, `[0x4d9e08] = (int)(old + 40 * dt)`
+  capped at 100 (0x426725..0x426763; the same in 0x4269c0's arm). At more
+  than 40 fps the step truncates to 0, the brake stays 0, only the engine
+  braking (CARS.DAT A[28], 3.0 m/s^2 for the Brabant) slows the car, and it
+  never reverses. Under the debugger the frames were slow (dt 0.008-0.03 and
+  longer), the ramp reached 16-18 and the brake worked. At the 20-30 fps of
+  1998 hardware the ramp ran at 20-30 a second.
+- The port had: a -6 m/s cap of its own (REVERSE_MAX, from its old impulse
+  scale) that also capped reversing at 21.6 km/h; brake lights on whenever the
+  car went backwards; and the truncating ramp, copied, which at the port's
+  60 fps broke braking just as it does in the original. Now: no cap (the
+  drive model's -13.333 stays), lights by the force rule, and the ramp keeps
+  its fraction (port choice, so the brake works at any frame rate).
 
