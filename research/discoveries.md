@@ -6808,9 +6808,9 @@ Completes open question 5 (session 9), which found the driver-name scan
   2 px of the port's rows, so they are unchanged. (The original then stopped
   with "Unhandled exception" under Wine, a few seconds into the stage. Not
   investigated; it may be the reduced drive mapping of the Wine prefix.)
-- Port gap: its fonts are scaled with nearest-neighbour sampling, which at
-  0.8 drops whole rows and columns of the glyphs; the original's text stays
-  solid.
+- The port's fonts were point-sampled, which at 0.8 dropped whole glyph
+  rows and columns; the original's text stays solid. They are now
+  linear-filtered. The original's own filtering is not known.
 - The port had no RACE RECORD row on the highway stages and placed POSITIE
   as on a circuit. Both are fixed. The bottom group is refitted to the
   capture, in 800x600 units (capture px x 1.25).

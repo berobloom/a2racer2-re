@@ -108,7 +108,10 @@ a2_font *a2_font_load(const a2_archive *rcs, const char *name, const uint8_t pal
      * colour").  olfnt02's index 230 is (189,202,231) in e02_pl16, squared
      * (140,160,209), against (140,158,214) in a capture of the original. */
     a2_gfx_gamma_rgba(im.rgba, (size_t)total_w * max_h);
-    f->tex = a2_gfx_texture_from_image_nearest(&im, 1);
+    /* Linear, not point-sampled: the HUD draws the fonts at 0.8 (800x600
+     * units at 640x480), and point sampling then drops whole glyph rows
+     * and columns, where the original's text stays solid. */
+    f->tex = a2_gfx_texture_from_image(&im, 1);
     free(im.rgba);
     f->atlas_w = total_w;
     f->atlas_h = max_h;
