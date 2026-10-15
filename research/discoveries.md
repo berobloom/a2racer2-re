@@ -7116,3 +7116,37 @@ Completes open question 5 (session 9), which found the driver-name scan
   The CHECKPOINT label and clock heights are still the capture fit: mode 1
   centres on a height read through [0x4ead08] + 0x68 that was not traced.
 
+## The two collision deviations re-tested (session 15, after the traffic change)
+
+- The port's re-test at **t = 0** (added after a car pinned at etappe1 chunk
+  330) is **gone**. With traffic on both carriageways, running the original's
+  rule (0x441490 returns 0 at t = 0; the car is not moved and the step's
+  impulse turns it) gives:
+  - unwedges 0 / 0 / 13 / 2 on etappe1 / etappe5 / etappe2 / etappe1 with
+    police, against 0 / 0 / 12 / 2 with the deviation;
+  - fewer samples under 10 km/h on etappe2 (26 against 40) and on etappe1
+    with police (11 against 20).
+
+  The AI cars' step never had it.
+- The **overlap** deviation (a box the car already overlaps and moves away
+  from does not hold it) **is still needed**. Without it (A2_FAITHFUL_OVERLAP),
+  etappe5 did not finish within 13000 frames and etappe2 needed 30 unwedges
+  instead of 13.
+- What the player overlaps (A2_OVERLAP_LOG, one line per sub-step taking
+  the deviation):
+
+  | obstacle | etappe5 | etappe2 |
+  |---|---|---|
+  | barrier slabs | 80 | 506 |
+  | traffic | 0 | 953 |
+  | racers | 0 | 21 |
+
+  - LIKELY: the traffic share is a port artefact. The port's traffic follows
+    its lane points kinematically and never stops at a contact, so it drives
+    into the player's box. In the original, traffic cars are engine objects
+    moved by 0x440fb0 with their own contact pass (one step each).
+  - LIKELY: the slab overlaps come from the turn. 0x4404a0 turns the object
+    over the whole step after the swept move, unswept, in the original as in
+    the port, so a corner can swing into a slab. How the original then gets
+    free (if it does) was not traced.
+

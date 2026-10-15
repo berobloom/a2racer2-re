@@ -2233,14 +2233,15 @@ int main(int argc, char **argv)
                      * the move x t). The real velocity is left alone; the
                      * impulse changes it. */
                     float vn = vx * hit.n[0] + vz * hit.n[1];
-                    /* Port deviation: the original skips the re-test at
-                     * t = 0 (0x441490 returns 0) and leaves the escape to
-                     * the impulse that follows in the step.  In the port a
-                     * car steered into a barrier can stay pinned at t = 0
-                     * at full throttle (etappe1 chunk 330, with the police
-                     * on), the impulse undone by the grip each step, so the
-                     * port re-tests at t = 0 too. */
-                    if (vn >= 0.0f) {
+                    /* At t = 0 0x441490 returns 0 and the car is not moved;
+                     * the impulse that follows in the step turns it away.
+                     * (The port re-tested at t = 0 as well for a while, after
+                     * a car pinned at etappe1 chunk 330; with the traffic on
+                     * both carriageways that no longer happens.) */
+                    static int overlap_dev = -1;
+                    if (overlap_dev < 0)
+                        overlap_dev = getenv("A2_FAITHFUL_OVERLAP") == NULL;
+                    if (vn >= 0.0f && best > 0.0f) {
                         float k = -10.0f - vn; /* the normal part becomes -10 */
                         float wx = vx + k * hit.n[0], wz = vz + k * hit.n[1];
                         float wmx = 10.0f * sdt * wx, wmz = 10.0f * sdt * wz;
@@ -2254,7 +2255,10 @@ int main(int argc, char **argv)
                         /* stopped at the contact; at t = 0 not moved at all,
                          * the impulse below turning it away */
                         a2_drive_integrate_move(&drv, sdt, mx * best, mz * best);
-                    } else {
+                    } else if (overlap_dev) {
+                        if (getenv("A2_OVERLAP_LOG"))
+                            fprintf(stderr, "overlap: kind %d idx %d t=%.1f\n", hit.kind, hit.idx,
+                                    race_time);
                         /* Port deviation: a box already overlapping the car
                          * that it moves away from would hold it at t = 0 for
                          * ever (the overlap's "nearest side" is arbitrary).
