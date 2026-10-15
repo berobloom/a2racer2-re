@@ -102,6 +102,22 @@ static int toi_take(const toi_hit *t, int kind, int idx, float n[2], float p[2])
  *   traffic    the vehicle table's mass, 0.2, the car takes its share
  *   racers     the car table's mass, 0.2; cops 0.25; they take their share
  * Returns the impulse's magnitude. */
+/* Debug (A2_SLAB_TRACE): the barrier slab a box at (x, z, heading) has a
+ * corner in, or -1. */
+static int slab_overlap(const a2_scene *scene, float x, float z, float heading, float hw, float hl)
+{
+    a2_cbox cand[200];
+    int ch = a2_scene_nearest_chunk(scene, x, z);
+    int n = a2_scene_rail_boxes(scene, ch, cand, 200);
+    a2_cbox self = {-hw, -hl, hw, hl, x, z, heading};
+    for (int i = 0; i < n; i++) {
+        float t, p[2], nn[2];
+        if (a2_contact(&self, 0.001f, 0.0f, &cand[i], &t, p, nn) && t <= 0.0f)
+            return i;
+    }
+    return -1;
+}
+
 static float step_impulse(a2_drive *drv, const toi_hit *h, float hl, float hw, float m,
                           a2_scene *scene, a2_traffic *traffic, a2_racers *racers,
                           a2_cops *cops, const a2_handling_table *handling)
@@ -2211,7 +2227,31 @@ int main(int argc, char **argv)
         }                                                                                          \
         best_;                                                                                     \
     })
+                static int slab_trace = -1, slab_was = -1;
+                if (slab_trace < 0)
+                    slab_trace = getenv("A2_SLAB_TRACE") != NULL;
+                float sb_x = drv.x, sb_z = drv.z, sb_h = drv.heading;
+#define SLAB_CHECK(label)                                                                          \
+    do {                                                                                           \
+        if (slab_trace) {                                                                          \
+            int now_ = slab_overlap(scene, drv.x, drv.z, drv.heading, hw, hl);                     \
+            if ((now_ >= 0) != (slab_was >= 0)) {                                                  \
+                int tr_ = slab_overlap(scene, drv.x, drv.z, sb_h, hw, hl);                         \
+                fprintf(stderr, "slab: t=%.2f %s -> %d (translation alone %d) pos (%.1f, %.1f) "   \
+                                "dpos (%.2f, %.2f) dhead %.2f v (%.1f, %.1f) yaw %.2f\n",          \
+                        race_time, (label), now_, tr_, drv.x, drv.z, drv.x - sb_x, drv.z - sb_z,   \
+                        drv.heading - sb_h, drv.v_fwd, drv.v_lat, drv.yaw_rate);                   \
+            }                                                                                      \
+            slab_was = now_;                                                                       \
+            sb_x = drv.x;                                                                          \
+            sb_z = drv.z;                                                                          \
+            sb_h = drv.heading;                                                                    \
+        }                                                                                          \
+    } while (0)
+                SLAB_CHECK("between frames");
                 for (int sub = 0; sub < 8; sub++) {
+                    if (sub > 0)
+                        SLAB_CHECK("sub-step");
                     float hh = floorf(drv.heading);
                     float ang = (float)(((int)hh) & 0xfff) * (6.28318531f / 4096.0f);
                     float sn = sinf(ang), cs = cosf(ang);
@@ -2286,6 +2326,7 @@ int main(int argc, char **argv)
                         }
                     }
                 }
+                SLAB_CHECK("sub-step");
 #undef EARLIEST
                 if (getenv("A2_COL_LOG") && toi.kind != TOI_NONE)
                     fprintf(stderr, "toi: kind %d idx %d n (%.2f, %.2f)\n", toi.kind, toi.idx,

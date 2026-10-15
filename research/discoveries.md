@@ -7211,7 +7211,38 @@ Completes open question 5 (session 9), which found the driver-name scan
   - The overlap deviation is still needed. Without it etappe2 and etappe1
     with police stall. On etappe1 the car is held by a barrier slab (chunk
     421, 77086 sub-steps), entered just after a crash at 108 s (178 -> 43
-    km/h). How the car's corner got into the slab (the unswept turn, an
-    impulse, or the port's circular push-out, which can leave a box corner
-    inside a slab) is the next thing to settle.
+    km/h). See the next section for how it gets in.
+
+## How the car's corner gets into a barrier slab (session 15)
+
+- Port trace (A2_SLAB_TRACE): after every sub-step and between frames, is
+  a corner of the player's box inside a `.cmp` slab (a2_contact with a
+  vanishing move giving t = 0)? When that changes, the trace logs whether the
+  translation alone would have done it.
+  - etappe1 with police, faithful (A2_FAITHFUL_OVERLAP): the one entry is
+    at 110.9 s, in a **sub-step's turn**. The translation alone left the car
+    clear, and the turn of -1 heading unit (0.09 degrees) put a corner about
+    0.04 units in.
+  - etappe2, the whole race: 215 entries in a sub-step's turn, 1 on a move
+    (a float edge), none from the push-outs or the AI pass. 14 apparent
+    entries between frames with no motion are the trace's own artefact (its
+    nearest chunk, and so its set of slabs, changed).
+- So the overlaps come from the original's own rules: 0x4404a0 turns the
+  object over the step **unswept**, after the swept move. LIKELY the original
+  gets into the same state, since its contact code is the one the port
+  matches (1499 of 1500 random cases, fit_contact.py).
+- Once a corner is inside:
+  - a move that leaves it inside hits at t = 0 on the slab's nearest side;
+  - if the velocity points **away** (v . n > 0 in the record's sign)
+    0x441490 returns 0 and 0x43f900 moves by velocity x 0, so the car does
+    not move at all;
+  - only a velocity **into** the slab takes 0x441490's re-test, which sets
+    the normal part to 10 outward and moves the car clear.
+
+  The trap is a car sliding along a barrier with a corner a hair inside and
+  its velocity slightly away from it (etappe1: v . n = -0.17 m/s, about 0.007
+  units a sub-step). LIKELY a player in the original gets out by steering
+  into the wall or braking. The port's autopilot steers away, and the car
+  stays put. That is why the port keeps its deviation: a car overlapping a
+  box it moves away from is allowed to move.
 

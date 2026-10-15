@@ -714,9 +714,11 @@ reported before this point should be treated as a one-off sample.
   boxes"). The impulse is applied inside the step, as the original's
   0x4497f0 is, so the next step moves with the new velocity. One port
   deviation remains: a box the car is already inside and moving away from
-  does not hold it. Without it the car can still be held by a barrier slab
-  after a crash (etappe1 chunk 421); how its corner gets into the slab is
-  being looked into. The push-out, a circle of the car's half-width, stays as a
+  does not hold it. The original's unswept turn can put a corner a hair
+  into a barrier slab. Its contact rule then holds a car that slides along
+  the barrier, moving slightly away from it, until the driver steers into
+  the wall. The port's autopilot never does, so the port lets such a car
+  move. `A2_SLAB_TRACE` logs every entry. The push-out, a circle of the car's half-width, stays as a
   safety net. The AI cars move in one step, as the original moves every object but the
   player, with the same 0x441490 re-test and the impulse at the contact.
 - **Traffic speeds are the original's.** Vehicles come from its 12-entry spawn
