@@ -707,13 +707,17 @@ reported before this point should be treated as a one-off sample.
   Etappe1 under the autopilot dropped from 345.5 s to 294.3 s, and etappe5
   from 418.8 s to 365.7 s, mostly from no longer queueing behind it.
 - The HUD follows the game's own layout: a right-aligned stack of RACE TIJD,
-  RONDE INFO, POSITIE and RONDE, with SCHADE, TURBO and SNELHEID lower down.
+  then RACE RECORD and POSITIE on the highway stages (0x419b10) or RONDE
+  INFO, POSITIE and RONDE on the circuits (0x419e00), with SCHADE, TURBO and
+  SNELHEID lower down. On the highway stages CHECKPOINT sits top centre. The
+  layout is in 800x600 units scaled to the window, as the original's is (it
+  draws the labels at 0.8 at 640x480). It was checked against 640x480 Wine
+  captures of etappe1 and etappe2 (session 15).
   It draws with the game's **bitmap fonts** (`olfnt01..04` for labels, times,
   speed and lap info, `slider13` for the bar percentages; the `lo_fnt*` set as
   fallback, the 3D mesh font only if neither loads) and the **radar**
   bottom-left as the original paints it: the road as a white ribbon with a
-  black edge, the player a yellow dot and the other cars red ones. Compared
-  side by side with a capture of the original (`hud.png`) the layout matches.
+  black edge, the player a yellow dot and the other cars red ones.
 - (Superseded in session 13 by "The new AI model": what follows is the
   old model, ai_model 1.) **The racers follow the original's speed model**, recovered from
   HANDLE_RACER_AI and `calc_speed` (0x407140). The behaviour table was read
@@ -760,7 +764,7 @@ reported before this point should be treated as a one-off sample.
 - **The scene is darkened as the original darkens it.** Game.ini's `gamma`
   (shipped 1, "dark") makes the original square every colour as it converts
   textures and sprites to 16 bits (`c*c >> 8`, 0x468230). The port does the
-  same to the 3D textures, the sky and every stamped sprite (gfx.c
+  same to the 3D textures, the sky, every stamped sprite and the fonts (gfx.c
   `a2_gfx_gamma_rgba`); the HUD sprites already had it. Without it the port
   looked like bright midday where the original is dark and saturated.
 - **Traffic signs show their directions.** The gantry boards and the matrix
