@@ -7275,3 +7275,27 @@ Completes open question 5 (session 9), which found the driver-name scan
 - Port: `a2view --game` (the menu passes it) does all of this.
   `port/play.sh` runs the whole game from a private play copy of the data.
 
+## The speed camera ignores its pole (session 15)
+
+- CONFIRMED (code): 0x42a2e0, the handler for chunk trigger 1 (referenced
+  from the trigger table at file offset 0x89c8c), takes the car, compares
+  [0x4d9e34] (km/h) with the posted limit 0x48c480 and the record's
+  +0x1c < +0x18 (entered the chunk going forwards). Then it plays sample 11
+  and starts the flash sequence. It never looks at the camera object. The
+  trigger lies on the pole's chunk or one or two past it, so in the original
+  a car that knocks the pole over (the radar bonus, 0x428d30) is flashed as
+  well, a moment after or before the hit. Seen in the port's etappe1 run:
+  FLITS at chunk 462, then the camera knocked over at 124.2 s.
+- Port choice (asked for by the player): the flash is held for up to 0.5 s
+  or two chunks and dropped if that camera has been knocked over
+  (a2_scene_camera_down). Every other flash is unchanged.
+
+## The load screen (session 15)
+
+- CONFIRMED (debug trace, session 6): spel.dat shows **e0N_w_hi.tga**
+  (640x480; w_lo 320x200) while it loads ("Loading wait screen for 16-bit
+  mode"). For etappe1 it is the route map "Amsterdam / Den Haag".
+- Port (game mode): the same picture with a load bar while it loads, then
+  "DRUK OP ENTER OM DE RACE TE STARTEN" until Enter. The bar and prompt are
+  port additions.
+

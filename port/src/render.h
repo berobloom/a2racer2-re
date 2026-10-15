@@ -79,6 +79,10 @@ int a2_scene_collide_objects(const a2_scene *s, int chunk, float *x, float *z, f
  * from the collision impulse (world m/s, rad/s). */
 int a2_scene_object_pos(const a2_scene *s, int inst, float *x, float *z);
 void a2_scene_object_push(a2_scene *s, int inst, float dvx, float dvz, float dw);
+/* 1 when a speed camera (.omp type 7) on `chunk` or the two chunks before it
+ * has been knocked over (a camera trigger sits on its camera's chunk or a
+ * chunk or two past it). */
+int a2_scene_camera_down(const a2_scene *s, int chunk);
 /* One frame of the pushed objects' motion: they move by their velocity and
  * are damped by their type handlers, arrows x0.95 a frame (0x4296b0), parked
  * police cars x0.9 (0x4293a0). */

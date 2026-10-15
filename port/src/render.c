@@ -1828,6 +1828,22 @@ int a2_scene_object_pos(const a2_scene *s, int inst, float *x, float *z)
     return 1;
 }
 
+int a2_scene_camera_down(const a2_scene *s, int chunk)
+{
+    if (!s)
+        return 0;
+    for (int c = chunk - 2; c <= chunk; c++) {
+        if (c < 0 || c >= (int)s->chunk_count)
+            continue;
+        for (int k = 0; k < s->chunk_inst_count[c]; k++) {
+            const instance *in = &s->instances[s->chunk_inst_first[c] + k];
+            if (in->type == 7 && in->phase != 0)
+                return 1;
+        }
+    }
+    return 0;
+}
+
 void a2_scene_object_push(a2_scene *s, int inst, float dvx, float dvz, float dw)
 {
     if (!s || inst < 0 || inst >= s->instance_count)

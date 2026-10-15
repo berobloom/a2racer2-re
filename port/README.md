@@ -24,6 +24,20 @@ the files the game saves (Game.ini, Raser.ini, menu.ini, SLOTS.RAS,
 options.ras, CARS.DAT, garage.ini) are real copies, so careers persist
 between runs.
 
+Each race opens on the original's wait screen for the stage (`e0N_w_hi.tga`,
+the route map) with a load bar, and then waits for **Enter** ("DRUK OP ENTER
+OM DE RACE TE STARTEN"). The bar and the prompt are port additions; the
+original only shows the picture while it loads.
+
+Two port choices differ from the original on purpose:
+
+- **A speed camera you knock over does not flash you.** In the original the
+  flash is a chunk trigger (0x42a2e0) that never looks at the pole. Since it
+  sits on the pole's chunk or just past it, hitting the pole gets you flashed
+  as well. The port holds a triggered flash for up to 0.5 s and drops it if
+  that camera goes down meanwhile.
+- The load bar and the Enter prompt above.
+
 In the race (`a2view --game`, as the menu starts it) the keys are the
 original's:
 

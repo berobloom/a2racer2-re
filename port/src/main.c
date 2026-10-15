@@ -850,6 +850,98 @@ static int lane_blocked(const a2_scene *scene, const a2_traffic *traffic, int ch
 #define collide_impulse a2_drive_impulse
 
 
+/* The load screen (game mode).  spel.dat shows the stage's wait screen,
+ * e0N_w_hi.tga (640x480; w_lo for 320x200), while it loads ("Loading wait
+ * screen for 16-bit mode").  The port loads in a moment, so it adds a load
+ * bar and, once ready, a line asking for Enter (a port addition). */
+typedef struct {
+    unsigned tex;
+    int tried;
+} load_screen_t;
+
+static void load_screen(load_screen_t *ls, SDL_Window *win, const a2_archive *rcs,
+                        const char *prefix, float frac, const a2_font *font, const char *msg)
+{
+    int w = 640, h = 480;
+    SDL_GL_GetDrawableSize(win, &w, &h);
+    if (!ls->tried) {
+        ls->tried = 1;
+        char name[32];
+        snprintf(name, sizeof name, "%s_w_hi.tga", prefix);
+        long idx = a2_archive_find(rcs, name);
+        uint32_t size = 0;
+        const uint8_t *data = idx >= 0 ? a2_archive_data(rcs, idx, &size) : NULL;
+        a2_image im;
+        if (data && a2_image_decode(&im, data, size, name) == 0) {
+            ls->tex = a2_gfx_texture_from_image(&im, 1);
+            a2_image_free(&im);
+        }
+    }
+    glViewport(0, 0, w, h);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    a2_sprites_begin(w, h);
+    /* the picture, 4:3 in the middle */
+    float k = (float)h / 480.0f;
+    if (640.0f * k > (float)w)
+        k = (float)w / 640.0f;
+    float x0 = (w - 640.0f * k) * 0.5f, y0 = (h - 480.0f * k) * 0.5f;
+    if (ls->tex) {
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, ls->tex);
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex2f(x0, y0);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex2f(x0 + 640.0f * k, y0);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex2f(x0 + 640.0f * k, y0 + 480.0f * k);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex2f(x0, y0 + 480.0f * k);
+        glEnd();
+    }
+    /* the bar: a dark frame, the fill in the HUD's orange */
+    float bx = x0 + 120.0f * k, by = y0 + 440.0f * k, bw = 400.0f * k, bh = 12.0f * k;
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(0.0f, 0.0f, 0.0f, 0.75f);
+    glBegin(GL_QUADS);
+    glVertex2f(bx - 2.0f * k, by - 2.0f * k);
+    glVertex2f(bx + bw + 2.0f * k, by - 2.0f * k);
+    glVertex2f(bx + bw + 2.0f * k, by + bh + 2.0f * k);
+    glVertex2f(bx - 2.0f * k, by + bh + 2.0f * k);
+    glEnd();
+    if (frac > 1.0f)
+        frac = 1.0f;
+    glColor4f(1.0f, 0.55f, 0.1f, 1.0f);
+    glBegin(GL_QUADS);
+    glVertex2f(bx, by);
+    glVertex2f(bx + bw * frac, by);
+    glVertex2f(bx + bw * frac, by + bh);
+    glVertex2f(bx, by + bh);
+    glEnd();
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    glEnable(GL_TEXTURE_2D);
+    if (font && msg) {
+        float tw = a2_font_text_width(font, msg, k);
+        float th = a2_font_height(font, k);
+        glDisable(GL_TEXTURE_2D);
+        glColor4f(0.0f, 0.0f, 0.0f, 0.6f);
+        glBegin(GL_QUADS);
+        glVertex2f(x0 + 320.0f * k - tw * 0.5f - 8.0f * k, by - th - 18.0f * k);
+        glVertex2f(x0 + 320.0f * k + tw * 0.5f + 8.0f * k, by - th - 18.0f * k);
+        glVertex2f(x0 + 320.0f * k + tw * 0.5f + 8.0f * k, by - 6.0f * k);
+        glVertex2f(x0 + 320.0f * k - tw * 0.5f - 8.0f * k, by - 6.0f * k);
+        glEnd();
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glEnable(GL_TEXTURE_2D);
+        a2_font_draw(font, msg, x0 + 320.0f * k - tw * 0.5f, by - th - 12.0f * k, k);
+    }
+    a2_sprites_end();
+    SDL_GL_SwapWindow(win);
+    SDL_PumpEvents();
+}
+
 int main(int argc, char **argv)
 {
     const char *datadir = argc > 1 ? argv[1] : ".";
@@ -966,6 +1058,13 @@ int main(int argc, char **argv)
     }
     fprintf(stderr, "GL %s / %s\n", (const char *)glGetString(GL_VERSION),
             (const char *)glGetString(GL_RENDERER));
+    load_screen_t lscr = {0, 0};
+#define LOAD_STEP(frac)                                                                            \
+    do {                                                                                           \
+        if (game_mode)                                                                             \
+            load_screen(&lscr, win, &rcs, prefix, (frac), NULL, NULL);                             \
+    } while (0)
+    LOAD_STEP(0.05f);
 
     a2_anims *anims = a2_anims_load(datadir);
     if (anims)
@@ -1059,6 +1158,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "failed to build scene\n");
         return 1;
     }
+    LOAD_STEP(0.55f);
     char stats[256];
     a2_scene_stats(scene, stats, sizeof stats);
     fprintf(stderr, "scene: %s\n", stats);
@@ -1153,6 +1253,7 @@ int main(int argc, char **argv)
         sky_back = (int)(time(NULL) % 7) + 1;
     a2_sky *sky = a2_sky_load(&rcs, sky_back);
     a2_lang *lang = a2_lang_load(datadir, -1);
+    LOAD_STEP(0.65f);
 
     /* Checkpoints are the .pmp trigger slot value 45.  Across all 7 tracks
      * these are 1:1 with the A_CHECK* overhead gantries (11 triggers, 11
@@ -1560,6 +1661,7 @@ int main(int argc, char **argv)
     /* The scripted path objects: boats, trains, helicopter, aeroplane and
      * scripted traffic (.pth). */
     a2_paths *paths = a2_paths_create(scene, &rcs, anims, &track);
+    LOAD_STEP(0.85f);
     int scene_chunks = (int)track.rmp.chunk_count;
     finish_progress = circuit ? (float)(start_chunk + nr_laps * scene_chunks)
                               : (float)finish_chunk;
@@ -1642,6 +1744,9 @@ int main(int argc, char **argv)
     float race_time = 0.0f;
     int next_camera = 0;
     float flash_at = -100.0f;
+    /* a triggered flash held back while the car may still hit the pole */
+    float flash_pending = -1.0f;
+    int flash_pending_chunk = -1;
     /* Progress starts where the racers' does: the absolute start chunk. */
     player_progress = (float)player_chunk0;
     progress_chunk = player_chunk0;
@@ -1706,6 +1811,28 @@ int main(int argc, char **argv)
         overlay_detail = 0;
     int show_hud = 1;
     int running = 1, mouse_captured = 0, frames = 0, over_frames = 0;
+    if (game_mode) {
+        /* loaded: the full bar and, a port addition, wait for Enter */
+        int waiting = 1;
+        Uint32 t0 = SDL_GetTicks();
+        while (waiting && running) {
+            int blink = ((SDL_GetTicks() - t0) / 500) % 2 == 0;
+            load_screen(&lscr, win, &rcs, prefix, 1.0f, fnt_label,
+                        blink ? "DRUK OP ENTER OM DE RACE TE STARTEN" : NULL);
+            SDL_Event ev;
+            while (SDL_PollEvent(&ev)) {
+                if (ev.type == SDL_QUIT)
+                    running = 0;
+                else if (ev.type == SDL_KEYDOWN && (ev.key.keysym.sym == SDLK_RETURN ||
+                                                    ev.key.keysym.sym == SDLK_KP_ENTER))
+                    waiting = 0;
+            }
+            SDL_Delay(15);
+        }
+        if (lscr.tex)
+            a2_gfx_delete_texture(lscr.tex);
+    }
+#undef LOAD_STEP
     Uint32 last = SDL_GetTicks();
     Uint32 over_since = 0; /* when the finish or the game over began */
     int halt = 0;          /* [0x4d9ab4]: 1 the pause (P), 2 the quit question (Esc) */
@@ -2905,6 +3032,18 @@ int main(int argc, char **argv)
             a2_paths_update(paths, dt);
             prev_ch = ch;
 
+            if (flash_pending >= 0.0f) {
+                if (a2_scene_camera_down(scene, flash_pending_chunk)) {
+                    fprintf(stderr, "FLITS at chunk %d dropped: the camera was knocked over\n",
+                            flash_pending_chunk);
+                    flash_pending = -1.0f;
+                } else if (race_time - flash_pending >= 0.5f || ch > flash_pending_chunk + 2) {
+                    flash_at = race_time;
+                    if (audio)
+                        a2_audio_play(audio, 11, 0); /* flits.wav, 0x42a30f */
+                    flash_pending = -1.0f;
+                }
+            }
             if (next_camera < camera_count && ch >= camera_chunk[next_camera]) {
                 /* The game keeps the posted limit in a single global, 0x48C480,
                  * whose **static initial value is -1** and which only the
@@ -2919,10 +3058,18 @@ int main(int argc, char **argv)
                 for (int k = 0; k < limit_count && limit_sign[k].chunk <= ch; k++)
                     limit = limit_sign[k].limit;
                 int kmh = (int)(car.speed * 3.6f + 0.5f);
-                if (kmh > limit) {
-                    flash_at = race_time;
-                    if (audio)
-                        a2_audio_play(audio, 11, 0); /* flits.wav, 0x42a30f */
+                /* Port choice (at the player's request): a camera knocked
+                 * over does not flash.  The original's trigger 1 handler
+                 * (0x42a2e0) does not look at the pole at all: it flashes as
+                 * the car enters the trigger's chunk, which is the pole's or
+                 * one or two past it, so a car that hits the pole is flashed
+                 * too.  Here the flash waits up to 0.5 s (or two chunks) and
+                 * is dropped if the pole goes down meanwhile. */
+                if (kmh > limit && a2_scene_camera_down(scene, camera_chunk[next_camera])) {
+                    fprintf(stderr, "FLITS at chunk %d skipped: the camera is down\n", ch);
+                } else if (kmh > limit) {
+                    flash_pending = race_time;
+                    flash_pending_chunk = camera_chunk[next_camera];
                     if (limit < 0)
                         fprintf(stderr, "FLITS at chunk %d: %d km/h, no limit posted\n", ch, kmh);
                     else
