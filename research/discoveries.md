@@ -6547,8 +6547,10 @@ offset table read the constants but not what they do.
   0x440fb0 does (0x4497f0 right after the move). step_impulse in main.c uses
   each obstacle's own mass and restitution, and the blocks after the move
   keep only the push-out, the damage and the sound for those contacts. This
-  removed the t = 0 deviation: the port stops at t = 0 as the original does
-  and the impulse turns the car away. The overlap deviation stays.
+  removed the t = 0 deviation for a while. It came back once the start
+  heading was fixed: the autopilot then pinned the car to a barrier at
+  etappe1 chunk 330 with the police on, the impulse undone each step by the
+  grip. Both deviations stay.
   Regressions: etappe1 295.3 s, 1 unwedge; etappe5 342.1 s, 1; etappe2
   1206.9 s, **10** (was 25); etappe1 with police 323.8 s, 4.
   The AI cars' one step then got the same move: 0x441490's re-test replaces
