@@ -716,8 +716,11 @@ reported before this point should be treated as a one-off sample.
   It draws with the game's **bitmap fonts** (`olfnt01..04` for labels, times,
   speed and lap info, `slider13` for the bar percentages; the `lo_fnt*` set as
   fallback, the 3D mesh font only if neither loads) and the **radar**
-  bottom-left as the original paints it: the road as a white ribbon with a
-  black edge, the player a yellow dot and the other cars red ones.
+  bottom-left as gfx_radr.cpp makes it. It is a north-up map of the whole
+  track at 60 units a pixel, built once. Each frame a 128x128 window around
+  the player's chunk is shown at 0.7 on a quad turned with the camera. The
+  dots sit on the cars' chunks: racers red, chasing cops green, the player
+  yellow. Traffic is not shown, as in the original.
 - (Superseded in session 13 by "The new AI model": what follows is the
   old model, ai_model 1.) **The racers follow the original's speed model**, recovered from
   HANDLE_RACER_AI and `calc_speed` (0x407140). The behaviour table was read
