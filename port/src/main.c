@@ -858,6 +858,7 @@ int main(int argc, char **argv)
     const char *atlas = NULL;
     int max_frames = 0;
     float gb_gas = -1.0f, gb_brake = 0.0f; /* --gas-brake: scripted keys */
+    int game_mode = 0; /* --game: as spel.dat, no viewer extras */
     int drive_test = 0;
     int start_chunk = -1; /* <0 = derive it the way the game does; see below */
     int autopilot = 0;
@@ -900,6 +901,8 @@ int main(int argc, char **argv)
             no_racers = 1;
         else if (strcmp(argv[i], "--start-chunk") == 0 && i + 1 < argc)
             start_chunk = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--game") == 0)
+            game_mode = 1; /* started by the menu: play, not view */
         else if (strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
             max_frames = atoi(argv[++i]);
         else if (strcmp(argv[i], "--gas-brake") == 0 && i + 2 < argc) {
@@ -938,16 +941,20 @@ int main(int argc, char **argv)
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     /* The drive test measures physics, not pixels; a small window keeps a
      * software-GL run from taking minutes. */
-    int win_w = drive_test ? 320 : 1280, win_h = drive_test ? 240 : 720;
+    /* 640x480 is the original's screen; doubled, as the menu's window is */
+    int win_w = drive_test ? 320 : 1280, win_h = drive_test ? 240 : (game_mode ? 960 : 720);
     /* Debug: A2_WIN=<w>x<h> sets the window, A2_FOV=<deg> the vertical view
      * angle (for matching captures of the original). */
     if (getenv("A2_WIN"))
         sscanf(getenv("A2_WIN"), "%dx%d", &win_w, &win_h);
     if (getenv("A2_FOV"))
         view_fov = (float)atof(getenv("A2_FOV"));
-    SDL_Window *win = SDL_CreateWindow("A2 Racer II - track viewer", SDL_WINDOWPOS_CENTERED,
-                                       SDL_WINDOWPOS_CENTERED, win_w, win_h,
-                                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    Uint32 win_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    if (getenv("A2_FULLSCREEN") && atoi(getenv("A2_FULLSCREEN")))
+        win_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    SDL_Window *win = SDL_CreateWindow(game_mode ? "A2 Racer II" : "A2 Racer II - track viewer",
+                                       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, win_w,
+                                       win_h, win_flags);
     if (!win) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
         return 1;
@@ -1073,7 +1080,7 @@ int main(int argc, char **argv)
     radar_map radar;
     memset(&radar, 0, sizeof radar);
     a2_font *fnt_label = NULL, *fnt_time = NULL, *fnt_speed = NULL, *fnt_value = NULL,
-            *fnt_pct = NULL;
+            *fnt_pct = NULL, *fnt_small = NULL;
     {
         /* Raser.ini's [PALET] gives two palettes per track -- "first arg is the
          * version for 8-bit mode, second is the version for 16-bit mode" --
@@ -1133,6 +1140,9 @@ int main(int argc, char **argv)
                 /* The damage percentage is font 16, lo_fnt1 in both sets,
                  * with "%2d@": its '@' glyph is the percent sign (0x41ab44). */
                 fnt_pct = a2_font_load(&rcs, "lo_fnt1.fnt", pal);
+                /* font 6, olfnt07: the pause and quit screens' small lines */
+                fnt_small = a2_font_load(&rcs, "olfnt07.fnt", pal);
+                a2_font_set_spacing(fnt_small, -2);
             }
         }
     }
@@ -1697,6 +1707,8 @@ int main(int argc, char **argv)
     int show_hud = 1;
     int running = 1, mouse_captured = 0, frames = 0, over_frames = 0;
     Uint32 last = SDL_GetTicks();
+    Uint32 over_since = 0; /* when the finish or the game over began */
+    int halt = 0;          /* [0x4d9ab4]: 1 the pause (P), 2 the quit question (Esc) */
 
     while (running) {
         SDL_Event ev;
@@ -1706,7 +1718,17 @@ int main(int argc, char **argv)
             else if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_RESIZED) {
                 win_w = ev.window.data1;
                 win_h = ev.window.data2;
-            } else if (ev.type == SDL_MOUSEBUTTONDOWN && !mouse_captured) {
+            } else if (ev.type == SDL_KEYUP && over_since &&
+                       (ev.key.keysym.sym == SDLK_ESCAPE || ev.key.keysym.sym == SDLK_RETURN ||
+                        ev.key.keysym.sym == SDLK_SPACE) &&
+                       SDL_GetTicks() - over_since >= (finished ? 1500u : 1000u)) {
+                /* The finish sequence (mode 3, tick 0x4155d0) waits 1500 ms,
+                 * the game over (mode 6, 0x4162e0) 1000 ms, and then for
+                 * Esc, Enter or Space (VK 0x1b, 0x0d, 0x20 through 0x466910)
+                 * to go down and up; then the teardown (mode 4) ends the
+                 * race and the menu takes over. */
+                running = 0;
+            } else if (ev.type == SDL_MOUSEBUTTONDOWN && !mouse_captured && !game_mode) {
                 mouse_captured = 1;
                 SDL_SetRelativeMouseMode(SDL_TRUE);
             } else if (ev.type == SDL_MOUSEMOTION && mouse_captured) {
@@ -1726,6 +1748,36 @@ int main(int argc, char **argv)
                 } else if (ev.key.keysym.sym == SDLK_TAB && tweak_mode && drive_mode && have_cars) {
                     a2_tweak_open(&tweak, &cars, datadir);
                     continue;
+                }
+                /* spel.dat's own keys (check_game_keys 0x424f..0x425084),
+                 * as the menu starts the race: Esc asks whether to end the
+                 * race, P pauses, and the viewer's extras are off.  Both
+                 * screens are modal (the loop at 0x424938): the race stands
+                 * still until J / Y ends it (mode 4) or Esc / N goes back,
+                 * and any key ends the pause.  Neither opens during the
+                 * finish or a game over (modes 3 and 6). */
+                if (game_mode) {
+                    SDL_Keycode k = ev.key.keysym.sym;
+                    if (halt == 1) {
+                        halt = 0;
+                        continue;
+                    }
+                    if (halt == 2) {
+                        if (k == SDLK_j || k == SDLK_y)
+                            running = 0;
+                        else if (k == SDLK_n || k == SDLK_ESCAPE)
+                            halt = 0;
+                        continue;
+                    }
+                    if (k == SDLK_ESCAPE || k == SDLK_p) {
+                        if (!over_since)
+                            halt = k == SDLK_ESCAPE ? 2 : 1;
+                        continue;
+                    }
+                    if (k == SDLK_TAB || k == SDLK_o || k == SDLK_g || k == SDLK_t ||
+                        k == SDLK_h || k == SDLK_LEFTBRACKET || k == SDLK_RIGHTBRACKET ||
+                        k == SDLK_F2)
+                        continue;
                 }
                 switch (ev.key.keysym.sym) {
                 case SDLK_ESCAPE:
@@ -1805,7 +1857,7 @@ int main(int argc, char **argv)
         last = now;
         if (dt > 0.1f)
             dt = 0.1f;
-        if (tweak.open)
+        if (tweak.open || halt)
             dt = 0.0f; /* the menu is modal in the original: the race stands still */
         /* Fixed step for headless runs, so they are reproducible.  It has to be
          * set here, before anything reads `dt`: when it was applied further
@@ -3915,6 +3967,30 @@ int main(int argc, char **argv)
                     }
                 }
 
+                if (halt && fnt_label && fnt_small) {
+                    /* 0x419300: element 34, anim 14 = sprite 307 centred on
+                     * (320, 240) (mode 1), then language.ini 24-26 (PAUZE)
+                     * or 27-29 (EINDE) centred at elements 35, 36 and 37,
+                     * (320, 170 / 220 / 246), in fonts 10 and 6; mode 1
+                     * centres on the 'A' height, 17 and 15 */
+                    float k6 = win_h / 480.0f, cx6 = win_w * 0.5f;
+                    int bw = 345, bh = 139;
+                    a2_sprite_size(hud, 307, &bw, &bh);
+                    a2_sprite_draw(hud, 307, cx6 - bw * 0.5f * k6, (240.0f - bh * 0.5f) * k6, k6);
+                    static const char *const fbp[3] = {"PAUZE", "DRUK OP EEN TOETS OM DE",
+                                                       "RACE TE VERVOLGEN."};
+                    static const char *const fbq[3] = {"EINDE", "WEET JE ZEKER DAT JE DE",
+                                                       "RACE WILT BEEINDIGEN? (J/N)"};
+                    static const float ly[3] = {170.0f - 8.0f, 220.0f - 7.0f, 246.0f - 7.0f};
+                    for (int r = 0; r < 3; r++) {
+                        a2_font *f = r == 0 ? fnt_label : fnt_small;
+                        const char *txt = a2_lang_get(lang, (halt == 1 ? 24 : 27) + r,
+                                                      halt == 1 ? fbp[r] : fbq[r]);
+                        a2_font_draw(f, txt, cx6 - 0.5f * a2_font_text_width(f, txt, k6),
+                                     ly[r] * k6, k6);
+                    }
+                }
+
                 if (extra_lit && fnt_label) {
                     Uint32 now = SDL_GetTicks();
                     if (now - extra_lit_ms > 2000) {
@@ -4002,6 +4078,8 @@ int main(int argc, char **argv)
         SDL_GL_SwapWindow(win);
 
         frames++;
+        if (!over_since && (finished || arrested))
+            over_since = SDL_GetTicks();
         /* A headless test run ends itself a few seconds after the race does --
          * by finishing or by any of the game-over arms -- instead of sitting
          * on the result until the window is closed or the frame cap hits. */
@@ -4059,6 +4137,7 @@ int main(int argc, char **argv)
     a2_font_free(fnt_time);
     a2_font_free(fnt_speed);
     a2_font_free(fnt_pct);
+    a2_font_free(fnt_small);
     a2_font_free(fnt_label);
     a2_lang_free(lang);
     a2_font3d_free(font);

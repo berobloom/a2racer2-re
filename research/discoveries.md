@@ -7251,3 +7251,27 @@ Completes open question 5 (session 9), which found the driver-name scan
   stays put. That is why the port keeps its deviation: a car overlapping a
   box it moves away from is allowed to move.
 
+## How a race ends, pause and the quit question (session 15)
+
+- CONFIRMED (code): **the finish** (mode 3, tick 0x4155d0) waits **1500 ms**
+  (0x5dc against GetTickCount from the mode's start), then for VK 0x1b (Esc),
+  0x0d (Enter) or 0x20 (Space) through 0x466910, held and then released.
+  The end callback 0x415690 books the prize and sets mode 4, the teardown,
+  and spel.dat ends. **The game over** (mode 6, 0x4162e0) does the same
+  after **1000 ms** (0x3e8).
+- CONFIRMED (code), check_game_keys (0x425040..0x425084), outside modes 3
+  and 6:
+  - **Esc** sets [0x4d9ab4] = 2, the quit question. The modal loop at
+    0x424938 waits for **J (0x4a) or Y (0x59)**, which set mode 4 and so end
+    the race unfinished, or **Esc / N (0x4e)**, which go back.
+  - **P** sets [0x4d9ab4] = 1, the pause. It waits for P to be released,
+    then for any key to be pressed and released (0x4249d4..0x424a21).
+- CONFIRMED (code), the screen 0x419300: element 34, anim 14 (sprite 307,
+  345x139, the chequered panel) at (320, 240) in mode 1, then language.ini
+  **24-26 (PAUZE / DRUK OP EEN TOETS OM DE / RACE TE VERVOLGEN.)** or
+  **27-29 (EINDE / WEET JE ZEKER DAT JE DE / RACE WILT BEEINDIGEN? (J/N))**
+  centred at elements 35, 36 and 37 ((320, 170 / 220 / 246)), the first in
+  font 10 (olfnt01), the others in font 6 (olfnt07, hires spacing -2).
+- Port: `a2view --game` (the menu passes it) does all of this.
+  `port/play.sh` runs the whole game from a private play copy of the data.
+

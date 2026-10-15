@@ -4,6 +4,41 @@ Reimplementation effort. The original game data is read as-is; nothing here
 modifies or redistributes original files. All format knowledge comes from
 `../research/` and `../reverse-engineering/` (living spec).
 
+## Playing the game
+
+```sh
+port/play.sh <game data dir>                 # 1280x960 window
+port/play.sh <game data dir> --fullscreen
+port/play.sh <game data dir> --fresh         # forget the saved careers
+```
+
+This runs the whole game as the original does: the intro video, the menu
+(new player, garage, showroom, controls, options, standings), the race
+(START), back to the menu with the results, and after the last stage the
+standings and the win or lose ending. It builds the port first if needed
+(CMake, SDL2, OpenGL).
+
+The data directory is never written. The game plays from a copy in
+`~/.local/share/a2racer2` (or `$A2_PLAY_DIR`). The data there is linked, and
+the files the game saves (Game.ini, Raser.ini, menu.ini, SLOTS.RAS,
+options.ras, CARS.DAT, garage.ini) are real copies, so careers persist
+between runs.
+
+In the race (`a2view --game`, as the menu starts it) the keys are the
+original's:
+
+- the arrows, Ctrl (turbo) and Alt (handbrake), or what the controls screen
+  binds;
+- 1, 2 and 4 for the camera views; D for the overlay detail;
+- **P** pauses (any key resumes);
+- **Esc** asks "EINDE ... (J/N)": J or Y ends the race, N or Esc goes back.
+  An ended race does not count as finished, as in the original;
+- after the finish (1.5 s) or a game over (1 s), Esc, Enter or Space
+  returns to the menu.
+
+The viewer's extras (Tab free camera, mouse look, O, G, T, H, [ ], F2) are
+off in this mode.
+
 ## Architecture mapping (from spel.dat analysis)
 
 | original | port equivalent |

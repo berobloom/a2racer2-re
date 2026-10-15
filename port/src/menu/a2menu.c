@@ -117,7 +117,7 @@ static int run_race(const menu *m)
     if (pid < 0)
         return -1;
     if (pid == 0) {
-        execl(m->race_cmd, m->race_cmd, m->datadir, stage, (char *)NULL);
+        execl(m->race_cmd, m->race_cmd, m->datadir, stage, "--game", (char *)NULL);
         perror(m->race_cmd);
         _exit(127);
     }
@@ -218,9 +218,11 @@ int main(int argc, char **argv)
     static uint8_t rgba[M_W * M_H * 4];
     for (;;) {
         m.audio = m_audio_open(&m.a);
+        Uint32 flags = SDL_WINDOW_RESIZABLE;
+        if (getenv("A2_FULLSCREEN") && atoi(getenv("A2_FULLSCREEN")))
+            flags |= SDL_WINDOW_FULLSCREEN_DESKTOP; /* the race takes it too */
         SDL_Window *win = SDL_CreateWindow("A2 Racer II", SDL_WINDOWPOS_CENTERED,
-                                           SDL_WINDOWPOS_CENTERED, M_W * 2, M_H * 2,
-                                           SDL_WINDOW_RESIZABLE);
+                                           SDL_WINDOWPOS_CENTERED, M_W * 2, M_H * 2, flags);
         SDL_Renderer *ren = SDL_CreateRenderer(win, -1, 0);
         SDL_RenderSetLogicalSize(ren, M_W, M_H);
         SDL_Texture *tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ABGR8888,
