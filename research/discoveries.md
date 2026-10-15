@@ -6795,6 +6795,22 @@ Completes open question 5 (session 9), which found the driver-name scan
   (LIKELY visible; not seen at runtime). Ported.
 - MEASURED: the banners are olfnt01 at **0.8** as well: COP MODE is 85 px
   wide in the capture against the font's 100, centred at about (318, 80).
+- CONFIRMED (data): the panels' brackets are **whole sprites**, one anim
+  each: the highway panel's element 0x39 is anim 13 = **sprite 427**
+  (42x63, the time, record and position brackets in one image), the circuit
+  panel's element 0x33 is anim 8 = sprite 425, and the bottom group's element
+  52 is anim 10 = sprite 426. On the capture the pieces come out at about 1.6
+  of their art size, but no single stretch of the whole of 427 fits (best 49%
+  of its white pixels), so how they are scaled is not resolved. The port draws
+  427's three pieces into the boxes measured on the capture.
+- The circuit panel (0x419e00) was checked against a Wine capture of
+  etappe2. RONDE INFO, TIJD, RECORD, LAATSTE, POSITIE and RONDE sit within
+  2 px of the port's rows, so they are unchanged. (The original then stopped
+  with "Unhandled exception" under Wine, a few seconds into the stage. Not
+  investigated; it may be the reduced drive mapping of the Wine prefix.)
+- Port gap: its fonts are scaled with nearest-neighbour sampling, which at
+  0.8 drops whole rows and columns of the glyphs; the original's text stays
+  solid.
 - The port had no RACE RECORD row on the highway stages and placed POSITIE
   as on a circuit. Both are fixed. The bottom group is refitted to the
   capture, in 800x600 units (capture px x 1.25).

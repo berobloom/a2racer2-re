@@ -3502,7 +3502,9 @@ int main(int argc, char **argv)
 
                 /* --- top right: race time, lap info, position, lap --- */
                 HUD_LABEL(a2_lang_get(lang, 33, "RACE TIJD"), 6.0f * s);
-                HUD_BRACKET(425, 0, 22, 27, 7, right - 116.0f * s, 7.0f * s, 68.0f, 23.0f);
+                /* sprite 427's time bracket, at 1.62 per art pixel on the 640x480 capture (2.03 units) */
+                a2_sprite_draw_sub(hud, 427, 0, 0, 28, 15, right - 176.5f * s, 20.0f * s, 56.8f * s,
+                                   30.4f * s);
                 int rm = (int)(race_time / 60.0f);
                 snprintf(line, sizeof line, "%02d:%02d:%d", rm, ((int)race_time) % 60,
                          (int)((race_time - (int)race_time) * 10.0f));
@@ -3551,7 +3553,9 @@ int main(int argc, char **argv)
                     right += shift;
                     rval += shift;
                     HUD_LABEL("CHECKPOINT", 6.0f * s);
-                    HUD_BRACKET(425, 0, 22, 27, 7, right - 116.0f * s, 7.0f * s, 68.0f, 23.0f);
+                    /* sprite 427's time bracket, at 1.62 per art pixel on the 640x480 capture (2.03 units) */
+                a2_sprite_draw_sub(hud, 427, 0, 0, 28, 15, right - 176.5f * s, 20.0f * s, 56.8f * s,
+                                   30.4f * s);
                     snprintf(line, sizeof line, "%02d:%02d:%d", (int)(time_left / 60.0f),
                              ((int)time_left) % 60,
                              (int)((time_left - (int)time_left) * 10.0f));
@@ -3571,7 +3575,8 @@ int main(int argc, char **argv)
                  * sits between). */
                 if (overlay_detail >= 3 && !circuit) {
                     HUD_LABEL(a2_lang_get(lang, 52, "RACE RECORD"), 71.0f * s);
-                    HUD_BRACKET(425, 0, 22, 27, 7, right - 146.0f * s, 69.5f * s, 32.5f, 23.0f);
+                    a2_sprite_draw_sub(hud, 427, 2, 24, 11, 15, right - 177.75f * s, 82.5f * s,
+                                       22.3f * s, 30.4f * s); /* 427's record bracket */
                     int rr = save.race_record;
                     if (rr >= A2_NO_RECORD || rr <= 0)
                         snprintf(line, sizeof line, "--:--:-");
@@ -3583,8 +3588,12 @@ int main(int argc, char **argv)
                 if (racers) {
                     float py = circuit ? 178.0f : 135.0f;
                     HUD_LABEL(a2_lang_get(lang, 38, "POSITIE"), py * s);
-                    HUD_BRACKET(425, 37, 91, 17, 11, right - 87.0f * s, (py + 15.0f) * s, 26.0f,
-                                28.0f);
+                    if (circuit)
+                        HUD_BRACKET(425, 37, 91, 17, 11, right - 87.0f * s, (py + 15.0f) * s,
+                                    26.0f, 28.0f);
+                    else /* 427's position bracket */
+                        a2_sprite_draw_sub(hud, 427, 31, 48, 11, 15, right - 117.75f * s,
+                                           146.25f * s, 22.3f * s, 30.4f * s);
                     snprintf(line, sizeof line, "%d/%d", PLAYER_POSITION(),
                              a2_racers_count(racers) + 1);
                     HUD_VALUE(fnt_time, line, (py + 26.0f) * s);
