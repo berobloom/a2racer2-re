@@ -192,5 +192,17 @@ original in `.work/game` is untouched. To go back:
   `a2_II.exe` also started nothing. A registry virtual desktop
   (HKCU\Software\Wine\Explorer Desktop=Default, Desktops\Default=640x480)
   still exited; it was reverted.
-- Unresolved: how to show the original on that desktop. A nested 640x480 X
-  server (Xephyr) is the next thing to try.
+- **Settled (later in session 15):** the menu does run on that desktop. The
+  exit code 40 was START being pressed (the user was clicking it): menu.dat
+  exits with 40 for "start a race" and leaves running spel.dat to the shell
+  a2_II.exe, so menu.dat started on its own just closes at START. Start
+  **a2_II.exe** instead.
+- The race then stopped with `Initlib.cpp(1217) : could not set display mode
+  (operation is not supported)`. At START the menu writes its own options
+  into Raser.ini: the resolution from **options.ras** (i32 at offset 10;
+  0 320x200x8, 1 640x480x8, 3 640x480x16), whose default is 0. The 8-bit
+  modes do not work under Wine (discoveries.md), so .work/menutest's
+  options.ras now holds 3 (the old file is options.ras.bak_res0). With that,
+  shell -> menu -> START -> race ran on Xvfb :98 (etappe0).
+- `reverse-engineering/tools/play-original.sh` starts it on the current
+  display and puts the resolution back to 3 first each time.
