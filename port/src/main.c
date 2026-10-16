@@ -1680,7 +1680,8 @@ int main(int argc, char **argv)
         no_traffic ? NULL
                    : a2_traffic_create(scene, &rcs, anims, start_chunk,
                                        a2_ini_int(datadir, "Game.ini", "[OPTIONS]",
-                                                  "visiblechunks", 30));
+                                                  "visiblechunks", 30),
+                                       difficulty);
     a2_traffic_set_limits(traffic, &track);
     /* The police.  The speed limit they enforce is the per-chunk .pmp trigger,
      * not the limit signs standing by the road -- see cops.h. */

@@ -26,11 +26,12 @@
 
 typedef struct a2_traffic a2_traffic;
 
-/* Create the original's 20 traffic cars around `start_chunk` (STARTCHUNK),
- * `vchunks` being Game.ini [OPTIONS] visiblechunks.  Returns NULL if no
- * models could be loaded. */
+/* Create the original's traffic around `start_chunk` (STARTCHUNK),
+ * `vchunks` being Game.ini [OPTIONS] visiblechunks: 24 cars on HARD
+ * (`difficulty` 1), 10 on EASY (0).  Returns NULL if no models could be
+ * loaded. */
 a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_anims *anims,
-                              int start_chunk, int vchunks);
+                              int start_chunk, int vchunks, int difficulty);
 void a2_traffic_free(a2_traffic *t);
 
 /* Give traffic the per-chunk speed limits it obeys, read from the .pmp speed

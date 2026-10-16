@@ -7631,3 +7631,46 @@ Lists taken from spel.dat and checked against the port
     not in the shipped Game.ini, so it takes the reader's default. Its
     effect was not traced.
   - `dif_mod` and `injectie`: see open question 56 and the upgrade table.
+
+## What Difficulty changes (session 15, checked against every read)
+
+`[OPTIONS] Difficulty` (0 EASY, 1 HARD) goes to **0x4d9ab0** (0x421e32).
+Re-scanning every occurrence of the address, decoding from each possible
+instruction start and keeping only those a linear decode from earlier reaches,
+gives 12 reads. The first xref listing had missed or mis-decoded half of
+them.
+
+| read | effect | port |
+|---|---|---|
+| **0x423df7** | **traffic counts**: [0x484aa8] / [0x484aac] = **10 / 14** on HARD, **5 / 7** on EASY (the file's 8 / 12 are never used) | **added this session** |
+| 0x4015b0, 0x401604, 0x405bc3 | the rubber-band table 0x482258 by difficulty x 7 + etappe | ai_car.c |
+| 0x401c42, 0x4034b6 | 3 on HARD, 1 on EASY (police) | cops.c, racers.c |
+| 0x401e21 | 60 on HARD, 30 on EASY (police) | cops.c |
+| 0x424360 | the checkpoint clock's 0.65 / 0.4 of top speed | main.c |
+| 0x427406, 0x427f72 | impact damage capped at 12 / 6 | main.c |
+| 0x428127 | last place pays 5000 on EASY | results.c |
+| 0x427ff9 | [0x4a63d0] = 1 on EASY: see below | not needed |
+
+- CONFIRMED (code): the spawner 0x40ca70 places count / 2 (truncated) of
+  each group behind the start and as many ahead. So EASY has 2 + 2 cars on the
+  player's side and 3 + 3 on the other (10), and HARD 5 + 5 and 7 + 7 (24).
+  Nothing else reads the two counts. The port had used the file's 8 / 12 (20
+  cars) on both settings.
+- CONFIRMED (code): **on EASY the car cannot slide, but only in the old
+  steering model.** 0x40e5e2, in the tyre model 0x40e530, zeroes the vehicle's
+  lateral velocity (+0x6c) every frame while [0x4a63d0] (EASY) is set and
+  the handbrake (0x4d9df8) is not held, and sets the old model's high-speed
+  steering lock [0x4a5dc8] to 7.0. 0x40e530's step 0x40cfd0 has a single
+  caller, 0x42632c, inside the `stuur_model != 0` branch (0x426238;
+  stuur_model 0 calls 0x40fc30 and jumps past it). The shipped Game.ini has
+  stuur_model=0, so this never runs. The earlier note that 0x40e5ef gates
+  "low-speed snap-to-rest" was wrong: the test is EASY, not speed.
+- CONFIRMED (code): **`dif_mod` is dead** (question 56). 0x4108d0 scales the
+  max-speed rows (fields 12-16, and 18-23 with the gearbox) of each racer
+  entry's own car type. Every reader of those rows indexes by **0x4d9e2c**:
+  0x40ea32 and 0x40eb72 (the AI's target speed), 0x40f525 / 0x40f55f, and
+  0x410b00, whose only caller is the checkpoint clock (0x42433f). 0x4d9e2c is
+  written only at 0x42290c (Game.ini) and 0x4256bc (init_player_car), and the
+  racers never take the player's car type. So the scaled rows are never read.
+  (Found by scanning every access to the in-memory CARS.DAT table, base
+  0x4a5ee0, stride 124.)

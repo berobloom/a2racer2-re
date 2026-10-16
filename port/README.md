@@ -620,10 +620,14 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 
 | stage | result |
 |---|---|
-| etappe1 | **finishes in 201.8 s**, 4th, 0 unwedges, 2 damaging impacts |
-| etappe5 | **finishes in 271.6 s**, 4th, 1 unwedge, 2 damaging impacts |
-| etappe2 (city, 2 laps) | **completes both laps**, 1036.8 s, 3rd; 15 unwedges on the city corners |
-| etappe1 with police | finishes in 220.4 s, 4th, 1 unwedge |
+| etappe1 | **finishes in 200.3 s**, 4th, 0 unwedges, 2 damaging impacts |
+| etappe5 | **finishes in 261.5 s**, 4th, 0 unwedges, 1 damaging impact |
+| etappe2 (city, 2 laps) | **completes both laps**, 1104.1 s, 4th; 21 unwedges on the city corners |
+| etappe1 with police | finishes in 226.1 s, 3rd, 2 unwedges |
+
+The shipped Game.ini is HARD, so these run with 24 traffic cars (Difficulty
+sets the count, 0x423df7). With the 20 the file's defaults give, they were
+201.8, 271.6, 1036.8 and 220.4 s.
 
 These are on the new AI model (session 13), rerun in session 14 with the
 ground planes, the engine's box contact (src/contact.c), the player's 8

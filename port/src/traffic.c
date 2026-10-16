@@ -346,16 +346,16 @@ static void spawn(a2_traffic *t, traffic_car *c, int chunk, int side)
     c->alive = 0;
 }
 
-/* The spawner's two groups (0x40ca70): [0x484aa8] = 8 cars on side
- * `DIRECTION == 0` (the player's) and [0x484aac] = 12 on the other, each
- * half at STARTCHUNK - vchunks - 5 - 3i (behind) and half at STARTCHUNK +
- * vchunks + 5 + 3i (ahead).  All start out of play, outside the window. */
-#define TRAFFIC_OWN_SIDE 8
-#define TRAFFIC_OTHER_SIDE 12
-
+/* The spawner's two groups (0x40ca70): [0x484aa8] cars on side
+ * `DIRECTION == 0` (the player's) and [0x484aac] on the other, each count / 2
+ * (truncated) at STARTCHUNK - vchunks - 5 - 3i (behind) and as many at
+ * STARTCHUNK + vchunks + 5 + 3i (ahead).  All start out of play, outside the
+ * window.  The file holds 8 and 12, but init (0x423df7) overwrites them by
+ * Difficulty: 10 and 14 on HARD, 5 and 7 on EASY. */
 a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_anims *anims,
-                              int start_chunk, int vchunks)
+                              int start_chunk, int vchunks, int difficulty)
 {
+    const int own_side = difficulty ? 10 : 5, other_side = difficulty ? 14 : 7;
     a2_traffic *t = calloc(1, sizeof(*t));
     if (!t)
         return NULL;
@@ -380,7 +380,7 @@ a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_a
         return NULL;
     }
 
-    int count = TRAFFIC_OWN_SIDE + TRAFFIC_OTHER_SIDE;
+    int count = own_side / 2 * 2 + other_side / 2 * 2;
     t->cars = calloc((size_t)count, sizeof(traffic_car));
     if (!t->cars) {
         free(t);
@@ -389,7 +389,7 @@ a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_a
     t->count = count;
     int n = a2_scene_chunk_count(scene), k = 0;
     for (int g = 0; g < 2; g++) {
-        int side = g == 0 ? 1 : 0, half = (g == 0 ? TRAFFIC_OWN_SIDE : TRAFFIC_OTHER_SIDE) / 2;
+        int side = g == 0 ? 1 : 0, half = (g == 0 ? own_side : other_side) / 2;
         for (int i = 0; i < half; i++)
             spawn(t, &t->cars[k++], wrap_chunk_4426e0(start_chunk - vchunks - 5 - 3 * i, n),
                   side);
@@ -397,8 +397,8 @@ a2_traffic *a2_traffic_create(a2_scene *scene, const a2_archive *rcs, const a2_a
             spawn(t, &t->cars[k++], wrap_chunk_4426e0(start_chunk + vchunks + 5 + 3 * i, n),
                   side);
     }
-    fprintf(stderr, "traffic: %d cars (%d on the player's side), %d models\n", count,
-            TRAFFIC_OWN_SIDE, t->model_count);
+    fprintf(stderr, "traffic: %d cars (%d on the player's side, %s), %d models\n", count,
+            own_side / 2 * 2, difficulty ? "HARD" : "EASY", t->model_count);
     return t;
 }
 
