@@ -621,9 +621,9 @@ With the shipped save (every upgrade owned), `--drive-test --autopilot
 | stage | result |
 |---|---|
 | etappe1 | **finishes in 200.3 s**, 4th, 0 unwedges, 2 damaging impacts |
-| etappe5 | **finishes in 261.5 s**, 4th, 0 unwedges, 1 damaging impact |
-| etappe2 (city, 2 laps) | **completes both laps**, 1104.1 s, 4th; 21 unwedges on the city corners |
-| etappe1 with police | finishes in 226.1 s, 3rd, 2 unwedges |
+| etappe5 | **finishes in 254.7 s**, 4th, 0 unwedges, 0 damaging impacts |
+| etappe2 (city, 2 laps) | **completes both laps**, 1085.8 s, 3rd; 20 unwedges on the city corners |
+| etappe1 with police | finishes in 233.5 s, 4th, 3 unwedges |
 
 The shipped Game.ini is HARD, so these run with 24 traffic cars (Difficulty
 sets the count, 0x423df7). With the 20 the file's defaults give, they were

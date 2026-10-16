@@ -3834,6 +3834,16 @@ int main(int argc, char **argv)
                 }
             }
         }
+        /* The player is one of the pass's bodies, and a racer, cop or
+         * traffic car that runs into it pushes `drv` (a2_ai_push).  The next
+         * frame starts from car.speed (drv.v_fwd = car.speed), which was
+         * taken before this pass, so keep the push: without this the
+         * forward part of every hit from behind was lost a frame later
+         * while its spin and sideways part stayed -- a racer on the bumper
+         * bounced off a car that jumped ahead for one frame, and a cop's
+         * shunt from behind became a spin. */
+        if (drive_mode)
+            car.speed = drv.v_fwd;
         /* the contact pass moved the traffic cars back to their contacts */
         a2_traffic_sync(traffic, scene, aiw);
         if (audio && cops) {

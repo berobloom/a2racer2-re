@@ -7674,3 +7674,46 @@ them.
   racers never take the player's car type. So the scaled rows are never read.
   (Found by scanning every access to the in-memory CARS.DAT table, base
   0x4a5ee0, stride 124.)
+
+## Hits from behind: the push was lost (session 15, port bug)
+
+- Reported: racers right behind the player "glitch forward and backward",
+  and a police car ramming the rear "pits" the player.
+- Reproduced on etappe0 (`--gas-brake 4 0`, racers coming up behind): every
+  4-7 frames racer 1 reached the bumper (39 units centre to centre), jumped
+  back 12 units in one frame, and the **player's speed spiked from 27.8 to
+  43.3 m/s for one frame and fell back to 27.6** the next.
+- Cause, port only: the player is a still body in the AI contact pass, and a
+  car that runs into it pushes `drv` (a2_ai_push, the impulse's Δv2 and
+  spin). That pass runs after `car.speed = drv.v_fwd`, and the next frame
+  starts with `drv.v_fwd = car.speed`, so **the forward part of every push
+  the player took from an AI car was discarded** while v_lat and the yaw
+  rate stayed. A shunt from behind therefore left only its spin, and a
+  following racer bounced off a car that leapt ahead for a frame.
+- Fixed: car.speed takes drv.v_fwd after the pass. The same run now shows
+  one hit, the player carried on at 43 m/s easing off, and the racer
+  falling back and following smoothly.
+- With the push kept, a rear shunt is the original's impulse (0x448eb0:
+  Δv = M j n, Δω = 0.34 I (r × n) j, clamped to ±6). The player's driving
+  model matches the original exactly at those spins as well:
+  diff_drive.py over 2000 random states with yaw rates up to ±6 (the
+  harness had to be brought up to date: `a2_drive` gained `brake_ramp` and
+  `a2_drive_env` `no_integrate` since it was written).
+
+## When a parked cop starts a chase (session 15, checked against a report)
+
+- Reported: the police are not immediately aware of a fast pass. The port
+  follows the shipped trigger 0x409060 (the old model's 0x402a10 with its
+  1.1 margin never runs). Re-read in this session:
+  - a parked cop looks only at its **own chunk**: the player when
+    [0x4d9e44] equals the cop's chunk and is over 12.5 / 17.5 / 25 / 30 m/s
+    (triggers 4-7), and each racer (table 0x4a55a0, stride 0x60) in that
+    chunk with speed >= its +0x2c;
+  - a cop already chasing never runs it, so **racers ahead of the player
+    use the cops up**: in the etappe1 police regression all 10 cops went
+    after racers;
+  - on city stages 0x4034a0 only opens the chase with a chance of about
+    dt per frame, so a fast pass through a cop's chunk is often missed.
+- Without racers (`--no-racers`), cops 1-4 on etappe1 each started the chase
+  in their own chunk and the player was caught three times. No port
+  deviation found.

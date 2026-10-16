@@ -32,7 +32,7 @@ class Drive(C.Structure):
         ('stopped', C.c_int), ('spin', C.c_float), ('drift', C.c_float), ('slide', C.c_float),
         ('hb_heading', C.c_float), ('hb_flag', C.c_int), ('handbrake', C.c_int),
         ('hb_forced', C.c_int), ('throttle', C.c_float), ('brake', C.c_int),
-        ('steer', C.c_float), ('rng', C.c_uint)]
+        ('brake_ramp', C.c_float), ('steer', C.c_float), ('rng', C.c_uint)]
 
 
 HEIGHT_FN = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_float, C.c_float, C.POINTER(C.c_float))
@@ -41,7 +41,8 @@ HEIGHT_FN = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_float, C.c_float, C.POINTER(C.c
 class Env(C.Structure):
     _fields_ = [('car', C.POINTER(Car)), ('motor', C.c_int), ('gearbox', C.c_int),
                 ('tyres', C.c_int), ('abs', C.c_int), ('turbo_active', C.c_int),
-                ('forced_handbrake', C.c_int), ('height', HEIGHT_FN), ('height_ud', C.c_void_p)]
+                ('forced_handbrake', C.c_int), ('no_integrate', C.c_int), ('height', HEIGHT_FN),
+                ('height_ud', C.c_void_p)]
 
 
 lib = C.CDLL(LIB)
@@ -254,6 +255,7 @@ def rnd_state(rng, car):
     d.hb_forced = 0
     d.throttle = rng.choice([0.0, 100.0, rng.uniform(0, 100)])
     d.brake = rng.choice([0, 0, rng.randint(1, 100)])
+    d.brake_ramp = float(d.brake)  # the port keeps the ramp's fraction here
     d.steer = rng.choice([0.0, rng.uniform(-100, 100)])
     d.rng = 1
     return d
@@ -278,7 +280,7 @@ def main():
         car_i = rng.randint(0, 6)
         car = car_struct(car_i)
         env = Env(C.pointer(car), rng.randint(0, 1), rng.randint(0, 1), rng.randint(0, 1),
-                  rng.randint(0, 1), rng.choice([0, 0, 1]), 0, height, None)
+                  rng.randint(0, 1), rng.choice([0, 0, 1]), 0, 0, height, None)
         o.w(0x4d9e2c, car_i)
         o.w(0x4d9ec0, env.motor)
         o.w(0x4d9ed0, env.gearbox)
