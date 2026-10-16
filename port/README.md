@@ -64,10 +64,14 @@ original's:
 - **P** pauses (any key resumes);
 - **Esc** asks "EINDE ... (J/N)": J or Y ends the race, N or Esc goes back.
   An ended race does not count as finished, as in the original;
-- 1.5 s after the finish the chequered flag waves in front of the camera
+- at the finish line the view cuts to a fixed camera by the road, to
+  cheering; 1.5 s later the chequered flag waves in front of the camera
   (Game.ini `finish_flag`) and the original's results panel appears: the
   place badge, GEFINISHT, the lap times or race time, and BUDGET,
   PRIJZENGELD, RADAR BONUS and NIEUW BUDGET;
+- a game over (TOTAL LOSS, TIJD IS OM or GEARRESTEERD) slides its reason
+  and then RACE OVER together line by line while the camera circles the
+  car;
 - after the finish (1.5 s) or a game over (1 s), Esc, Enter or Space
   returns to the menu.
 

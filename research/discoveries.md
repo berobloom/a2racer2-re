@@ -7539,3 +7539,95 @@ Completes open question 5 (session 9), which found the driver-name scan
   `"%d/%d"` (0x4882f0, at 0x41a3c0) of laps done [0x4d9ad4] + 1 and Nrlaps
   [0x4d9ad8] capped at 9. Laps done is clamped to Nrlaps, so after the
   finish the original shows **3/2** on a two-lap circuit, as the port does.
+
+## The finish camera and the cheer (session 15)
+
+- CONFIRMED (code), mode 3's begin **0x4154d0** (this settles the LIKELY
+  "victory sequence" above):
+  - camera [0x4a708c] targets the player's car with offset (0, 20, 0)
+    (0x4477f0);
+  - it stands at the point of the chunk the player is on (vehicle record
+    +0x18, chunk record +0x24 through the 0x4e5d2c map), **40** units up
+    (0x4474f0, the -40.0 at 0x47f540 subtracted);
+  - 0x447ab0, then change_active_camera(5), then sample **21 `juich.wav`**
+    (0x4155ba), unconditionally.
+- So at the line the view cuts to a fixed point by the road and watches the
+  car go by, to cheering. It is the warning camera's recipe (0x4151f0) with
+  the player's own chunk instead of the next and 40 up instead of 20.
+- Port: the same, from the chunk the player finished on, until the race ends.
+
+## The game-over sequence, ev_g_ovr.cpp (session 15)
+
+- CONFIRMED (code), begin **0x416060**:
+  - 0x414b70(1), then **0x415b20**: copies the active camera's car-relative
+    offset (0x447720) and target (0x447820) into camera 6 ([0x4a7090]),
+    attached to the player's car, and makes it active
+    (change_active_camera(6)).
+  - The sub-mode [0x4867a4] (table 0x4162cc; -1 asserts "No game over mode
+    set!") picks language **40 TOTAL LOSS / 41 TIJD IS OM / 42
+    GEARRESTEERD**. 0x415c50 renders it in font 14 (olfnt08) into text object
+    0x4a7548 with its top at screen height / 4, over **1.5 s**, enabled.
+  - Language **43 RACE OVER** goes into 0x4a7588 at height / 2, over
+    **3.0 s**, created **disabled** (+4 = 0).
+  - The orbit: r = the offset's length across the ground (0x4a74fc), height
+    = its y (0x4a7510), angle 0x4a7504 = **-1024**, step 0x4a7508 = 4096 /
+    (8 s / frame time).
+- CONFIRMED (code), text objects (0x415c50 builds, 0x415e80 draws):
+  - +0 inited, +4 enabled, +8 hold, +0xc/+0x10 the surface, +0x14 / +0x18
+    width / height, +0x1c y, +0x20 frames (duration / frame time), +0x24 the
+    frame counter, +0x28 the text (asserted under 20 characters, 0x415e11).
+  - Each frame it blits **one scanline at a time** (0x4697c0). With s =
+    sin(1024 x counter / frames) (a quarter turn at the end), cx = (screen
+    width - w) / 2: **even rows at W - s (W - cx)** come in from the right and
+    **odd rows at -w + s (cx + w)** from the left, clipped to the screen. At
+    the last frame it draws the whole line at cx and returns 1.
+- CONFIRMED (code), tick **0x4162e0**:
+  - while damage [0x4d9e30] >= 99: **0x4159a0**, every 200 ms one tyre-smoke
+    puff (0x41fff0) at X = x + cos h lat - sin h d, Z = z + cos h d + sin h
+    lat, y + 5 (decoded from the FPU sequence at 0x415a83), with d =
+    rand() % 6 - 3 + 16 and lat = rand() % 18 - 9, no velocity;
+  - camera 6's offset = (cos a r, height, sin a r) in the car's frame
+    (0x447770), a += step: **one turn round the car in 8 s, starting behind
+    it**;
+  - draws the reason line; when it finishes RACE OVER is enabled
+    (0x4163c7); when RACE OVER finishes the reason line is held (0x416399);
+  - after **1000 ms**, Esc / Enter / Space as before.
+- LIKELY: the write-off smoke hardly shows. The puffs start inside the
+  bonnet, and 0x41fae0 damps their rise by 0.9 a frame, so a puff climbs
+  only 10 vy (under 4 units) before it fades. The port does the same and the
+  smoke is not visible in its captures. Not seen in the original.
+- Port: all three endings now run this sequence. It replaces the port's
+  centre-screen 3D-font texts, which showed no RACE OVER for TOTAL LOSS and
+  TIJD IS OM. Seen in port captures: the interlaced slide-in, RACE OVER
+  following, and the orbit from behind round to the front.
+
+## Coverage audit against the binary (session 15)
+
+Lists taken from spel.dat and checked against the port
+(`reverse-engineering/tools/coverage.py`, `xref.py`):
+
+- **Functions:** 1616 call targets, 512 named anywhere in research or the
+  port. The unnamed ones are mostly library code (DirectInput `di_*`, winlib
+  Sound / Mouse / Fileio / Sprite / Rcpcx..., the C runtime) or the switched-
+  off particle module (`gfx_sprk`, rain). The audit found the two sequences
+  above.
+- **One-shot sounds (0x4286a0) and loops (0x428700):** every immediate id is
+  played by the port. The only one missing was **21 juich.wav**, now added.
+- **Banners (writes to 0x4882c0):** 31, 44, 45, 46, 47, 48, 49, 50 and 51,
+  all in the port.
+- **Keys (0x466910):** all handled, except two developer keys: **Ctrl+Q**
+  "Emergency exit" (0x4317d0, Main.cpp's assert) and **Ctrl+F10**, a
+  screenshot to `lvl%2.2d_%2.2d.bmp` (0x431807). Numpad + / - are the tweak
+  menu's (0x411958), which tweak.c has.
+- **Ini reads (0x46aad0 / 0x46ab10)** the port does not make:
+  - stored and **never read** in spel.dat: `[OPTIONS] BENZINEPRIJS`
+    (0x4d9a98, only written at 0x421d2a), `collisionoff` (0x4d9aa8),
+    `filter` (0x4d9adc); the two apparent reads of the last two are
+    immediates that happen to equal the address;
+  - read, but off in the shipped Game.ini: `fog` (0x4d9abc, read at
+    0x418dbc; "doesn't work with blending"), `resizetexture` (0x4d9a84,
+    0x4235bb), `WAITVBL` (0x4d9ac0, 0x425090), `particles` / `part_rain`;
+  - `BACKGROUND` (0x4d9a80, read at 0x41e757 in gfx_sky and 0x421b22) is
+    not in the shipped Game.ini, so it takes the reader's default. Its
+    effect was not traced.
+  - `dif_mod` and `injectie`: see open question 56 and the upgrade table.

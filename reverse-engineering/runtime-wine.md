@@ -178,3 +178,19 @@ patch makes a missing next or previous link count as "not free". Everything
 else is byte-identical, so addresses and gdb scripts are unaffected. The
 original in `.work/game` is untouched. To go back:
 `rm .work/menutest/spel.dat && ln -s ../game/spel.dat .work/menutest/spel.dat`.
+
+## H. Running the menu on a desktop display (session 15)
+
+- On the Xvfb 640x480 display `wine ./menu.dat` (from .work/menutest, prefix
+  .work/wp, NOCD=C) reaches the HOOFDMENU.
+- On the user's desktop (DISPLAY=:1, XWayland, two monitors 3840x1080) it
+  starts, flips about 98 frames and exits with code 40 within 20 s; the log
+  shows `xinerama_get_fullscreen_monitors Failed` and DirectDraw texture
+  warnings. LIKELY the exclusive 640x480 mode switch or the focus loss.
+- `wine explorer /desktop=A2Racer,640x480 menu.dat` opens the desktop
+  window but starts nothing: explorer will not launch a `.dat`. The same with
+  `a2_II.exe` also started nothing. A registry virtual desktop
+  (HKCU\Software\Wine\Explorer Desktop=Default, Desktops\Default=640x480)
+  still exited; it was reverted.
+- Unresolved: how to show the original on that desktop. A nested 640x480 X
+  server (Xephyr) is the next thing to try.

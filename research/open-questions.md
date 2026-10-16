@@ -927,3 +927,12 @@ phrasing may not be the original's.)*
     (patch_wp_guard.py); see discoveries.md "The waypoint -1 read in
     0x40b650". Still open: what the read returned on Windows 9x (hypotheses).
 
+56. **Does `dif_mod` reach the racers' driving?** 0x4108dd..0x4109de scale
+    CARS.DAT max-speed rows by 0.6..1.5 (dif_mod 0..9; 4 = x1.00, the shipped
+    value) for the three entries' car types (session 13). The port follows
+    0x40eb5b, where the AI drives with the **player's** car row. If both are
+    right the scaling never touches a row the AI reads, and dif_mod is dead.
+    A distinguishing experiment: dif_mod=0 against 9 under Wine, timing the
+    racers on etappe1. The port ignores the setting for now (no change at 4).
+57. **Does the race clock stop in the game over?** The port's RACE TIJD keeps
+    counting through mode 6. Not checked in the original.

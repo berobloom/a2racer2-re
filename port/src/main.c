@@ -1356,6 +1356,12 @@ int main(int argc, char **argv)
     float finish_time = 0.0f;
     int result_booked = 0; /* the finish has been booked into `save` */
     int fin_budget = 0, fin_prize = 0; /* the finish panel's BUDGET and PRIJZENGELD */
+    int fin_chunk = -1;                /* the chunk the finish camera stands at */
+    /* the game-over camera's orbit (0x415b20 / 0x416060): radius, height and
+     * look height taken from the active view when the sequence starts */
+    int go_cam_set = 0;
+    float go_r = 0.0f, go_y = 0.0f, go_look = 0.0f, go_smoke_last = -1.0f;
+    unsigned go_rng = 1;
     int track_ms = 0;
     /* Radar cameras knocked over (0x4dc964, by the type-7 handler 0x428d30;
      * see a2_scene_props_step), and when banner 51 RADAR BONUS was raised. */
@@ -2335,7 +2341,7 @@ int main(int argc, char **argv)
                     time_left = 0.0f;
                     arrested = 1;
                     game_over_msg = 41;
-                    fprintf(stderr, "out of time at %.1f s -- TIJD IS OM\n", race_time);
+                    fprintf(stderr, "out of time at %.1f s, frame %d -- TIJD IS OM\n", race_time, frames);
                 }
             }
             if (arrested) {
@@ -2626,6 +2632,25 @@ int main(int argc, char **argv)
                 for (int side = -1; side <= 1; side += 2)
                     a2_smoke_spawn(smoke, drv.x + sn * back + cs * 9.0f * side, drv.y + 3.0f,
                                    drv.z - cs * back + sn * 9.0f * side, vx, vz, dt);
+            }
+            /* A write-off smokes (0x4162e0 -> 0x4159a0, while damage >= 99
+             * in the game over): every 200 ms one puff at rand() % 6 - 3 + 16
+             * ahead of the car and rand() % 18 - 9 across, 5 up, standing
+             * still.  That is inside the bonnet, and a puff rises only
+             * 10 vy in all (vy is damped 0.9 a frame), so it barely shows
+             * -- by the original's own numbers. */
+            if (smoke && arrested && damage >= 99) {
+                float now = drive_test ? (float)over_frames / 30.0f : SDL_GetTicks() / 1000.0f;
+                if (go_smoke_last < 0.0f || now - go_smoke_last >= 0.2f) {
+                    go_smoke_last = now;
+                    go_rng = go_rng * 1103515245u + 12345u;
+                    float d = (float)((int)((go_rng >> 16) % 6u) - 3) + 16.0f;
+                    go_rng = go_rng * 1103515245u + 12345u;
+                    float lat = (float)((int)((go_rng >> 16) % 18u) - 9);
+                    float h = a2_drive_heading_rad(&drv), sn = sinf(h), cs = cosf(h);
+                    a2_smoke_spawn(smoke, drv.x - sn * d + cs * lat, drv.y + 5.0f,
+                                   drv.z + cs * d + sn * lat, 0.0f, 0.0f, dt);
+                }
             }
             a2_smoke_update(smoke);
             /* 0x424afd: the skidmarks get the skid intensity every frame */
@@ -3212,6 +3237,12 @@ int main(int argc, char **argv)
              * over, and finished = 1. */
             if (finished && !result_booked) {
                 result_booked = 1;
+                /* Mode 3's begin (0x4154d0): the finish camera stands at the
+                 * player's chunk, and the crowd cheers, sample 21 juich.wav
+                 * (0x4155ba). */
+                fin_chunk = ch;
+                if (audio)
+                    a2_audio_play(audio, 21, 0);
                 track_ms = (int)(finish_time * 1000.0f);
                 if (track_ms < save.race_record)
                     save.race_record = track_ms;
@@ -3374,6 +3405,34 @@ int main(int argc, char **argv)
                     cam_look[1] = ty + off[1];
                     cam_look[2] = tz + off[2];
                 }
+                /* The game over (mode 6): 0x415b20 copies the active
+                 * camera's offset and target into camera 6 and makes it
+                 * active; 0x416060 keeps the offset's height and its
+                 * distance r across the ground, and 0x4162e0 moves it to
+                 * (cos a * r, height, sin a * r) in the car's frame each
+                 * frame, a from -1024 (behind) by 4096 / (8 s of frames):
+                 * one turn round the car in 8 s. */
+                float go_t = arrested && over_since
+                                 ? (drive_test ? (float)over_frames / 30.0f
+                                               : (SDL_GetTicks() - over_since) / 1000.0f)
+                                 : -1.0f;
+                if (go_t >= 0.0f) {
+                    if (!go_cam_set) {
+                        go_cam_set = 1;
+                        go_r = sqrtf(ox * ox + oz * oz);
+                        go_y = oy;
+                        go_look = cam_preset[cam_view].target ? 10.0f : 0.0f;
+                    }
+                    float a = (-1024.0f + 4096.0f * go_t / 8.0f) * (2.0f * (float)M_PI / 4096.0f);
+                    CAM_TURN(off, cosf(a) * go_r, go_y, sinf(a) * go_r);
+                    cam_eye[0] = tx + off[0];
+                    cam_eye[1] = ty + off[1];
+                    cam_eye[2] = tz + off[2];
+                    CAM_TURN(off, 0.0f, go_look, 0.0f);
+                    cam_look[0] = tx + off[0];
+                    cam_look[1] = ty + off[1];
+                    cam_look[2] = tz + off[2];
+                }
                 float dx = cam_look[0] - cam_eye[0], dy = cam_look[1] - cam_eye[1],
                       dz = cam_look[2] - cam_eye[2];
                 memcpy(cam.pos, cam_eye, sizeof cam_eye);
@@ -3391,6 +3450,25 @@ int main(int argc, char **argv)
                           dz = car.z - cp[2];
                     cam.pos[0] = cp[0];
                     cam.pos[1] = cp[1] + 20.0f;
+                    cam.pos[2] = cp[2];
+                    cam.yaw = atan2f(dx, -dz) * 180.0f / (float)M_PI;
+                    cam.pitch = atan2f(dy, sqrtf(dx * dx + dz * dz)) * 180.0f / (float)M_PI;
+                }
+            }
+
+            /* The finish camera (mode 3's begin, 0x4154d0): camera [0x4a708c]
+             * looks at the player's car 20 units up (0x4477f0) from the point
+             * of the chunk the player finished on (vehicle record +0x18,
+             * chunk record +0x24 via the 0x4e5d2c map), 40 units up
+             * (0x4474f0), and is made active (change_active_camera(5)). It
+             * stays until the race ends. */
+            if (fin_chunk >= 0) {
+                float cp[3];
+                if (a2_scene_chunk_point(scene, fin_chunk, cp)) {
+                    float dx = car.x - cp[0], dy = (car.y + 20.0f) - (cp[1] + 40.0f),
+                          dz = car.z - cp[2];
+                    cam.pos[0] = cp[0];
+                    cam.pos[1] = cp[1] + 40.0f;
                     cam.pos[2] = cp[2];
                     cam.yaw = atan2f(dx, -dz) * 180.0f / (float)M_PI;
                     cam.pitch = atan2f(dy, sqrtf(dx * dx + dz * dz)) * 180.0f / (float)M_PI;
@@ -4274,7 +4352,6 @@ int main(int argc, char **argv)
                               win_h - 119.0f * k, 0.7f * k, cam.yaw);
                 }
 
-                float small = 14.0f * s; /* 3D font, the centre-screen banners */
 #undef HUD_BRACKET
 #undef HUD_VALUE
 #undef HUD_LABEL
@@ -4372,33 +4449,48 @@ int main(int argc, char **argv)
                     }
                 }
 
-                /* the two game-over arms the police code does not already
-                 * announce: 40 TOTAL LOSS and 41 TIJD IS OM */
-                if (game_over_msg == 40 || game_over_msg == 41) {
-                    int id = game_over_msg;
-                    const char *txt = a2_lang_get(lang, id, id == 40 ? "TOTAL LOSS" : "TIJD IS OM");
-                    float bs = small * 1.8f;
-                    a2_font3d_draw(font, scene, txt,
-                                   (win_w - a2_font3d_width(font, txt) * bs) * 0.5f,
-                                   win_h * 0.40f, bs);
-                }
-
-                /* The police: the two warnings go through the banner slot
-                 * (above); the arrest's 42 GEARRESTEERD and 43 RACE OVER are
-                 * the game-over sequence's own (see cops.h). */
-                if (cops) {
-                    float age = 0.0f;
-                    int msg = a2_cops_message(cops, &age);
-                    if ((msg == 42 || msg == 43) && age < 4.0f) {
-                        const char *fb = msg == 49   ? "EERSTE WAARSCHUWING"
-                                         : msg == 50 ? "LAATSTE WAARSCHUWING"
-                                         : msg == 43 ? "RACE OVER"
-                                                     : "GEARRESTEERD";
-                        const char *txt = a2_lang_get(lang, msg, fb);
-                        float bs = small * 1.6f;
-                        a2_font3d_draw(font, scene, txt,
-                                       (win_w - a2_font3d_width(font, txt) * bs) * 0.5f,
-                                       win_h * 0.22f, bs);
+                /* The game-over texts (ev_g_ovr.cpp).  The begin 0x416060
+                 * renders two lines in font 14 (olfnt08) through 0x415c50:
+                 * the reason -- 40 TOTAL LOSS, 41 TIJD IS OM or 42
+                 * GEARRESTEERD by the sub-mode 0x4867a4 -- with its top at
+                 * screen height / 4 over 1.5 s, and 43 RACE OVER at height / 2
+                 * over 3 s, switched off until the first is done (0x4163c7).
+                 * 0x415e80 blits a line a scanline at a time: with s = sin of
+                 * a quarter turn times the elapsed fraction, even rows come in
+                 * from the right (x = W - s (W - cx)) and odd rows from the
+                 * left (x = -w + s (cx + w)), meeting at the centre cx. */
+                if (arrested && game_over_msg && fnt_fin_title && over_since) {
+                    float k = win_h / 480.0f, W = win_w / k;
+                    float t = drive_test ? (float)over_frames / 30.0f
+                                         : (SDL_GetTicks() - over_since) / 1000.0f;
+                    const char *fb = game_over_msg == 40   ? "TOTAL LOSS"
+                                     : game_over_msg == 41 ? "TIJD IS OM"
+                                                           : "GEARRESTEERD";
+                    const char *line_txt[2] = {a2_lang_get(lang, game_over_msg, fb),
+                                               a2_lang_get(lang, 43, "RACE OVER")};
+                    float top[2] = {120.0f, 240.0f}, start[2] = {0.0f, 1.5f}, dur[2] = {1.5f, 3.0f};
+                    int th = (int)a2_font_height(fnt_fin_title, 1.0f);
+                    for (int n = 0; n < 2; n++) {
+                        float u = (t - start[n]) / dur[n];
+                        if (u < 0.0f)
+                            continue;
+                        float w = a2_font_text_width(fnt_fin_title, line_txt[n], 1.0f);
+                        float cx = (W - w) * 0.5f;
+                        if (u >= 1.0f) {
+                            a2_font_draw(fnt_fin_title, line_txt[n], cx * k, top[n] * k, k);
+                            continue;
+                        }
+                        float sn = sinf(u * (float)M_PI * 0.5f);
+                        glEnable(GL_SCISSOR_TEST);
+                        for (int r = 0; r < th; r++) {
+                            float x = (r & 1) ? -w + sn * (cx + w) : W - sn * (W - cx);
+                            int y0 = (int)floorf((top[n] + r) * k), y1 = (int)floorf((top[n] + r + 1) * k);
+                            if (y1 <= y0)
+                                continue;
+                            glScissor(0, win_h - y1, win_w, y1 - y0);
+                            a2_font_draw(fnt_fin_title, line_txt[n], x * k, top[n] * k, k);
+                        }
+                        glDisable(GL_SCISSOR_TEST);
                     }
                 }
 
