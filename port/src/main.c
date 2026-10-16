@@ -51,6 +51,14 @@
 
 #include <GL/gl.h>
 #include <SDL2/SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+/* hand the browser a turn (draw, sound, input): the loops below are the
+ * desktop's, kept as they are under ASYNCIFY */
+#define A2_YIELD() emscripten_sleep(0)
+#else
+#define A2_YIELD() ((void)0)
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -925,11 +933,20 @@ static void load_screen(load_screen_t *ls, SDL_Window *win, const a2_archive *rc
     }
     a2_sprites_end();
     SDL_GL_SwapWindow(win);
+    A2_YIELD();
     SDL_PumpEvents();
 }
 
+#ifdef A2_WEB
+/* The web build is one program: the menu (src/menu/a2menu.c) calls the race
+ * here where the desktop starts a2view as a process. */
+void a2web_gl_reset(void);
+int a2view_main(int argc, char **argv)
+#else
 int main(int argc, char **argv)
+#endif
 {
+    snd_seed = 0x2468aceu; /* each race starts as a fresh process would */
     const char *datadir = argc > 1 ? argv[1] : ".";
     const char *stem = "etappe0";
     const char *shot = NULL;
@@ -1042,6 +1059,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL_GL_CreateContext: %s\n", SDL_GetError());
         return 1;
     }
+#ifdef A2_WEB
+    a2web_gl_reset();
+#endif
     fprintf(stderr, "GL %s / %s\n", (const char *)glGetString(GL_VERSION),
             (const char *)glGetString(GL_RENDERER));
     a2_sprites *hud = NULL;
@@ -1905,6 +1925,7 @@ int main(int argc, char **argv)
     float cd_launch[4] = {-1, -1, -1, -1};
     float cd_px = 0.0f, cd_py = 0.0f, cd_pz = 0.0f, cd_fx = 0.0f, cd_fz = 1.0f;
 
+    unsigned flag_tex = 0; /* S_SFX for the finish flag, loaded at first use */
     while (running) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -3972,7 +3993,6 @@ int main(int argc, char **argv)
         if (drive_test && finished)
             flag_t = (float)over_frames / 30.0f; /* the clock stops at the line */
         if (finish_flag_on && flag_t >= 1.5f) {
-            static unsigned flag_tex;
             if (!flag_tex)
                 flag_tex = a2_scene_texture(scene, &rcs, "s_sfx.pcx");
             float ph0 = fmodf(flag_t - 1.5f, 2.0f) / 2.0f * 4096.0f;
@@ -4591,6 +4611,7 @@ int main(int argc, char **argv)
             a2_sprites_end();
         }
         SDL_GL_SwapWindow(win);
+    A2_YIELD();
 
         frames++;
         if (!over_since && (finished || arrested))

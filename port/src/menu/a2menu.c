@@ -23,8 +23,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef A2_WEB
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 static int write_ppm(const char *path, const m_canvas *c, const uint8_t pal[768])
 {
@@ -37,10 +39,97 @@ static int write_ppm(const char *path, const m_canvas *c, const uint8_t pal[768]
     return fclose(f);
 }
 
+/* Where the menu's 640x480 picture goes.  The desktop uses an SDL renderer.
+ * The web build draws it through GL instead: a canvas has one WebGL context,
+ * which the race's fixed-function emulation shares, and SDL's renderer
+ * misdrew on it after a race (half the screen). */
+#ifdef A2_WEB
+#include <GL/gl.h>
+typedef struct {
+    SDL_Window *win;
+    SDL_GLContext ctx;
+    GLuint tex;
+} screen;
+
+static void screen_open(screen *s, SDL_Window *win)
+{
+    s->win = win;
+    s->ctx = SDL_GL_CreateContext(win);
+    a2web_gl_reset();
+    glGenTextures(1, &s->tex);
+    glBindTexture(GL_TEXTURE_2D, s->tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    /* 1024x512 holds the 640x480 picture at a power of two, pixel for pixel */
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+}
+
+static void screen_show(screen *s, const uint8_t *rgba)
+{
+    int w = 0, h = 0;
+    SDL_GL_GetDrawableSize(s->win, &w, &h);
+    glViewport(0, 0, w, h);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glBindTexture(GL_TEXTURE_2D, s->tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, M_W, M_H, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    glEnable(GL_TEXTURE_2D);
+    glColor4f(1, 1, 1, 1);
+    float u = M_W / 1024.0f, v = M_H / 512.0f;
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 0); glVertex2f(-1, 1);
+    glTexCoord2f(u, 0); glVertex2f(1, 1);
+    glTexCoord2f(u, v); glVertex2f(1, -1);
+    glTexCoord2f(0, v); glVertex2f(-1, -1);
+    glEnd();
+    SDL_GL_SwapWindow(s->win);
+}
+
+static void screen_close(screen *s)
+{
+    glDeleteTextures(1, &s->tex);
+    SDL_GL_DeleteContext(s->ctx);
+}
+#else
+typedef struct {
+    SDL_Renderer *ren;
+    SDL_Texture *tex;
+} screen;
+
+static void screen_open(screen *s, SDL_Window *win)
+{
+    s->ren = SDL_CreateRenderer(win, -1, 0);
+    SDL_RenderSetLogicalSize(s->ren, M_W, M_H);
+    s->tex = SDL_CreateTexture(s->ren, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING,
+                               M_W, M_H);
+}
+
+static void screen_show(screen *s, const uint8_t *rgba)
+{
+    SDL_UpdateTexture(s->tex, NULL, rgba, M_W * 4);
+    SDL_RenderClear(s->ren);
+    SDL_RenderCopy(s->ren, s->tex, NULL, NULL);
+    SDL_RenderPresent(s->ren);
+}
+
+static void screen_close(screen *s)
+{
+    SDL_DestroyTexture(s->tex);
+    SDL_DestroyRenderer(s->ren);
+}
+#endif
+
 /* Play <name>.smk from the data dir (menu.dat 0x409f70): Raser.ini [MOVIES]
  * ON=0 skips them, SIZE=1 doubles the 320x240 picture to the full screen,
  * SIZE=0 shows it centred.  A key or a click ends it. */
-static void play_video(const menu *m, SDL_Renderer *ren, SDL_Texture *tex, const char *name)
+static void play_video(const menu *m, screen *scr, const char *name)
 {
     if (!a2_ini_int(m->datadir, "Raser.ini", "[MOVIES]", "ON", 1))
         return;
@@ -88,10 +177,7 @@ static void play_video(const menu *m, SDL_Renderer *ren, SDL_Texture *tex, const
                 o[2] = c[2];
                 o[3] = 255;
             }
-        SDL_UpdateTexture(tex, NULL, rgba, M_W * 4);
-        SDL_RenderClear(ren);
-        SDL_RenderCopy(ren, tex, NULL, NULL);
-        SDL_RenderPresent(ren);
+        screen_show(scr, rgba);
         Uint32 due = start + (Uint32)((f + 1) * smk_frame_ms(v));
         while (!stop && SDL_GetTicks() < due) {
             SDL_Event ev;
@@ -108,6 +194,22 @@ static void play_video(const menu *m, SDL_Renderer *ren, SDL_Texture *tex, const
 }
 
 /* Run the race and wait for it, as a2_II.exe does with spel.dat. */
+#ifdef A2_WEB
+/* The web build has no processes: the race is a call (src/main.c), which
+ * ends with SDL_Quit, so the menu brings SDL back up for itself. */
+int a2view_main(int argc, char **argv);
+static int run_race(const menu *m)
+{
+    char stage[32];
+    snprintf(stage, sizeof stage, "etappe%d", m_slot_int(&m->career, M_SLOT_ETAPPE));
+    fprintf(stderr, "menu: starting the race %s %s\n", m->datadir, stage);
+    char *argv[] = {"a2view", (char *)m->datadir, stage, "--game", NULL};
+    int r = a2view_main(4, argv);
+    a2web_gl_reset(); /* the race's GL state off the canvas's one context */
+    SDL_Init(SDL_INIT_VIDEO);
+    return r;
+}
+#else
 static int run_race(const menu *m)
 {
     char stage[32];
@@ -125,6 +227,7 @@ static int run_race(const menu *m)
     waitpid(pid, &status, 0);
     return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
+#endif
 
 /* What the menu does when it (re)starts: load the slots, take a finished
  * race's results, read the device. */
@@ -219,19 +322,20 @@ int main(int argc, char **argv)
     for (;;) {
         m.audio = m_audio_open(&m.a);
         Uint32 flags = SDL_WINDOW_RESIZABLE;
+#ifdef A2_WEB
+        flags |= SDL_WINDOW_OPENGL;
+#endif
         if (getenv("A2_FULLSCREEN") && atoi(getenv("A2_FULLSCREEN")))
             flags |= SDL_WINDOW_FULLSCREEN_DESKTOP; /* the race takes it too */
         SDL_Window *win = SDL_CreateWindow("A2 Racer II", SDL_WINDOWPOS_CENTERED,
                                            SDL_WINDOWPOS_CENTERED, M_W * 2, M_H * 2, flags);
-        SDL_Renderer *ren = SDL_CreateRenderer(win, -1, 0);
-        SDL_RenderSetLogicalSize(ren, M_W, M_H);
-        SDL_Texture *tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ABGR8888,
-                                             SDL_TEXTUREACCESS_STREAMING, M_W, M_H);
+        screen scr;
+        screen_open(&scr, win);
         SDL_ShowCursor(SDL_DISABLE);
         SDL_StopTextInput();
         /* \FIRST: the shell starts the menu with it once, and the intro plays */
         if (first && !no_intro)
-            play_video(&m, ren, tex, "intro");
+            play_video(&m, &scr, "intro");
         first = 0;
         /* After the last stage the menu loop first shows the standings
          * (0x4076c7 -> 0x405630, which opens mhigh_open_screen 0x405530) and
@@ -252,6 +356,17 @@ int main(int argc, char **argv)
                 if (ev.type == SDL_QUIT)
                     m.quit = 1;
                 else if (ev.type == SDL_MOUSEMOTION) {
+#ifdef A2_WEB
+                    /* the desktop's renderer maps the window onto the 640x480
+                     * screen (SDL_RenderSetLogicalSize); the web build's GL
+                     * picture fills the canvas, so scale here */
+                    {
+                        int ww = 1, wh = 1;
+                        SDL_GetWindowSize(win, &ww, &wh);
+                        ev.motion.x = ev.motion.x * M_W / (ww > 0 ? ww : 1);
+                        ev.motion.y = ev.motion.y * M_H / (wh > 0 ? wh : 1);
+                    }
+#endif
                     m_ui_mouse_move(&m, ev.motion.x, ev.motion.y);
                     if (m.mouse_down && m.screen == SCR_OPTIONS && !m.req.active)
                         m_options_drag(&m, ev.motion.x, ev.motion.y);
@@ -275,7 +390,7 @@ int main(int argc, char **argv)
                 if (career_end && m.screen == SCR_STANDINGS) {
                     const uint8_t *lead = m_slot_row(&m.career, 0, 0);
                     int won = strncmp((const char *)lead + 1, m_slot_name(&m.career), 9) == 0;
-                    play_video(&m, ren, tex, won ? "win" : "lose");
+                    play_video(&m, &scr, won ? "win" : "lose");
                     m_slot_set_int(&m.career, M_SLOT_ETAPPE, 0);
                     career_end = 0;
                 }
@@ -284,16 +399,12 @@ int main(int argc, char **argv)
             }
             m_ui_draw(&m, &canvas, 1);
             m_to_rgba(&canvas, m.a.pal, rgba);
-            SDL_UpdateTexture(tex, NULL, rgba, M_W * 4);
-            SDL_RenderClear(ren);
-            SDL_RenderCopy(ren, tex, NULL, NULL);
-            SDL_RenderPresent(ren);
+            screen_show(&scr, rgba);
             SDL_Delay(10);
         }
         if (m.quit)
-            play_video(&m, ren, tex, "exit"); /* the menu returned 0xff (0x409bbe) */
-        SDL_DestroyTexture(tex);
-        SDL_DestroyRenderer(ren);
+            play_video(&m, &scr, "exit"); /* the menu returned 0xff (0x409bbe) */
+        screen_close(&scr);
         SDL_DestroyWindow(win);
         m_audio_close(m.audio); /* the race has the sound device to itself */
         m.audio = NULL;

@@ -78,6 +78,48 @@ original's:
 The viewer's extras (Tab free camera, mouse look, O, G, T, H, [ ], F2) are
 off in this mode.
 
+## The WebAssembly port (port/web)
+
+The same C sources also build for the browser with Emscripten, as one program
+(the menu calls the race where the desktop starts it as a process):
+
+```sh
+port/web/build.sh        # needs emcc: emsdk, or the copy in .work/emsdk
+port/web/serve.sh        # then open http://localhost:8080/a2racer2.html
+```
+
+The page does not include the game. On first use it asks for your A2 Racer II
+folder (the installed game or the CD; it finds `RCS.IMG` at any depth) and
+copies the files the port reads into the browser's storage, leaving out
+`debug.txt`, the programs and backups. They stay there, with the careers and
+settings the game saves, until "Forget the game files". Play needs a click,
+because browsers only start sound after one.
+
+What differs from the desktop build, all behind `A2_WEB` / `__EMSCRIPTEN__` or
+in `port/web/`:
+
+- the menu calls `a2view_main` instead of fork/exec, and the loops yield to
+  the browser every frame (ASYNCIFY), so they stay as they are;
+- the old fixed-function GL runs on Emscripten's LEGACY_GL_EMULATION (WebGL
+  1). `web/glshim.c` covers what that misses, each found with the probe
+  `web/gltest.c`: textures whose sides are not powers of two (black under
+  GL_REPEAT) are scaled up on upload; indexed draws with 32-bit indices from
+  client memory (drawn as nothing) become 16-bit batches;
+  glPushAttrib / glPopAttrib and glIsEnabled are tracked; and the canvas's
+  one WebGL context is put back to its defaults when the race takes it and
+  when it hands it back;
+- the menu shows its 640x480 picture through that same GL path instead of an
+  SDL renderer (which drew only half the screen after a race), and scales
+  the mouse to 640x480 itself.
+
+`port/web/test_web.py <data dir> <out dir> [steps]` drives it in headless
+Chromium (Playwright): it feeds the folder picker, presses Play and follows
+steps such as `click:80,82`, `key:Enter`, `hold:ArrowUp:5`, `shot:name`.
+Checked that way: intro, menu, START, the stage's loading screen, the race,
+Esc/J back to the menu, a second race, the garage, and the files and saves
+surviving a reload. The page's own clock is printed with each message,
+because while the game holds the main thread the console receives them late.
+
 ## Architecture mapping (from spel.dat analysis)
 
 | original | port equivalent |

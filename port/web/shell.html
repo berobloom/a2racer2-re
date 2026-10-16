@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2 Racer II</title>
+<style>
+  :root {
+    --bg: #111317; --panel: #1b1e24; --text: #e8e8ea; --muted: #9aa0aa;
+    --accent: #e8452c; --border: #2c3038;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+               font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { min-height: 100%; display: flex; flex-direction: column; align-items: center;
+         justify-content: center; gap: 16px; padding: 16px; }
+  /* SDL sizes its (resizable) window to the canvas's size on the page, so the
+     canvas gets a definite one: 4:3, as large as fits */
+  #canvas { display: none; background: #000; outline: none;
+            width: min(calc(100vw - 32px), calc((100vh - 32px) * 4 / 3));
+            height: min(calc(100vh - 32px), calc((100vw - 32px) * 3 / 4)); }
+  #panel { width: min(520px, 100%); background: var(--panel); border: 1px solid var(--border);
+           border-radius: 10px; padding: 24px; }
+  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .02em; }
+  p { margin: 8px 0; color: var(--muted); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  button, label.btn { appearance: none; border: 0; border-radius: 6px; padding: 10px 16px;
+           font: inherit; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=file] { display: none; }
+  progress { width: 100%; height: 8px; margin-top: 12px; accent-color: var(--accent); }
+  #log { font: 12px/1.4 ui-monospace, monospace; color: var(--muted); white-space: pre-wrap;
+         max-height: 120px; overflow: auto; margin-top: 12px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="panel">
+    <h1>A2 Racer II</h1>
+    <p id="status">Starting…</p>
+    <progress id="progress" class="hidden" max="100" value="0"></progress>
+    <div id="pick" class="row hidden">
+      <label class="btn" for="folder">Choose the game folder…</label>
+      <input id="folder" type="file" webkitdirectory multiple>
+    </div>
+    <div id="ready" class="row hidden">
+      <button id="play">Play</button>
+      <button id="fullscreen" class="ghost">Play full screen</button>
+      <button id="forget" class="ghost">Forget the game files</button>
+    </div>
+    <div id="log"></div>
+  </div>
+  <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const DATA = '/data';
+  // the files the port never reads: the original's log, programs, backups
+  const SKIP = /(^debug\.txt$)|(\.(exe|dll|ico|bak[^/]*)$)|(\.bak_)/i;
+  const status = (t) => { $('status').textContent = t; };
+  const log = (t) => { const l = $('log'); l.textContent += t + '\n'; l.scrollTop = l.scrollHeight; };
+
+  function sync(populate) {
+    return new Promise((ok, fail) => Module.FS.syncfs(populate, (e) => (e ? fail(e) : ok())));
+  }
+  function haveData() {
+    try { Module.FS.stat(DATA + '/RCS.IMG'); return true; } catch (e) { return false; }
+  }
+
+  async function importFolder(files) {
+    const all = Array.from(files);
+    const dir = (f) => (f.webkitRelativePath || f.name).split('/').slice(0, -1).join('/');
+    // the game's folder is where RCS.IMG is, at whatever depth was chosen
+    // (the installed game, or the CD with its data folder)
+    const rcs = all.filter((f) => /^RCS\.IMG$/i.test(f.name))
+                   .sort((a, b) => dir(a).length - dir(b).length)[0];
+    log(all.length + ' files offered');
+    if (!rcs) {
+      status('That folder has no RCS.IMG. Choose the folder that holds the game files (spel.dat, RCS.IMG, etappe*.*).');
+      return;
+    }
+    const list = all.filter((f) => dir(f) === dir(rcs) && !SKIP.test(f.name));
+    $('pick').classList.add('hidden');
+    $('progress').classList.remove('hidden');
+    let done = 0;
+    for (const f of list) {
+      status('Copying ' + f.name + '…');
+      Module.FS.writeFile(DATA + '/' + f.name, new Uint8Array(await f.arrayBuffer()));
+      $('progress').value = (++done / list.length) * 100;
+    }
+    status('Saving the game files in this browser…');
+    await sync(false);
+    $('progress').classList.add('hidden');
+    log(list.length + ' files copied');
+    showReady();
+  }
+
+  function showReady() {
+    status('The game files are in this browser. Saves are kept here too.');
+    $('ready').classList.remove('hidden');
+  }
+
+  function start(full) {
+    $('panel').classList.add('hidden');
+    const c = $('canvas');
+    c.style.display = 'block';
+    c.focus();
+    if (full && c.requestFullscreen) c.requestFullscreen().catch(() => {});
+    // careers and settings: write them back now and then, and when leaving
+    setInterval(() => sync(false).catch(() => {}), 5000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') sync(false).catch(() => {});
+    });
+    Module.callMain([DATA]);
+  }
+
+  var Module = {
+    canvas: $('canvas'),
+    // stamped with the page's own clock: while the game holds the main
+    // thread the messages reach the console late and all at once
+    print: (t) => console.log((performance.now() / 1000).toFixed(2) + ' ' + t),
+    printErr: (t) => console.log((performance.now() / 1000).toFixed(2) + ' ' + t),
+    setStatus: (t) => { if (t) status(t); },
+    onRuntimeInitialized: async () => {
+      try {
+        Module.FS.mkdir(DATA);
+        Module.FS.mount(Module.IDBFS, {}, DATA);
+        await sync(true);
+      } catch (e) {
+        log('browser storage: ' + e);
+      }
+      if (haveData()) {
+        showReady();
+      } else {
+        status('This port needs the original game\'s files, which it does not include. ' +
+               'Choose your A2 Racer II folder once; the files are copied into this browser.');
+        $('pick').classList.remove('hidden');
+      }
+    },
+  };
+
+  $('folder').addEventListener('change', (e) => importFolder(e.target.files));
+  $('play').addEventListener('click', () => start(false));
+  $('fullscreen').addEventListener('click', () => start(true));
+  $('forget').addEventListener('click', async () => {
+    for (const n of Module.FS.readdir(DATA))
+      if (n !== '.' && n !== '..') Module.FS.unlink(DATA + '/' + n);
+    await sync(false);
+    location.reload();
+  });
+  window.addEventListener('keydown', (e) => {
+    // the arrows and space drive the car, they should not scroll the page
+    if ($('canvas').style.display === 'block' && [32, 37, 38, 39, 40].includes(e.keyCode))
+      e.preventDefault();
+  }, { passive: false });
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

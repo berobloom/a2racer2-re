@@ -3,6 +3,7 @@
 /.work/
 # Build output and caches
 /port/build/
+/port/web/out/
 __pycache__/
 *.pyc
 # Vendored rizin executables (reverse-engineering/tools, see open question 19)
