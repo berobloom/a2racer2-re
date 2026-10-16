@@ -12,6 +12,7 @@
 
 typedef struct {
     int w, h;
+    int ax, ay; /* the anchor the blit 0x468db0 subtracts unless flag 2 is set */
     unsigned tex;
 } sprite_entry;
 
@@ -55,6 +56,8 @@ static int upload(a2_sprites *s, int index, const uint8_t palette[768])
     s->entries[index].tex = a2_gfx_texture_from_image_nearest(&im, 1);
     s->entries[index].w = w;
     s->entries[index].h = h;
+    s->entries[index].ax = d[4] | (d[5] << 8);
+    s->entries[index].ay = d[6] | (d[7] << 8);
     free(rgba);
     return 1;
 }
@@ -167,6 +170,17 @@ int a2_sprite_size(const a2_sprites *s, int index, int *w, int *h)
         *w = s->entries[index].w;
     if (h)
         *h = s->entries[index].h;
+    return 1;
+}
+
+int a2_sprite_anchor(const a2_sprites *s, int index, int *ax, int *ay)
+{
+    if (!s || index < 0 || index >= s->count || !s->entries[index].tex)
+        return 0;
+    if (ax)
+        *ax = s->entries[index].ax;
+    if (ay)
+        *ay = s->entries[index].ay;
     return 1;
 }
 

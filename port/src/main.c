@@ -1195,7 +1195,7 @@ int main(int argc, char **argv)
     radar_map radar;
     memset(&radar, 0, sizeof radar);
     a2_font *fnt_label = NULL, *fnt_time = NULL, *fnt_speed = NULL, *fnt_value = NULL,
-            *fnt_pct = NULL, *fnt_small = NULL;
+            *fnt_pct = NULL, *fnt_small = NULL, *fnt_fin_title = NULL, *fnt_fin_value = NULL;
     {
         /* Raser.ini's [PALET] gives two palettes per track -- "first arg is the
          * version for 8-bit mode, second is the version for 16-bit mode" --
@@ -1258,6 +1258,12 @@ int main(int argc, char **argv)
                 /* font 6, olfnt07: the pause and quit screens' small lines */
                 fnt_small = a2_font_load(&rcs, "olfnt07.fnt", pal);
                 a2_font_set_spacing(fnt_small, -2);
+                /* fonts 14 (olfnt08, -14) and 15 (olfnt09, -2): the finish
+                 * panel's GEFINISHT and its numbers (0x4194e0 / 0x419870) */
+                fnt_fin_title = a2_font_load(&rcs, "olfnt08.fnt", pal);
+                a2_font_set_spacing(fnt_fin_title, -14);
+                fnt_fin_value = a2_font_load(&rcs, "olfnt09.fnt", pal);
+                a2_font_set_spacing(fnt_fin_value, -2);
             }
         }
     }
@@ -1315,6 +1321,8 @@ int main(int argc, char **argv)
     ((finished && final_pos) ? final_pos                                                           \
                              : (final_pos = a2_racers_position(racers, player_progress)))
     float lap_start = 0.0f, last_lap = 0.0f, best_lap = 0.0f;
+    /* each lap's time in ms, 0x4dc970[laps] (Tr_finis.cpp 0x429860) */
+    int lap_ms[8] = { 0 };
     /* The banner slot: 0x4882c0 takes a pending language.ini id, the HUD
      * (0x41a95b) latches it into 0x4882c4 with the GetTickCount, and for 2000
      * ms draws it while (ticks / 100) is odd -- 100 ms on, 100 ms off -- as
@@ -1347,6 +1355,7 @@ int main(int argc, char **argv)
     float turbo_left = 1.0f;  /* the turbo reserve, full at the start (with TURBO) */
     float finish_time = 0.0f;
     int result_booked = 0; /* the finish has been booked into `save` */
+    int fin_budget = 0, fin_prize = 0; /* the finish panel's BUDGET and PRIJZENGELD */
     int track_ms = 0;
     /* Radar cameras knocked over (0x4dc964, by the type-7 handler 0x428d30;
      * see a2_scene_props_step), and when banner 51 RADAR BONUS was raised. */
@@ -1544,6 +1553,7 @@ int main(int argc, char **argv)
     /* TURBO (0x4d9ec8): only with it is the turbo tank filled at the start
      * (0x428563) and at a service station (0x42a4f6) */
     int up_turbo = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "TURBO", 0);
+    int finish_flag_on = a2_ini_int(datadir, "Game.ini", "[GFX OPTIONS]", "finish_flag", 1);
     if (!up_turbo)
         turbo_left = 0.0f;
     /* The 0x484B18 physics table.  It drives only the old Autobahn Raser I
@@ -3075,6 +3085,8 @@ int main(int argc, char **argv)
                         RAISE_BANNER(45);
                     }
                     save.time_checks = 0;
+                    if (lap >= 1 && lap <= 8)
+                        lap_ms[lap - 1] = (int)(last_lap * 1000.0f);
                     lap_start = race_time;
                     lap++;
                     fprintf(stderr, "lap %d complete in %.1f s\n", lap - 1, last_lap);
@@ -3205,6 +3217,8 @@ int main(int argc, char **argv)
                     save.race_record = track_ms;
                 save.position = PLAYER_POSITION() - 1;
                 int prize = a2_save_prize(save.position, save.etappe, difficulty);
+                fin_budget = save.money;
+                fin_prize = prize;
                 save.money += prize + radar_knocked * 2000;
                 if (save.money > 999999)
                     save.money = 999999;
@@ -3857,6 +3871,57 @@ int main(int argc, char **argv)
         if (cops)
             a2_cops_draw(cops, scene, near_chunk, radius);
         a2_paths_draw(paths, scene);
+        /* The finish flag (gfx: 0x41ad40 builds, 0x41ac00 waves, 0x41aee0
+         * draws; Game.ini [GFX OPTIONS] finish_flag).  1.5 s after the finish
+         * (mode 3's tick, 0x41560f) a chequered flag -- S_SFX's 8x6 patch at
+         * u 0.4453..0.5078, v 0..0.047 -- waves across the screen in front of
+         * the camera: a 17 x 11 grid, x -100 + 12.5c, y -75 + 15r, 10 strips
+         * drawn, depth 100 + 10 sin(phase), phase = 4096 t / 2 s + 128c +
+         * 64r, grey clamp(256 - (w + 10) * 6.4, 128, 255) at alpha 0x64, in
+         * the camera's frame (its matrix as the world transform). */
+        float flag_t = finished && over_since ? (SDL_GetTicks() - over_since) / 1000.0f : -1.0f;
+        if (drive_test && finished)
+            flag_t = (float)over_frames / 30.0f; /* the clock stops at the line */
+        if (finish_flag_on && flag_t >= 1.5f) {
+            static unsigned flag_tex;
+            if (!flag_tex)
+                flag_tex = a2_scene_texture(scene, &rcs, "s_sfx.pcx");
+            float ph0 = fmodf(flag_t - 1.5f, 2.0f) / 2.0f * 4096.0f;
+            glMatrixMode(GL_MODELVIEW);
+            glPushMatrix();
+            glLoadIdentity();
+            GLboolean cull = glIsEnabled(GL_CULL_FACE);
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_ALPHA_TEST); /* alpha 0x64 is under the scene's 0.5 */
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, flag_tex);
+            for (int r = 0; r < 10; r++) {
+                glBegin(GL_TRIANGLE_STRIP);
+                for (int c = 0; c <= 16; c++)
+                    for (int k = 0; k < 2; k++) {
+                        int rr = r + k;
+                        float ph = ph0 + 128.0f * c + 64.0f * rr;
+                        float w = 10.0f * sinf(ph * (6.28318531f / 4096.0f));
+                        int g = 256 - (int)((w + 10.0f) * 6.4f);
+                        g = g < 128 ? 128 : g > 255 ? 255 : g;
+                        glColor4ub((GLubyte)g, (GLubyte)g, (GLubyte)g, 0x64);
+                        glTexCoord2f(0.4453f + c / 256.0f, 0.046875f - rr * 0.0046875f);
+                        /* D3D camera space (x right, y up, z ahead) into
+                         * this flipped GL eye space */
+                        glVertex3f(-(-100.0f + 12.5f * c), -75.0f + 15.0f * rr, -(100.0f + w));
+                    }
+                glEnd();
+            }
+            glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+            glEnable(GL_DEPTH_TEST);
+            if (cull)
+                glEnable(GL_CULL_FACE);
+            glEnable(GL_ALPHA_TEST);
+            glPopMatrix();
+        }
         /* the countdown's letters, in the world */
         for (int k = 0; font && k < 4; k++) {
             if (cd_launch[k] < 0.0f)
@@ -4337,15 +4402,59 @@ int main(int argc, char **argv)
                     }
                 }
 
-                /* Finish banner: the game's own GEFINISHT and total time. */
-                if (finished) {
-                    int fm = (int)(finish_time / 60.0f);
-                    snprintf(line, sizeof line, "%s   %02d:%02d",
-                             a2_lang_get(lang, 17, "GEFINISHT"), fm, ((int)finish_time) % 60);
-                    float bs = small * 1.8f;
-                    a2_font3d_draw(font, scene, line,
-                                   (win_w - a2_font3d_width(font, line) * bs) * 0.5f,
-                                   win_h * 0.40f, bs);
+                /* The finish panel.  Mode 3's tick 0x4155d0 draws it, with
+                 * the flag, from 1.5 s after the line (0x5dc ms) until a key
+                 * ends the race: 0x419ad0 picks 0x4194e0 on a circuit (sprite
+                 * 314, RONDE 1 / RONDE 2 / TOTAAL) and 0x419870 on a highway
+                 * (sprite 319, RACE TIJD).  Both put the place badge (anim 3:
+                 * sprites 317 316 315 318 for 1st..4th, drawn anchored) and
+                 * GEFINISHT (language 17, font 14) over the flag, then the
+                 * money in font 15: BUDGET (money before the prize, " %d"),
+                 * PRIJZENGELD and RADAR BONUS ("+%d") and NIEUW BUDGET.
+                 * The positions are the hires elements 62..82 that 0x41b860
+                 * writes (emu_layout.py); all text is top-left (mode 0).  The
+                 * 640x480 screen is centred here. */
+                float fin_t = drive_test ? (float)over_frames / 30.0f
+                                         : (SDL_GetTicks() - over_since) / 1000.0f;
+                if (finished && hud && over_since && fin_t >= 1.5f) {
+                    float k = win_h / 480.0f, ox = (win_w - 640.0f * k) * 0.5f;
+#define FIN_TEXT(fnt, txt, ex, ey)                                                                 \
+    do {                                                                                           \
+        if (fnt)                                                                                   \
+            a2_font_draw((fnt), (txt), ox + (ex) * k, (ey) * k, k);                                \
+    } while (0)
+#define FIN_TIME(ms, ex, ey)                                                                       \
+    do {                                                                                           \
+        int t_ = (ms) / 1000;                                                                      \
+        snprintf(line, sizeof line, "%02d:%02d:%d", t_ / 60, t_ % 60, ((ms) / 100) % 10);          \
+        FIN_TEXT(fnt_fin_value, line, ex, ey);                                                     \
+    } while (0)
+                    a2_sprite_draw(hud, circuit ? 314 : 319, ox + 49.0f * k, 46.0f * k, k);
+                    static const int badge[4] = { 317, 316, 315, 318 };
+                    int place = save.position < 0 ? 0 : save.position > 3 ? 3 : save.position;
+                    int bax = 0, bay = 0;
+                    a2_sprite_anchor(hud, badge[place], &bax, &bay);
+                    a2_sprite_draw(hud, badge[place], ox + (494.0f - bax) * k, (83.0f - bay) * k, k);
+                    FIN_TEXT(fnt_fin_title, a2_lang_get(lang, 17, "GEFINISHT"), 68, 78);
+                    int radar = radar_knocked * 2000;
+                    if (circuit) {
+                        FIN_TIME(lap_ms[0], 256, 159); /* element 65, 0x4dc970 */
+                        FIN_TIME(lap_ms[1], 256, 186); /* element 66, 0x4dc974 */
+                        FIN_TIME(track_ms, 256, 237);  /* element 67, 0x4d9e5c */
+                    } else {
+                        FIN_TIME(track_ms, 294, 157); /* element 82 */
+                    }
+                    float my = circuit ? 281.0f : 207.0f; /* elements 68.. / 78.. */
+                    snprintf(line, sizeof line, " %d", fin_budget);
+                    FIN_TEXT(fnt_fin_value, line, 388, my);
+                    snprintf(line, sizeof line, "+%d", fin_prize);
+                    FIN_TEXT(fnt_fin_value, line, 388, my + 28.0f);
+                    snprintf(line, sizeof line, "+%d", radar);
+                    FIN_TEXT(fnt_fin_value, line, 388, my + 56.0f);
+                    snprintf(line, sizeof line, " %d", fin_budget + fin_prize + radar);
+                    FIN_TEXT(fnt_fin_value, line, 388, my + 109.0f);
+#undef FIN_TIME
+#undef FIN_TEXT
                 }
 
             }
@@ -4388,6 +4497,8 @@ int main(int argc, char **argv)
          * on the result until the window is closed or the frame cap hits. */
         if (drive_test && (finished || arrested) && ++over_frames > 150) {
             fprintf(stderr, "drive-test: race over, exiting\n");
+            if (shot)
+                write_ppm(shot, win_w, win_h);
             running = 0;
         }
         float dbg_road = 0.0f;
@@ -4441,6 +4552,8 @@ int main(int argc, char **argv)
     a2_font_free(fnt_speed);
     a2_font_free(fnt_pct);
     a2_font_free(fnt_small);
+    a2_font_free(fnt_fin_title);
+    a2_font_free(fnt_fin_value);
     a2_font_free(fnt_label);
     a2_lang_free(lang);
     a2_font3d_free(font);

@@ -25,6 +25,9 @@ void a2_sprites_free(a2_sprites *s);
 
 int a2_sprites_count(const a2_sprites *s);
 int a2_sprite_size(const a2_sprites *s, int index, int *w, int *h);
+/* The entry's anchor_x / anchor_y: where the original's blit puts the element
+ * point when it draws anchored (0x41c0f0 mode 1). */
+int a2_sprite_anchor(const a2_sprites *s, int index, int *ax, int *ay);
 /* Sprite `index` as malloc'd RGBA (the transparent index as alpha 0), for
  * stamping into a texture the way the original's txt_main.cpp blits do.
  * The caller frees it.  NULL on failure. */

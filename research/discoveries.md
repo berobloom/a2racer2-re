@@ -6685,8 +6685,10 @@ back to the list).
   - For **2000 ms** after the latch (`cmp eax, 0x7d0`), the id is drawn while
     **(ticks / 100) is odd** (`mul 0x51eb851f; shr edx, 5; test dl, 1`): a
     100 ms on / 100 ms off blink.
-  - It is drawn with **0x41bfc0(surface, element 0x4c, mode 1, text, font)**.
-    Mode 1 centres the text on the element's point.
+  - It is drawn through **0x41bfc0**, element 0x4c, mode 1. Mode 1 centres
+    the text on the element's point. (Argument order, read from 0x41bfc0
+    itself in session 15: `(surface 1..2, element 0..0x54, font record, mode,
+    format, ...)`; the font record is 0x486d08 + 148 x (17 x set + font).)
 - Element 76 in the 12-byte layout table at 0x488510 (`{anim, x, y}`): the
   reader picks the half at +84 elements when the lores flag [0x4d9a70] is
   **0** (0x41c018: `sete`), and that half has the 640x480 coordinates
@@ -7478,3 +7480,62 @@ Completes open question 5 (session 9), which found the driver-name scan
   radar bonus), damage 30 % and next stage "Kwalificatie AMSTERDAM - DEN
   HAAG". STANDEN TOTAAL listed the three racers and the player at 19:34.
 
+
+## The finish: flag and results panel (session 15)
+
+- CONFIRMED (code): mode 3's tick **0x4155d0** does nothing for the first
+  **1500 ms**. After that, every frame:
+  - if Game.ini `[GFX OPTIONS] finish_flag` ([0x4d9aac]) is set, it turns the
+    flag on once (0x41abc0(1) at 0x41560f, [0x4aa858]);
+  - it draws the results panel through **0x419ad0** (from 0x415621);
+  - it waits for Esc / Enter / Space as described above.
+- CONFIRMED (code), **the flag** (gfx): 0x41aea0 init, 0x41ad40 builds the
+  mesh, 0x41ac00 waves it, 0x41aee0 draws it, gated on [0x4d9ae4] =
+  finish_flag. `reverse-engineering/tools/emu_flag.py` runs the builder and
+  the wave under Unicorn.
+  - A 17 x 11 grid: x = -100 + 12.5c, y = -75 + 15r.
+  - Depth 100 + 10 sin(phase), with phase = 4096 t / 2 s + 128c + 64r.
+  - Grey clamp(256 - (w + 10) x 6.4, 128, 255), alpha 0x64.
+  - Texture S_SFX at u 0.4453 + c/256, v 0.046875 - r x 0.0046875: the
+    chequered 8x6 patch.
+  - It is drawn in camera space.
+  - How it looks on screen in the original is **not captured**. LIKELY the
+    1-texel checker blurs under FILTER=2 as it does in the port.
+- CONFIRMED (code), **the results panel**: 0x419ad0 tests the track record's
+  circuit flag (dword at 0x4d8e9c + 137 x [0x4d9a74], as 0x419ae4 indexes
+  it). A circuit goes to
+  **0x4194e0** and a highway to **0x419870**.
+- Both panels draw the same pieces:
+
+  | element | at (640x480) | what | source |
+  |---|---|---|---|
+  | 62 / 72 | (49, 46) | panel: anim 6 = sprite 314 (circuit, 543x380) / anim 4 = sprite 319 (highway, 543x306) | mode 0, top-left |
+  | 64 | (494, 83) | place badge: anim 3, frame = position [0x4d9e60] | mode 1, anchored |
+  | 63 | (68, 78) | GEFINISHT, language 17, font 14 (olfnt08) | |
+  | 65 / 66 / 67 | (256, 159 / 186 / 237) | circuit: RONDE 1 [0x4dc970], RONDE 2 [0x4dc974], TOTAAL [0x4d9e5c] | `%02d:%02d:%d` |
+  | 82 | (294, 157) | highway: RACE TIJD [0x4d9e5c] | `%02d:%02d:%d` |
+  | 68 / 78 | (388, 281 / 207) | BUDGET, money getter 0x428140 | `" %d"` |
+  | 69 / 79 | (388, 309 / 235) | PRIJZENGELD, prize 0x4280c0 | `"+%d"` |
+  | 70 / 80 | (388, 337 / 263) | RADAR BONUS, [0x4dc964] x 2000 | `"+%d"` |
+  | 71 / 81 | (388, 390 / 316) | NIEUW BUDGET, the sum of the three | `" %d"` |
+
+  - The times are min : s : tenths of the ms value.
+  - All the numbers are font 15 (olfnt09, hires spacing -2), top-left (mode 0).
+  - The prize is only added by the end callback (0x415690), so BUDGET is
+    the money **before** this race. NIEUW BUDGET is not clamped there.
+- CONFIRMED (data): anim 3's frames are sprites **317, 316, 315, 318**, the
+  badges "1", "2", "3" and "4". So frame = 0-based position.
+- CONFIRMED (code): the blit 0x468db0 subtracts the surface's anchor unless
+  flag 2 is set. 0x41c0f0 passes flags 3 for mode 0 and 1 for mode 1, so a
+  mode-1 sprite is placed by its RC.IMG anchor. For the badges the anchor is
+  (62, 44..63), which puts them on the panel's flag ellipse.
+- The positions come from **0x41b860**, run under Unicorn at 640x480 by
+  `reverse-engineering/tools/emu_layout.py`. Its output reproduces every
+  element the HUD work had read back from the running game (38: (546, 4),
+  51: (474, 15), 57: (485, 15), 83: (580, 349)...).
+- Port: the panel replaces the port's own 3D "GEFINISHT mm:ss" text. The
+  640x480 screen is centred in the window.
+- CONFIRMED (code): behind the panel the circuit HUD's RONDE value is
+  `"%d/%d"` (0x4882f0, at 0x41a3c0) of laps done [0x4d9ad4] + 1 and Nrlaps
+  [0x4d9ad8] capped at 9. Laps done is clamped to Nrlaps, so after the
+  finish the original shows **3/2** on a two-lap circuit, as the port does.
