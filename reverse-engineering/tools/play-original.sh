@@ -24,5 +24,13 @@ if [ "$res" != 3 ]; then
     echo "options.ras: resolution $res -> 3 (640x480x16)"
 fi
 
+# A 640x480 Wine virtual desktop: the game switches the screen to 640x480,
+# which Wine cannot do on a larger or XWayland display ("could not set display
+# mode (operation is not supported)").  Inside the virtual desktop the mode
+# is already right, so the shell, the menu and the race all run in one
+# 640x480 window.
+wine reg add 'HKCU\Software\Wine\Explorer' /v Desktop /d Default /f >/dev/null 2>&1
+wine reg add 'HKCU\Software\Wine\Explorer\Desktops' /v Default /d 640x480 /f >/dev/null 2>&1
+
 cd "$DIR"
 exec env -u WAYLAND_DISPLAY NOCD=C WINEDEBUG=-all wine ./a2_II.exe

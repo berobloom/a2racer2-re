@@ -204,5 +204,12 @@ original in `.work/game` is untouched. To go back:
   modes do not work under Wine (discoveries.md), so .work/menutest's
   options.ras now holds 3 (the old file is options.ras.bak_res0). With that,
   shell -> menu -> START -> race ran on Xvfb :98 (etappe0).
-- `reverse-engineering/tools/play-original.sh` starts it on the current
-  display and puts the resolution back to 3 first each time.
+- On the desktop the race then failed with `could not set display mode
+  (operation is not supported)` even at RESOLUTION=3: Wine cannot switch a
+  3840x1080 XWayland screen (or a 1280x1024 Xvfb, where it reproduces) to
+  640x480. On Xvfb :98 the screen already is 640x480. A **640x480 Wine
+  virtual desktop** in the prefix (HKCU\Software\Wine\Explorer
+  Desktop=Default, Desktops\Default=640x480) fixes it: on the 1280x1024
+  Xvfb :97 the shell, the menu and START -> race all ran in it.
+- `reverse-engineering/tools/play-original.sh` sets that, puts the
+  resolution back to 3 and starts the shell on the current display.
