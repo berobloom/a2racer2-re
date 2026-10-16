@@ -7,7 +7,8 @@ printing the game's console output.
 Usage: test_web.py <game data dir> <out dir> [step ...]
   steps:  wait:<s>  until:<text> (a console line, up to 10 min)  shot:<name>
           click:<x>,<y> (640x480 menu coordinates)
-          key:<Key> (Playwright key name)  hold:<Key>:<s>
+          key:<Key> (Playwright key name)  hold:<Key>:<s>  eval:<js>
+A2_VIEW=<w>x<h> sets the browser window (default 1320x1000).
 Needs: pip install playwright (any cached Chromium; set A2_CHROME to pick one)
 """
 import functools
@@ -40,7 +41,8 @@ with sync_playwright() as p:
     b = p.chromium.launch(executable_path=chrome, args=[
         '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
         '--autoplay-policy=no-user-gesture-required', '--ignore-gpu-blocklist'])
-    page = b.new_page(viewport={'width': 1320, 'height': 1000})
+    vw, vh = (int(v) for v in os.environ.get('A2_VIEW', '1320x1000').split('x'))
+    page = b.new_page(viewport={'width': vw, 'height': vh})
     seen = []
     def note(t):
         seen.append(t)
@@ -71,7 +73,14 @@ with sync_playwright() as p:
         elif kind == 'click':
             x, y = (float(v) for v in arg.split(','))
             box = canvas.bounding_box()
-            page.mouse.click(box['x'] + x * box['width'] / 640, box['y'] + y * box['height'] / 480)
+            # the menu's 4:3 picture, letterboxed in the canvas
+            bw = min(box['width'], box['height'] * 4 / 3)
+            bh = bw * 3 / 4
+            bx = box['x'] + (box['width'] - bw) / 2
+            by = box['y'] + (box['height'] - bh) / 2
+            page.mouse.click(bx + x * bw / 640, by + y * bh / 480)
+        elif kind == 'eval':
+            page.evaluate(arg)
         elif kind == 'key':
             page.keyboard.press(arg)
         elif kind == 'hold':

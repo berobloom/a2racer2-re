@@ -66,13 +66,29 @@ static void screen_open(screen *s, SDL_Window *win)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 }
 
+/* The 4:3 box the picture fills in a w x h area, letterboxed as
+ * SDL_RenderSetLogicalSize does on the desktop (full screen is 16:9). */
+static void screen_box(int w, int h, int *x, int *y, int *bw, int *bh)
+{
+    *bw = w;
+    *bh = w * M_H / M_W;
+    if (*bh > h) {
+        *bh = h;
+        *bw = h * M_W / M_H;
+    }
+    *x = (w - *bw) / 2;
+    *y = (h - *bh) / 2;
+}
+
 static void screen_show(screen *s, const uint8_t *rgba)
 {
-    int w = 0, h = 0;
+    int w = 0, h = 0, bx, by, bw, bh;
     SDL_GL_GetDrawableSize(s->win, &w, &h);
     glViewport(0, 0, w, h);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
+    screen_box(w, h, &bx, &by, &bw, &bh);
+    glViewport(bx, by, bw, bh);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
@@ -361,10 +377,11 @@ int main(int argc, char **argv)
                      * screen (SDL_RenderSetLogicalSize); the web build's GL
                      * picture fills the canvas, so scale here */
                     {
-                        int ww = 1, wh = 1;
+                        int ww = 1, wh = 1, bx, by, bw, bh;
                         SDL_GetWindowSize(win, &ww, &wh);
-                        ev.motion.x = ev.motion.x * M_W / (ww > 0 ? ww : 1);
-                        ev.motion.y = ev.motion.y * M_H / (wh > 0 ? wh : 1);
+                        screen_box(ww, wh, &bx, &by, &bw, &bh);
+                        ev.motion.x = (ev.motion.x - bx) * M_W / (bw > 0 ? bw : 1);
+                        ev.motion.y = (ev.motion.y - by) * M_H / (bh > 0 ? bh : 1);
                     }
 #endif
                     m_ui_mouse_move(&m, ev.motion.x, ev.motion.y);

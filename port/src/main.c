@@ -1927,6 +1927,19 @@ int main(int argc, char **argv)
 
     unsigned flag_tex = 0; /* S_SFX for the finish flag, loaded at first use */
     while (running) {
+#ifdef A2_WEB
+        /* The canvas's size is the page's (CSS), not the 1280x960 asked for,
+         * and no resize event says so at the start: draw at what it really
+         * is, or the viewport and the HUD run off its edges. */
+        {
+            int dw = 0, dh = 0;
+            SDL_GL_GetDrawableSize(win, &dw, &dh);
+            if (dw > 0 && dh > 0) {
+                win_w = dw;
+                win_h = dh;
+            }
+        }
+#endif
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_QUIT)

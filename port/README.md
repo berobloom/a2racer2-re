@@ -109,8 +109,11 @@ in `port/web/`:
   one WebGL context is put back to its defaults when the race takes it and
   when it hands it back;
 - the menu shows its 640x480 picture through that same GL path instead of an
-  SDL renderer (which drew only half the screen after a race), and scales
-  the mouse to 640x480 itself.
+  SDL renderer (which drew only half the screen after a race), letterboxed
+  at 4:3 like the desktop's, and maps the mouse to 640x480 itself;
+- the race reads the canvas's real drawing size every frame: the canvas is
+  sized by the page, not by the 1280x960 the race asks for, and with the
+  asked size the viewport and the HUD ran off its edges.
 
 `port/web/test_web.py <data dir> <out dir> [steps]` drives it in headless
 Chromium (Playwright): it feeds the folder picker, presses Play and follows
