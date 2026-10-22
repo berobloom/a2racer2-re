@@ -3,16 +3,14 @@
 A study of the 1998 Windows racing game **A2 Racer II** (the Dutch release,
 v1.01), and a reimplementation in C that plays it on Linux and in the browser.
 
-The repository has two halves:
+The research half is notes on how the original works, worked out from its
+binaries (mainly `spel.dat`, the renamed game executable) and from experiments
+with it running under Wine. Each finding records the code addresses it rests on
+and how sure it is.
 
-- **Research.** Notes on how the original works, worked out from its binaries
-  (mainly `spel.dat`, the renamed game executable) and from experiments with
-  it running under Wine. Each finding records the code addresses it rests on
-  and how sure it is.
-- **The port.** A new engine in C (SDL2, OpenGL) that reads the original game
-  data unchanged. It runs the whole game: the intro video, the menu, the
-  races, the results and the ending. The same sources build for the web with
-  Emscripten.
+The port is a new engine in C (SDL2, OpenGL) that reads the original game data
+unchanged. It runs the whole game: the intro video, the menu, the races, the
+results and the ending. The same sources build for the web with Emscripten.
 
 **The game itself is not included.** You need your own copy of A2 Racer II.
 Nothing here changes or redistributes the original files.
@@ -59,8 +57,8 @@ in the browser's storage.
 
 ## How the research works
 
-Findings are labelled **CONFIRMED**, **STRONGLY SUPPORTED**, **LIKELY** or
-**SPECULATIVE**, and an inference is never written up as fact. Evidence from
+Each finding carries a label: CONFIRMED, STRONGLY SUPPORTED, LIKELY or
+SPECULATIVE. The notes never present an inference as fact. Evidence from
 the binaries and from runtime experiments comes before outside documentation.
 Where the port's behaviour comes from the original, its source comments name
 the address it was taken from, for example `0x4190d0` for the sky. Where the
