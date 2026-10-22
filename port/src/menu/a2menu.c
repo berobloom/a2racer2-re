@@ -144,7 +144,10 @@ static void screen_close(screen *s)
 
 /* Play <name>.smk from the data dir (menu.dat 0x409f70): Raser.ini [MOVIES]
  * ON=0 skips them, SIZE=1 doubles the 320x240 picture to the full screen,
- * SIZE=0 shows it centred.  A key or a click ends it. */
+ * SIZE=0 shows it centred.  A key or a click ends it.  The sound goes
+ * through the menu's mixer when it is open (SDL's Emscripten backend
+ * allows one device, and the menu holds it), else through a device of its
+ * own. */
 static void play_video(const menu *m, screen *scr, const char *name)
 {
     if (!a2_ini_int(m->datadir, "Raser.ini", "[MOVIES]", "ON", 1))
@@ -162,7 +165,7 @@ static void play_video(const menu *m, screen *scr, const char *name)
     int rate, ch, bits;
     smk_audio_info(v, &rate, &ch, &bits);
     SDL_AudioDeviceID dev = 0;
-    if (rate && SDL_InitSubSystem(SDL_INIT_AUDIO) == 0) {
+    if (rate && !m->audio && SDL_InitSubSystem(SDL_INIT_AUDIO) == 0) {
         SDL_AudioSpec want = {0};
         want.freq = rate;
         want.format = bits == 16 ? AUDIO_S16LSB : AUDIO_U8;
@@ -182,6 +185,8 @@ static void play_video(const menu *m, screen *scr, const char *name)
         const uint8_t *a = smk_audio(v, &ab);
         if (dev && ab)
             SDL_QueueAudio(dev, a, (Uint32)ab);
+        else if (ab)
+            m_audio_stream(m->audio, a, ab, rate, ch, bits);
         memset(rgba, 0, sizeof rgba);
         const uint8_t *px = smk_pixels(v), *pal = smk_palette(v);
         for (int y = 0; y < h * scale; y++)
@@ -205,6 +210,7 @@ static void play_video(const menu *m, screen *scr, const char *name)
     }
     if (dev)
         SDL_CloseAudioDevice(dev);
+    m_audio_stream_stop(m->audio);
     smk_close(v);
     free(data);
 }

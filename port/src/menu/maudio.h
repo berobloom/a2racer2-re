@@ -23,5 +23,10 @@ int m_audio_clip_ms(m_audio *au, const char *name);
 void m_audio_stop_sfx(m_audio *au);
 void m_audio_music(m_audio *au, const char *name, int volume); /* NULL stops */
 void m_audio_music_volume(m_audio *au, int volume);
+/* A video's sound, mixed in at full volume as it is queued: the web build
+ * has one audio device, which the menu holds.  Returns 0 if it was not
+ * taken. */
+int m_audio_stream(m_audio *au, const void *pcm, size_t bytes, int rate, int channels, int bits);
+void m_audio_stream_stop(m_audio *au); /* drop what is still queued */
 
 #endif /* A2_MAUDIO_H */

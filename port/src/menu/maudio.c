@@ -28,6 +28,9 @@ struct m_audio {
     clip clips[48];
     int nclips;
     voice v[VOICES];
+    /* a video's sound, queued as it decodes (stereo, RATE) */
+    int16_t *sq;
+    int sq_len, sq_pos, sq_cap; /* frames */
 };
 
 /* DirectSound volume (hundredths of a dB, <= 0) from the menu's 1..100 */
@@ -108,6 +111,11 @@ static void mix(void *ud, Uint8 *stream, int len)
             r += v->c->pcm[v->pos * 2 + 1] * v->gain;
             v->pos++;
         }
+        if (au->sq_pos < au->sq_len) {
+            l += au->sq[au->sq_pos * 2];
+            r += au->sq[au->sq_pos * 2 + 1];
+            au->sq_pos++;
+        }
         out[f * 2] = (int16_t)(l > 32767 ? 32767 : l < -32768 ? -32768 : l);
         out[f * 2 + 1] = (int16_t)(r > 32767 ? 32767 : r < -32768 ? -32768 : r);
     }
@@ -155,6 +163,7 @@ void m_audio_close(m_audio *au)
     SDL_CloseAudioDevice(au->dev);
     for (int i = 0; i < au->nclips; i++)
         free(au->clips[i].pcm);
+    free(au->sq);
     free(au);
 }
 
@@ -211,5 +220,58 @@ void m_audio_stop_sfx(m_audio *au)
     SDL_LockAudioDevice(au->dev);
     for (int i = 1; i < VOICES; i++)
         au->v[i].c = NULL;
+    SDL_UnlockAudioDevice(au->dev);
+}
+
+int m_audio_stream(m_audio *au, const void *pcm, size_t bytes, int rate, int channels, int bits)
+{
+    if (!au || !bytes)
+        return 0;
+    SDL_AudioCVT cvt;
+    if (SDL_BuildAudioCVT(&cvt, bits == 16 ? AUDIO_S16LSB : AUDIO_U8, (Uint8)channels, rate,
+                          AUDIO_S16SYS, 2, RATE) < 0)
+        return 0;
+    cvt.len = (int)bytes;
+    cvt.buf = malloc(bytes * (size_t)(cvt.len_mult > 0 ? cvt.len_mult : 1));
+    if (!cvt.buf)
+        return 0;
+    memcpy(cvt.buf, pcm, bytes);
+    if (cvt.needed)
+        SDL_ConvertAudio(&cvt);
+    else
+        cvt.len_cvt = cvt.len;
+    int n = cvt.len_cvt / 4;
+    SDL_LockAudioDevice(au->dev);
+    /* drop what has played, then append */
+    au->sq_len -= au->sq_pos;
+    if (au->sq_len > 0)
+        memmove(au->sq, au->sq + au->sq_pos * 2, (size_t)au->sq_len * 4);
+    au->sq_pos = 0;
+    int ok = 1;
+    if (au->sq_len + n > au->sq_cap) {
+        int cap = (au->sq_len + n) * 2;
+        int16_t *q = realloc(au->sq, (size_t)cap * 4);
+        if (q) {
+            au->sq = q;
+            au->sq_cap = cap;
+        } else {
+            ok = 0;
+        }
+    }
+    if (ok) {
+        memcpy(au->sq + au->sq_len * 2, cvt.buf, (size_t)n * 4);
+        au->sq_len += n;
+    }
+    SDL_UnlockAudioDevice(au->dev);
+    free(cvt.buf);
+    return ok;
+}
+
+void m_audio_stream_stop(m_audio *au)
+{
+    if (!au)
+        return;
+    SDL_LockAudioDevice(au->dev);
+    au->sq_len = au->sq_pos = 0;
     SDL_UnlockAudioDevice(au->dev);
 }
