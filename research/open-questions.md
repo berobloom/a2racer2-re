@@ -961,7 +961,13 @@ phrasing may not be the original's.)*
     Original question: **Does the police warning's banner (49 / 50) appear
     only after the 4 s warning camera?**
 
-59. **Are the 3D textures run through the game's gamma?** #44 says the sprite
+59. **RESOLVED (session 18): yes; only back.pcx is spared, on purpose.** The
+    race setup 0x4234e0 calls 0x468220(**0**) at 0x423567 before loading
+    back<N>.pcx (0x423584) and 0x468220(1) at 0x423597 after it; the track
+    textures load later in init_game (0x4236d0 at 0x42402d). See
+    discoveries.md "Game.ini gamma squares every colour". The port already
+    did this.
+    Original question: **Are the 3D textures run through the game's gamma?** #44 says the sprite
     and PCX loaders convert through 0x468230's c*c >> 8, "so the 3D textures
     are darkened as well". The session-16 sky fit says back.pcx, loaded as a
     texture by 0x45a460, is **not** (3.6/255 linear against 31+ squared). Either

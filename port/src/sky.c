@@ -45,8 +45,10 @@ a2_sky *a2_sky_load(const a2_archive *rcs, int back)
         return NULL;
     }
     s->still = back >= 1 && back <= 7;
-    /* LIKELY for the panorama, a PCX like the rest; back<N> is not darkened
-     * (fitted against a Wine capture, session 16) */
+    /* LIKELY for the panorama, a PCX like the rest. back<N> is not darkened:
+     * the race setup switches the gamma off around its load (0x468220(0) at
+     * 0x423567, back on at 0x423597; discoveries.md "Game.ini gamma squares
+     * every colour") */
     if (!s->still)
         a2_gfx_gamma_rgba(im.rgba, (size_t)im.width * im.height);
     s->tex = a2_gfx_texture_from_image(&im, 0); /* repeat, so the wrap is free */

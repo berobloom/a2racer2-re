@@ -6263,6 +6263,21 @@ sub-objects. Every address below was read in spel.dat.
   Rcpcx.cpp PCX loader, whose pixel conversion calls 0x468380 with an 8-bit
   source (0x46b6c0..0x46b7f9). The port already darkened it; that was LIKELY
   and is now backed by the code path.
+- CONFIRMED (code, session 18; open question 59): **the accelerated sky's
+  back<N>.pcx is the one exception, and on purpose.** On the Direct3D path
+  the race setup 0x4234e0 calls **0x468220(0)** at 0x423567 (when
+  0x4d9b14 is set), loads back<N>.pcx through 0x45ce90 at 0x423584, and
+  calls **0x468220(1)** at 0x423597. 0x468220 has only these two callers and
+  0x420ffa, and 0x4eacc0 no other writer. init_game calls 0x4234e0 at
+  0x423df2 and the anim/texture loader 0x4236d0 at 0x42402d, later in the
+  same function, so **every track texture is squared**. The texture loader
+  0x45a460 reaches the converters (0x45af20 -> 0x45be50 -> 0x468380, and
+  -> 0x45ae00 -> 0x4636d0 / 0x46b930 -> 0x468380). This explains the
+  session-16 fit (back.pcx undarkened) and agrees with the session-14 road
+  check above. The software path (0x4d9aac clear) skips both calls; that its
+  panorama is darkened relies on 0x420ffa having run earlier (LIKELY, the
+  call order was not traced). Port: already so (sky.c darkens only the
+  panorama).
 - CONFIRMED (code + data, session 15): **the fonts are squared too.**
   The ascii.cpp loader converts glyph indices through 0x468380 (8-bit at
   0x46a6ed, 24-bit at 0x46a658, raw copy only in mode 0, picked by
