@@ -81,6 +81,11 @@ The full game is playable from start to finish. The remaining differences
 from the original are listed under "Known gaps" in `port/README.md`, and the
 unanswered questions are in `research/open-questions.md`.
 
+## License
+
+This software is released under the [BOLA License](LICENSE). It covers this
+project's own code and notes, not the game.
+
 ## Legal
 
 A2 Racer II and its data are the property of their rights holders. This
