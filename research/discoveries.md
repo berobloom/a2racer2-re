@@ -7909,10 +7909,16 @@ them.
   (0, 159.67)-(639, 479) with v 1/3..1. The vertex colours are white at the
   top and bottom edges and the horizon tint (0xc83838 there) along the split.
   z / rhw come from the view distance (0x418760; 0.99687 / 0.003 there).
-- CONFIRMED (code + runtime): u runs from **1 - (player heading & 0x3ff) /
-  1024** to that + 0.15 (0x41911f..0x4191a3; the player object's transform
+- CONFIRMED (code + runtime): u runs from **1 - (player heading & 0xfff) /
+  4096** to that + 0.15 (0x41911f..0x4191a3; the player object's transform
   +0x78). So the sky turns with the car (not the camera), shows 0.15 of the
-  image, and repeats every quarter turn.
+  image, and goes round **once per turn**.
+  - Corrected (session 19): this note first said `& 0x3ff / 1024`, a quarter
+    turn. Those are only the file's defaults: the code reads the mask
+    `[0x49b018]` (0x41914d) and divisor `[0x49b014]` (0x41915b), and the sine
+    table setup 0x450280, called with 0x1000 (0x431688 -> 0x44c7b0), sets them
+    to 0xfff and 4096.0 (0x4502be / 0x4502c7). The port scrolled the sky 4x
+    too fast when turning; sky.c now uses 0xfff / 4096.
 - CONFIRMED (fit): rendering back1.pcx through the dumped quads, bilinear,
   modulated by the vertex colours, matches the Wine capture's visible sky
   (x 120-150, y 2-58) to a mean of **3.6/255**. back3 gives 7.8, the texture

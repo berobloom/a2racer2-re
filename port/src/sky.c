@@ -100,8 +100,11 @@ void a2_sky_draw(const a2_sky *s, float yaw_deg, float heading, unsigned horizon
     /* Band height: the original's screen_h - screen_h/3. */
     float band = (float)h - (float)h / 3.0f;
     if (s->still) {
-        /* 0x419145..0x4191a3: u = 1 - (heading & 0x3ff) / 1024 .. + 0.15 */
-        u0 = 1.0f - (float)((int)heading & 0x3ff) / 1024.0f;
+        /* 0x41914d..0x4191a3: u = 1 - (heading & [0x49b018]) / [0x49b014]
+         * .. + 0.15.  Those are the sine table's mask and size, 0x3ff / 1024
+         * in the file but set to 0xfff / 4096 at startup (0x431688 ->
+         * 0x44c7b0 -> 0x450280), so the image goes round once per turn. */
+        u0 = 1.0f - (float)((int)heading & 0xfff) / 4096.0f;
         du = 0.15f;
     }
 
