@@ -7505,8 +7505,15 @@ Completes open question 5 (session 9), which found the driver-name scan
 
 - CONFIRMED (code): mode 3's tick **0x4155d0** does nothing for the first
   **1500 ms**. After that, every frame:
-  - if Game.ini `[GFX OPTIONS] finish_flag` ([0x4d9aac]) is set, it turns the
-    flag on once (0x41abc0(1) at 0x41560f, [0x4aa858]);
+  - if [0x4d9aac] is set it turns the flag on once (0x41abc0(1) at
+    0x41560f, [0x4aa858]; skipped while [0x4a70ec] is set). **Correction
+    (session 18):** 0x4d9aac is not finish_flag. Its only writer is
+    set_game_display (0x423d93, 1 for RESOLUTION 2 and 3, the 640x480x16
+    modes; see "0x4d9a70 is the lores flag"). finish_flag is read at
+    0x421ff4 into **0x4d9ae4**, whose only reader is the flag's draw 0x41aee0.
+    So the flag is switched on only in the 16-bit 640x480 modes and drawn
+    only with finish_flag set. The port (always that mode) gates on
+    finish_flag alone, which comes to the same thing;
   - it draws the results panel through **0x419ad0** (from 0x415621);
   - it waits for Esc / Enter / Space as described above.
 - CONFIRMED (code), **the flag** (gfx): 0x41aea0 init, 0x41ad40 builds the

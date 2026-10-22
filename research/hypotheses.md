@@ -6,7 +6,7 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
 
 - STRONGLY SUPPORTED: `qrace.exe` is the session orchestrator: it reads `game.ini`, spawns `<name>.dat` (menu.dat or spel.dat), and on exit reads game.ini again to decide what to launch next. Evidence: qrace imports CreateProcessA + GetPrivateProfileIntA, contains strings "game.ini", ".dat", "Failed to launch A2Racer 2"; menu.dat/spel.dat have no CreateProcess; game.ini comments describe state handoff between menu and game ("saved by menu"/"saved by game to tell the menu whether the player was finished").
 - SETTLED (session 12, see discoveries "When the Smacker videos play"): win.smk / lose.smk are played by menu.dat, but not after every race. They play only at the end of a career (after the last stage), chosen by whether the player's name leads the TOTAAL standings. The earlier guess ("checks finished/position after each race") was wrong.
-- LIKELY: a2_II.exe (1998-03-20, older than the rest) is an early/alternate launcher that starts spel.dat directly; may be leftover from development or used for quick-play.
+- **SETTLED (session 9; marked session 18):** a2_II.exe is not an alternate launcher but **the shell** a shortcut points at: it alternates menu.dat and spel.dat, launching spel.dat when menu.dat exits with code 40. See discoveries.md "a2_II.exe is the shell, and menu.dat exits". ~~LIKELY: a2_II.exe (1998-03-20, older than the rest) is an early/alternate launcher that starts spel.dat directly.~~
 
 ## Rendering
 
@@ -54,7 +54,7 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
 
 ## Track data
 
-- STRONGLY SUPPORTED: etappe0 and etappe6 are the same road geometry with different scenery/draw data (identical .rmp/.pmp/.cmp/.pth sizes; different .dmp/.omp). Possibly the same stretch driven in opposite directions (A2 Amsterdam↔Utrecht?).
+- **CONFIRMED (session 18, data):** etappe0 and etappe6 are **the same circuit, driven the same way**. Their 778 chunk positions in .pmp are identical in the same order (the reversed order is up to 25,000 units off), the .pth files are byte-identical, and the start line (trigger 13), finish (14) and finish-valid (15) sit at the same chunks, 524 / 524 / 525. The .rmp differs only in **texture coordinates**: 1,150 u/v words (638 u, 512 v) of road planes in 68 chunks (24..621), and no x, y, z or triangle. The .cmp moves a few rail points by 2 units. What really differs is the .dmp waypoints (3,310 against 3,167 references), the lane triggers (18-21 / 40-42: 53 on etappe0, 82 on etappe6) and the .omp scenery. The "opposite directions" idea is disproven. ~~STRONGLY SUPPORTED: same road geometry with different scenery/draw data. Possibly the same stretch driven in opposite directions.~~
 - **CONFIRMED (session 5):** `.pmp` is the per-chunk table — position plus index
   lists into `.cmp` (rails) and `.dmp` (left/right waypoints). Its chunk count
   matches `.rmp`'s second header word and the runtime `m_chunks alloc`.
