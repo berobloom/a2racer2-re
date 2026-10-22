@@ -299,6 +299,14 @@ after the last stage the win/lose video plays and the career restarts.
   down on GARAGE already shows the garage (Wine capture), and the screens'
   event handlers play klik.wav as they take the event, so the click is heard
   as the button goes down.
+- **No player** (Wine, session 18): with the shipped SLOTS.RAS (all nine
+  slots empty, menu.ini save_game=2) the original opens HOOFDMENU with an
+  empty Naam, and START races as nobody. menu.ini save_game is read once at
+  startup (0x401ad0, from WinMain 0x409b82, into 0x43ff00) and written only
+  by ini_write_options on START (0x401cc0 tail-jumps to 0x401aa0). The port
+  (a port choice, at the player's request) opens the player list with the
+  name requester when the active slot is empty and no slot is in use, and
+  otherwise makes the most recently played player active.
 - **START** (0x40786e): after a finished career (etappe >= 7) Restart
   (0x407320: stage 0, +0x1a 0, standings cleared; car and budget kept);
   plays motor.wav; writes the options and player state; exits with 40.

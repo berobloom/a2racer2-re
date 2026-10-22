@@ -371,7 +371,24 @@ int main(int argc, char **argv)
         memset(m.kept_focus, 0, sizeof m.kept_focus); /* a fresh menu.dat */
         free(m.bg);
         m.bg = NULL;
-        m_ui_enter(&m, career_end ? SCR_STANDINGS : SCR_MAIN);
+        int start = career_end ? SCR_STANDINGS : SCR_MAIN;
+        /* Port choice: no player in the active slot.  The original opens
+         * HOOFDMENU with an empty name and lets START race as nobody (Wine,
+         * session 18).  Here the most recently played player takes over (the
+         * slot is only written to menu.ini on START, 0x401cc0 -> 0x401aa0, so
+         * a player made and then left with Einde would be lost); with no
+         * player at all (a fresh SLOTS.RAS has all nine empty) the player list
+         * opens with the name requester, as Nieuwe speler does. */
+        if (start == SCR_MAIN && !m_career_in_use(&m.career, m.career.active)) {
+            int recent = m_career_most_recent(&m.career);
+            if (m_career_in_use(&m.career, recent)) {
+                m.career.active = recent;
+            } else {
+                m.np_ask_name = 1;
+                start = SCR_NEWPLAYER;
+            }
+        }
+        m_ui_enter(&m, start);
         while (!m.quit && !m.start_race) {
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {
