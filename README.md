@@ -5,8 +5,6 @@
 A study of the 1998 Windows racing game **A2 Racer II** (the Dutch release,
 v1.01), and a reimplementation in C that plays it on Linux and in the browser.
 
-![The port on Amsterdam - Den Haag: out of a tunnel, under a KLM jumbo](docs/media/race.gif)
-
 The research half is notes on how the original works, worked out from its
 binaries (mainly `spel.dat`, the renamed game executable) and from experiments
 with it running under Wine. Each finding records the code addresses it rests on
