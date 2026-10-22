@@ -7965,3 +7965,36 @@ them.
   the player, mostly 2500-3800; racers fall about 4 units a frame after a
   collision throws them up (0x4497f0's dv_y); and the player's 300-800 unit
   jumps are the port's autopilot unwedge (main.c, a test crutch only).
+- CONFIRMED (code, session 18; open question 60): **0x40ede0's other two
+  callers.**
+  - **0x4011e7** is in the ADAC handler 0x401000 (0x401000..0x4011fb), the
+    car that never runs (see "the ADAC (wegenwacht) car"). It stores the
+    plane height as the ADAC car's y.
+  - **0x42605b** is in the player's per-frame update 0x425e20, in the arm
+    taken while 0x4d9e64 is set (the warning pull-over, after
+    handle_basic_ai at 0x42601a and the wheels at 0x426029). Every frame it
+    stores the plane height as the player's y (0x426060), then zeroes (ebx = 0
+    from 0x425f20 / 0x425f6b) the vehicle record's +0x6c (v_lat) and +0x70
+    (v_y), the rpm 0x4a63d8, the skid intensity 0x4a63dc and the object's
+    +0x7c (the body roll). So during the pull-over the car sits on the plane
+    with no bob or roll, and the engine sound plays at rpm 0.
+- CONFIRMED (code): **the ride height 0x40ee80 uses the walk too.** It
+  samples a point ahead of the car (x + 10 dt (cos v_lat - sin v_fwd),
+  z + 10 dt (sin + cos) v_fwd), finds its chunk with **0x445a10** hinted by
+  the vehicle's +0x18 (0x40ef9a; the result is not stored), and takes that
+  chunk's plane (0x40efba). The port does the same with its nearest-chunk
+  lookup.
+- Checked on the data (`reverse-engineering/tools/chunk_lookup_road.py`):
+  on every chunk of all 7 tracks, 5 points along it at 17 lateral offsets
+  from -80 to +80 units (about 66,000 points a track), the port's
+  nearest-chunk lookup and the walk give **the same plane to within 2
+  units**. The only exception is etappe5's chunk 808: the last chunk faces
+  back toward chunk 0, the walk falls off the end and rescans from chunk 0,
+  and lands on chunk 245, 49 units off. That is 13 chunks past etappe5's
+  finish (chunk 795). Whether the original's cars, which drive on after the
+  finish, ever reach it was not checked. So the port's player, racers and
+  cops can keep their lookup for heights.
+- Port (session 18): during the pull-over main.c now does what 0x426034..
+  0x4260b9 does after the step: y onto the plane, and v_lat, v_y, rpm, skid
+  and roll set to 0. The car is still driven by the port's own model, not
+  handle_basic_ai, as before.

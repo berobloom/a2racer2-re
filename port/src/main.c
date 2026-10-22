@@ -2638,6 +2638,19 @@ int main(int argc, char **argv)
             }
             step_dx = drv.x - pre_x;
             step_dz = drv.z - pre_z;
+            if (pulled) {
+                /* 0x426034..0x4260b9, each frame of the pull-over: y onto the
+                 * chunk's plane (0x40ede0's return, stored at 0x426060), and
+                 * v_lat, v_y, the rpm, the skid intensity and the body roll
+                 * to 0 */
+                float gy;
+                if (drive_height(&dground, drv.x, drv.z, &gy))
+                    drv.y = gy;
+                drv.v_lat = drv.v_y = 0.0f;
+                drv.rpm = 0.0f;
+                drv.skid = 0;
+                drv.roll = 0.0f;
+            }
             car.x = drv.x;
             car.z = drv.z;
             car.y = drv.y;

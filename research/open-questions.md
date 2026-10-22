@@ -976,7 +976,14 @@ phrasing may not be the original's.)*
 
 ## New questions (session 17)
 
-60. **What do 0x40ede0's other callers (0x4011e7, 0x42605b) set to the
+60. **RESOLVED (session 18).** 0x4011e7 is in the ADAC car's handler
+    0x401000, which never runs. 0x42605b is the player during a warning
+    pull-over: y goes onto the plane every frame, and v_lat, v_y, the rpm, the
+    skid intensity and the body roll go to 0. The port's nearest-chunk height
+    equals the walk's on all 7 tracks within 80 units of the chunk line,
+    except past etappe5's finish (chunk 808). See discoveries.md "Traffic
+    height, and the position-to-chunk walk".
+    Original question: **What do 0x40ede0's other callers (0x4011e7, 0x42605b) set to the
     plane?** The traffic call stores its return value as y (discoveries.md
     "Traffic height, and the position-to-chunk walk"). 0x42605b sits next
     to the handle_basic_ai call at 0x426004, so it is LIKELY the player's car
