@@ -1,5 +1,7 @@
 # A2 Racer II: reverse engineering and port
 
+<img src="docs/media/cover.jpg" align="right" width="200" alt="The original Dutch box cover of A2 Racer II">
+
 A study of the 1998 Windows racing game **A2 Racer II** (the Dutch release,
 v1.01), and a reimplementation in C that plays it on Linux and in the browser.
 
@@ -98,5 +100,6 @@ project's own code and notes, not the game.
 
 ## Legal
 
-A2 Racer II and its data are the property of their rights holders. This
+A2 Racer II, its data and its box art (Davilex, 1998; the cover image is from
+IGDB) are the property of their rights holders. This
 project contains no game data and is meant for people who own the game.
