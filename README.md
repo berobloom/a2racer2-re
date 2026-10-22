@@ -3,6 +3,8 @@
 A study of the 1998 Windows racing game **A2 Racer II** (the Dutch release,
 v1.01), and a reimplementation in C that plays it on Linux and in the browser.
 
+![The port on Amsterdam - Den Haag: out of a tunnel, under a KLM jumbo](docs/media/race.gif)
+
 The research half is notes on how the original works, worked out from its
 binaries (mainly `spel.dat`, the renamed game executable) and from experiments
 with it running under Wine. Each finding records the code addresses it rests on
@@ -11,6 +13,14 @@ and how sure it is.
 The port is a new engine in C (SDL2, OpenGL) that reads the original game data
 unchanged. It runs the whole game: the intro video, the menu, the races, the
 results and the ending. The same sources build for the web with Emscripten.
+
+<p>
+  <img src="docs/media/amsterdam.jpg" width="32%" alt="Leaving Amsterdam at dusk, office blocks ahead">
+  <img src="docs/media/tunnel.jpg" width="32%" alt="Through a motorway tunnel at 179 km/h">
+  <img src="docs/media/plane.jpg" width="32%" alt="A KLM jumbo crossing the motorway">
+</p>
+
+All of these are the port, captured on the first stage, Amsterdam - Den Haag.
 
 **The game itself is not included.** You need your own copy of A2 Racer II.
 Nothing here changes or redistributes the original files. The research is done
