@@ -7478,6 +7478,16 @@ Completes open question 5 (session 9), which found the driver-name scan
 - Port (game mode): the same offsets and timing through the race camera's
   car-frame transform. The countdown now starts after these 3 s, so the race
   stands still for 7 s in all.
+- CONFIRMED (code, session 18): the end 0x416fe0 first calls
+  **0x4142b0(0)**, making the race camera active again (the begin made the
+  start camera active with 0x4142b0(1)), and only then registers the
+  countdown. So **the countdown is seen through the chase camera**, not the
+  start camera's last pose; the countdown's end selecting view 1 (0x414b70)
+  changes nothing visible. Seen in the original by the player: the camera is
+  in its race place when the countdown runs. The port had kept the fly-in's
+  last pose (20 up, looking at the car + 20) for the 4 s, because the race
+  stands still then (dt 0) and the chase lag never moved; it now takes the
+  preset's position outright on the first frame after the fly-in.
 
 ## The speed cameras fire on every lap (session 15)
 

@@ -3453,6 +3453,12 @@ int main(int argc, char **argv)
                     cam_look[0] = tx + off[0];
                     cam_look[1] = ty + off[1];
                     cam_look[2] = tz + off[2];
+                    /* Its end (0x416fe0) makes the race camera active again
+                     * (0x4142b0(0)) before the countdown, so the countdown
+                     * already shows the chase view.  The race stands still
+                     * then (dt 0), and the lag would never get there: the next
+                     * frame takes the preset's position outright. */
+                    cam_fresh = 1;
                 }
                 /* The game over (mode 6): 0x415b20 copies the active
                  * camera's offset and target into camera 6 and makes it
