@@ -13,13 +13,16 @@ unchanged. It runs the whole game: the intro video, the menu, the races, the
 results and the ending. The same sources build for the web with Emscripten.
 
 **The game itself is not included.** You need your own copy of A2 Racer II.
-Nothing here changes or redistributes the original files.
+Nothing here changes or redistributes the original files. The research is done
+on the Redump disc image *A2 Racer II (Netherlands) (v1.01)*, which the
+Internet Archive keeps at
+[archive.org/details/Redump.org14618](https://archive.org/details/Redump.org14618).
 
 ## Playing
 
 You need CMake, a C compiler, SDL2 and OpenGL. Point the launcher at the game's
-data directory (the installed game, or the `data` folder of the CD: the one
-with `spel.dat` and `RCS.IMG`):
+data directory (the installed game, or the `data` folder of the CD or the
+extracted disc image: the one with `spel.dat` and `RCS.IMG`):
 
 ```sh
 port/play.sh <game data dir>                # 1280x960 window
