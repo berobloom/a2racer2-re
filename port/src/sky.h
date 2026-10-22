@@ -6,8 +6,19 @@
  * with it (0x45ce90 -> 0x45a460, 0x44f1a0) and sets that as the viewport's
  * background (0x42a210: SetMaterial, then IDirect3DViewport::SetBackground).
  * A Wine trace of the accelerated game opens back7.pcx / back2.pcx and never
- * SCRL_HI.pcx.  Direct3D fills the viewport with a background texture, so it
- * stands still whatever the heading; this port stretches it over the window.
+ * SCRL_HI.pcx.
+ *
+ * That viewport background is only the clear colour (its material's diffuse,
+ * white).  What shows is Gfx_bkg.cpp's own pair of screen quads (session 16,
+ * read back from the running game): 0x4190d0 draws them every frame as
+ * D3DTLVERTEX triangle fans over the whole viewport, the upper third with
+ * v 0..1/3 and the rest with v 1/3..1, a u window 0.15 wide starting at
+ * 1 - (player heading & 0x3ff) / 1024, so the sky turns with the car and
+ * repeats every quarter turn.  The top and bottom edges are white and the
+ * split line takes a horizon tint that 0x418f00 works out from the player's
+ * progress round the track (a2_sky_horizon).  A render of back1 through
+ * those quads matches a Wine capture to 3.6/255 in the visible sky; the
+ * texture is not run through the game's gamma.
  *
  * The software renderer's scrolling sky (`gfx_sky.cpp`), kept behind
  * --scrolling-sky:
@@ -48,9 +59,14 @@ typedef struct a2_sky a2_sky;
 a2_sky *a2_sky_load(const a2_archive *rcs, int back);
 void a2_sky_free(a2_sky *s);
 
-/* Draw the backdrop over a `w` x `h` window (the panorama: across the top,
- * scrolled for a camera heading of `yaw_deg`).  Call before the 3D scene: it
- * writes no depth. */
-void a2_sky_draw(const a2_sky *s, float yaw_deg, int w, int h);
+/* Draw the backdrop over a `w` x `h` window.  The panorama goes across the
+ * top, scrolled for a camera heading of `yaw_deg`; back<N> uses the player's
+ * `heading` (4096 a turn) and the `horizon` tint (0xRRGGBB, a2_sky_horizon).
+ * Call before the 3D scene: it writes no depth. */
+void a2_sky_draw(const a2_sky *s, float yaw_deg, float heading, unsigned horizon, int w, int h);
+
+/* 0x418f00: the horizon tint for the player at `chunk` of an `n_chunks` track
+ * whose race started at `start`. */
+unsigned a2_sky_horizon(int n_chunks, int start, int chunk);
 
 #endif /* A2_SKY_H */

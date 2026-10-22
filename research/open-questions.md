@@ -50,8 +50,10 @@
    picks the 5:6:5 D3D texture format (`TXF_16BPP_RGB selected = 3`); alpha
    formats 5:5:5:1 / 4:4:4:4 / 8:8:8:8 are enumerated and alpha blending caps
    are queried. The z-buffer is a real DirectDraw DDSCAPS_ZBUFFER surface, not a
-   software buffer. Still open: video- vs system-memory placement per surface,
-   and the actual z-buffer depth chosen at runtime.
+   software buffer. **Answered (session 16):** the z-buffer depth is a
+   constant 16, and only textures ask for video memory; Raser.ini FOCUS is
+   overridden in RESOLUTION 3 / 4, so the game renders to the back buffer.
+   See discoveries.md "Surfaces, memory placement and the z-buffer depth".
 7. **RESOLVED (session 9).** They are not unnamed -- `handle_game()`
    (Gm_main.cpp) prints `calling -> X()` before each one, so the game labels its
    own frame loop. In order:
@@ -151,8 +153,8 @@
     address: acceleration and speed per gear (stock + upgraded), Schakelpunt
     vooruit/achteruit, Remkracht, Motor vertraging, Stuursnelheid, and three
     (damping, factor) suspension pairs for roll, pitch and ride height.
-    See research/discoveries.md. **Still open:** field A[29] (used at 0x40F90D
-    as `x * dt` subtracted) and A[26] (always zero).
+    See research/discoveries.md. A[29] is answered by #34 (the body's roll
+    rate). **Still open:** A[26] (always zero).
 
 15. **RESOLVED (session 9).** They are menu.dat's two archives, mirroring
     spel.dat's: `Mrcs.img`/`Mrcs.ind` named, `menurc.img`/`menurc.ind` binary.
@@ -382,7 +384,7 @@
     (3,43,43) that reads as the dark edge both references show. Also CONFIRMED
     from Raser.ini `[PALET]`: in 16-bit mode **every** track uses e02_pl16.pcx,
     so there is no per-track HUD palette to choose.
-    **Still open:** whether that gamma is the game's own or an artefact of
+    **Answered by #44 (session 14): the game's own.** Was open: whether that gamma is the game's own or an artefact of
     Wine's 8-to-16-bit conversion. It was only ever observed under Wine. Testing
     it needs either a second renderer (the 3Dfx path, question 5) or reading the
     blit code in `winlib`'s sprite/pal units.
@@ -765,7 +767,12 @@ phrasing may not be the original's.)*
     projection mirror and CW front faces, and the steering-key swap is gone. See
     "The port's view was mirrored" in discoveries.md.
 
-48. **What does the Direct3D viewport background actually look like?** The
+48. **Answered (session 16):** Wine draws it correctly. The viewport
+    background is only a white clear; the sky is Gfx_bkg.cpp's own pair of
+    screen quads, a 0.15 x 1/3 window of back<N>.pcx that turns with the
+    player's heading under a tint that changes round the lap. See
+    discoveries.md "The accelerated sky, drawn by Gfx_bkg.cpp". Original
+    question: **What does the Direct3D viewport background actually look like?** The
     accelerated game sets a random `back1..7.pcx` as the viewport background
     (0x42a210). Under Wine it renders as a blue-to-pink gradient that is none of
     those images. A capture on real Windows / DX5-era hardware, or a
@@ -872,8 +879,12 @@ phrasing may not be the original's.)*
     against the original under Unicorn (1499 of 1500). The barriers are
     the same boxes (0x449c10), and the port moves the player in the
     original's 8 contact-limited steps (session 14); see discoveries.md.
-    Simplified: the impulse once per frame, and 0x441490's re-test. Still open: the exact arms of the record builder 0x449840
-    (which object is +8 and which +0xc in each arm).
+    Simplified: the impulse once per frame, and 0x441490's re-test. **Answered (session 16):** the arms of the record builder 0x449840, and
+    which call passes which box (discoveries.md "Which box is static, and
+    what the slip does"). The arm with the point in the wrong frame is a
+    rail-slab corner hitting the car's side; it reaches 0x449570 and, at a
+    slab's far end, kicks the yaw rate to the ±6 clamp. The port does not
+    reproduce it.
     Earlier notes:
     0x441490 does **not** bisect the frame. It reads the contact record
     0x4e6760 (normal +0x1c, point +0x10), returns 0 when the object
@@ -935,5 +946,35 @@ phrasing may not be the original's.)*
     right the scaling never touches a row the AI reads, and dif_mod is dead.
     A distinguishing experiment: dif_mod=0 against 9 under Wine, timing the
     racers on etappe1. The port ignores the setting for now (no change at 4).
-57. **Does the race clock stop in the game over?** The port's RACE TIJD keeps
-    counting through mode 6. Not checked in the original.
+57. **Answered (session 16): the clock keeps running, but nobody sees it.**
+    Timer 3 is paused only at the finish (0x4283e0) and by the P / quit
+    loop (0x4248d0). Mode 6 sets [0x4d9aa0], so the HUD (0x41a8b7) draws
+    no panels at all during the game over, and the same goes for modes 3
+    and 8. See discoveries.md "The game timers, and the HUD in modes 3, 6
+    and 8". Original question: **Does the race clock stop in the game
+    over?** The port's RACE TIJD keeps counting through mode 6.
+
+58. **Answered (session 16, runtime): yes.** Under Wine the first warning's
+    49 stayed pending for the whole 4 s of mode 8 and was latched the frame
+    after mode 0 returned; the captures show it blinking only then. See
+    discoveries.md "The game timers, and the HUD in modes 3, 6 and 8".
+    Original question: **Does the police warning's banner (49 / 50) appear
+    only after the 4 s warning camera?**
+
+59. **Are the 3D textures run through the game's gamma?** #44 says the sprite
+    and PCX loaders convert through 0x468230's c*c >> 8, "so the 3D textures
+    are darkened as well". The session-16 sky fit says back.pcx, loaded as a
+    texture by 0x45a460, is **not** (3.6/255 linear against 31+ squared). Either
+    the D3D texture loader skips the gamma or back.pcx takes another path; a
+    fit of a road or building texture in a Wine capture would tell.
+
+## New questions (session 17)
+
+60. **What do 0x40ede0's other callers (0x4011e7, 0x42605b) set to the
+    plane?** The traffic call stores its return value as y (discoveries.md
+    "Traffic height, and the position-to-chunk walk"). 0x42605b sits next
+    to the handle_basic_ai call at 0x426004, so it is LIKELY the player's car
+    when the game drives it. Not followed. The port's player, racers and
+    cops still use the global nearest-chunk lookup with a one-chunk step back
+    rather than 0x445a10's walk. On the waypoints both give the same height
+    (chunk_lookup.py); positions off the waypoints were not checked.

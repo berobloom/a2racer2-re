@@ -826,6 +826,7 @@ int a2_scene_object_box(const a2_scene *s, int inst, struct a2_cbox *box)
     box->z = in->z;
     /* drawn turned by yaw degrees; the engine's heading turns the other way */
     box->heading = -in->yaw * (4096.0f / 360.0f);
+    box->fixed = 0; /* registered objects move (+0x48 = 1), columns too */
     return 1;
 }
 
@@ -855,6 +856,7 @@ int a2_scene_rail_boxes(const a2_scene *s, int chunk, struct a2_cbox *out, int m
             b->z = r->z;
             /* forward along the rail: (-sin h, cos h) */
             b->heading = atan2f(-r->dx, r->dz) * (4096.0f / 6.28318531f);
+            b->fixed = 1;
         }
     }
     return n;
@@ -1431,6 +1433,49 @@ int a2_scene_road_height(const a2_scene *s, int chunk, float x, float z, float *
     float fx = s->chunk_x[next] - s->chunk_x[chunk], fz = s->chunk_z[next] - s->chunk_z[chunk];
     if ((x - s->chunk_x[chunk]) * fx + (z - s->chunk_z[chunk]) * fz < 0.0f)
         chunk = chunk > 0 ? chunk - 1 : n - 1;
+    const float *pl = &s->chunk_plane[chunk * 4];
+    if (pl[1] > -1e-6f && pl[1] < 1e-6f)
+        return 0;
+    *y = (pl[3] - pl[0] * x - pl[2] * z) / pl[1];
+    return 1;
+}
+
+/* 0x445a10's test against chunk i's start line: <= 0 once (x, z) is past it,
+ * (x - c) . r with r = (0,1,0) x forward, forward toward the next chunk */
+static float chunk_side(const a2_scene *s, int i, float x, float z)
+{
+    int n = (int)s->chunk_count, j = i + 1 < n ? i + 1 : 0;
+    float fx = s->chunk_x[j] - s->chunk_x[i], fz = s->chunk_z[j] - s->chunk_z[i];
+    return -((x - s->chunk_x[i]) * fx + (z - s->chunk_z[i]) * fz);
+}
+
+int a2_scene_track_chunk(const a2_scene *s, int hint, float x, float z)
+{
+    int n = (int)s->chunk_count, i = hint;
+    if (n <= 0)
+        return -1;
+    if (i < 0 || i >= n)
+        i = 0;
+    if (chunk_side(s, i, x, z) <= 0.0f) {
+        for (; i < n; i++)
+            if (chunk_side(s, i, x, z) > 0.0f)
+                return i - 1 >= 0 ? i - 1 : n - 1;
+    } else {
+        for (; i >= 0; i--)
+            if (chunk_side(s, i, x, z) < 0.0f)
+                return i;
+    }
+    /* 0x445c43: off an end, from the start */
+    for (i = 0; i < n; i++)
+        if (chunk_side(s, i, x, z) > 0.0f)
+            return i - 1 >= 0 ? i - 1 : n - 1;
+    return n - 1; /* the engine returns n here, one past the last chunk */
+}
+
+int a2_scene_chunk_height(const a2_scene *s, int chunk, float x, float z, float *y)
+{
+    if (!s->chunk_plane || chunk < 0 || chunk >= (int)s->chunk_count)
+        return 0;
     const float *pl = &s->chunk_plane[chunk * 4];
     if (pl[1] > -1e-6f && pl[1] < 1e-6f)
         return 0;

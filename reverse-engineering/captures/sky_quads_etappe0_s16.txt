@@ -1,0 +1,9 @@
+frame 600 anim 0 back_anim 0 enabled 1 d3d 1
+v0 sx 0.00 sy 0.00 sz 0.99687 rhw 0.003 col 00ffffff spec 80000000 tu 0.1855 tv 0.0000
+v1 sx 639.00 sy 0.00 sz 0.99687 rhw 0.003 col 00ffffff spec 80000000 tu 0.3355 tv 0.0000
+v2 sx 639.00 sy 159.67 sz 0.99687 rhw 0.003 col 00c83838 spec 01000000 tu 0.3355 tv 0.3333
+v3 sx 0.00 sy 159.67 sz 0.99687 rhw 0.003 col 00c83838 spec 01000000 tu 0.1855 tv 0.3333
+v4 sx 0.00 sy 159.67 sz 0.99687 rhw 0.003 col 00c83838 spec 01000000 tu 0.1855 tv 0.3333
+v5 sx 639.00 sy 159.67 sz 0.99687 rhw 0.003 col 00c83838 spec 01000000 tu 0.3355 tv 0.3333
+v6 sx 639.00 sy 479.00 sz 0.99687 rhw 0.003 col 00ffffff spec 01000000 tu 0.3355 tv 1.0000
+v7 sx 0.00 sy 479.00 sz 0.99687 rhw 0.003 col 00ffffff spec 01000000 tu 0.1855 tv 1.0000

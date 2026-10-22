@@ -178,6 +178,14 @@ int a2_scene_object_type(const a2_scene *s, int inst);
 /* to - from, the short way round on a circuit. */
 int a2_scene_chunk_delta(const a2_scene *s, int from, int to);
 int a2_scene_road_height(const a2_scene *s, int chunk, float x, float z, float *y);
+/* 0x445a10: the chunk (x, z) is in, walked along the chunk order from `hint`
+ * (an object's previous chunk, 0x442020): the last chunk whose start line --
+ * through its position, across its forward direction -- the point is past.
+ * Off either end it scans from chunk 0. */
+int a2_scene_track_chunk(const a2_scene *s, int hint, float x, float z);
+/* 0x442f00: the height of `chunk`'s own plane at (x, z), with no step to a
+ * neighbour. */
+int a2_scene_chunk_height(const a2_scene *s, int chunk, float x, float z, float *y);
 
 /* Push (x, z) out of any .cmp rail segment closer than `radius`, looking at
  * `chunk` and its immediate neighbours.  Returns 1 if anything was hit and

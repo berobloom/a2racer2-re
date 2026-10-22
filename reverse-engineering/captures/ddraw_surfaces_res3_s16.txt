@@ -1,0 +1,65 @@
+# spel.dat under Wine, RESOLUTION=3 FOCUS=1, WINEDEBUG=+ddraw (session 16): surface setup up to the D3D device
+0024:trace:ddraw:device_parent_wined3d_device_created device_parent 013CC488, device 01A1FAA0.
+0024:trace:ddraw:ddraw1_CreateSurface iface 013CC474, surface_desc 005FFBB0, surface 004EABD8, outer_unknown 00000000.
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_COMPLEX DDSCAPS_FLIP DDSCAPS_PRIMARYSURFACE DDSCAPS_3DDEVICE 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_BACKBUFFERCOUNT : 1
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_COMPLEX DDSCAPS_FLIP DDSCAPS_FRONTBUFFER DDSCAPS_PRIMARYSURFACE DDSCAPS_3DDEVICE DDSCAPS_VIDEOMEMORY DDSCAPS_VISIBLE DDSCAPS_LOCALVIDMEM 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_BACKBUFFERCOUNT : 1
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_RGB , RGB bits: 16, R 0x0000f800 G 0x000007e0 B 0x0000001f)
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_COMPLEX DDSCAPS_FLIP DDSCAPS_FRONTBUFFER DDSCAPS_PRIMARYSURFACE DDSCAPS_3DDEVICE DDSCAPS_VIDEOMEMORY DDSCAPS_VISIBLE DDSCAPS_LOCALVIDMEM 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_BACKBUFFERCOUNT : 1
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_RGB , RGB bits: 16, R 0x0000f800 G 0x000007e0 B 0x0000001f)
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface head_surface 013CC5D0, looking for caps 0x4, 0, 0, 0.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface Surface 013CCBF8, caps 0x1000601c, 0, 0, 0.
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_BACKBUFFER DDSCAPS_COMPLEX DDSCAPS_FLIP DDSCAPS_3DDEVICE DDSCAPS_VIDEOMEMORY DDSCAPS_LOCALVIDMEM 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_BACKBUFFERCOUNT : 0
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_RGB , RGB bits: 16, R 0x0000f800 G 0x000007e0 B 0x0000001f)
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_BACKBUFFER DDSCAPS_COMPLEX DDSCAPS_FLIP DDSCAPS_3DDEVICE DDSCAPS_VIDEOMEMORY DDSCAPS_LOCALVIDMEM 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_BACKBUFFERCOUNT : 0
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_RGB , RGB bits: 16, R 0x0000f800 G 0x000007e0 B 0x0000001f)
+0024:trace:ddraw:ddraw1_CreateSurface iface 013CC474, surface_desc 005FFB18, surface 005FFB90, outer_unknown 00000000.
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_SYSTEMMEMORY DDSCAPS_3DDEVICE 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_SYSTEMMEMORY DDSCAPS_3DDEVICE 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_RGB , RGB bits: 16, R 0x0000f800 G 0x000007e0 B 0x0000001f)
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_SYSTEMMEMORY DDSCAPS_3DDEVICE 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_RGB , RGB bits: 16, R 0x0000f800 G 0x000007e0 B 0x0000001f)
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface head_surface 013CC5D0, looking for caps 0x10, 0, 0, 0.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface Surface 013CCBF8, caps 0x1000601c, 0, 0, 0.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface head_surface 013CCBF8, looking for caps 0x10, 0, 0, 0.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface Surface 013CC5D0, caps 0x1000e238, 0, 0, 0.
+0024:trace:ddraw:ddraw1_CreateSurface iface 013CC474, surface_desc 005FFDF0, surface 004EA54C, outer_unknown 00000000.
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_CAPS : DDSCAPS_ZBUFFER 
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_HEIGHT : 480
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_WIDTH : 640
+0024:trace:ddraw:DDRAW_dump_members  - DDSD_PIXELFORMAT : ( DDPF_ZBUFFER , Z bits: 16)
+0024:trace:ddraw:ddraw_surface1_AddAttachedSurface iface 013CCC08, attachment 013CE340.
+0024:trace:ddraw:ddraw_surface4_AddAttachedSurface iface 013CCBFC, attachment 013CE334.
+0024:trace:ddraw:d3d3_EnumDevices Enumerating WineD3D D3DDevice interface.
+0024:trace:ddraw:d3d3_EnumDevices Enumerating HAL Direct3D device.
+0024:trace:ddraw:d3d2_CreateDevice iface 013CC480, riid {84e63de0-46aa-11cf-816f-0000c020156e}, surface 013CCC08, device 004EA7FC.
+0024:trace:ddraw:d3d_device_create ddraw 013CC468, guid {84e63de0-46aa-11cf-816f-0000c020156e}, target 013CCBF8, version 2, device 005FFDB8, outer_unknown 00000000.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface head_surface 013CCBF8, looking for caps 0x20000, 0, 0, 0.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface Surface 013CC5D0, caps 0x1000e238, 0, 0, 0.
+0024:trace:ddraw:ddraw_surface7_GetAttachedSurface Surface 013CE330, caps 0x10024000, 0, 0, 0.
+0024:trace:ddraw:d3d_device_create Created device 013CE460.
+# all CreateSurface requests in 25 s, by requested caps
+    771 DDSCAPS_SYSTEMMEMORY 
+     33 DDSCAPS_TEXTURE DDSCAPS_VIDEOMEMORY DDSCAPS_ALLOCONLOAD 
+     33 DDSCAPS_SYSTEMMEMORY DDSCAPS_TEXTURE 
+      1 DDSCAPS_ZBUFFER 
+      1 DDSCAPS_SYSTEMMEMORY DDSCAPS_3DDEVICE 
+      1 DDSCAPS_COMPLEX DDSCAPS_FLIP DDSCAPS_PRIMARYSURFACE DDSCAPS_3DDEVICE 

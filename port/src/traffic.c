@@ -86,6 +86,7 @@ typedef struct {
     int w0;         /* AI record +0: the waypoint it is on */
     int tlane;      /* AI record +0x14: the lane W0 is in, which change_lane
                      * steps one at a time toward the lane it wants */
+    int at;         /* vehicle +0x18: the chunk the car is in (0x442020), -1 unset */
 } traffic_car;
 
 struct a2_traffic {
@@ -152,6 +153,16 @@ static int lane_point_at(const traffic_car *c, const a2_scene *scene, int lane, 
 }
 
 /* Place a car at (chunk, lane, t) and work out its facing from the segment. */
+/* HANDLE_TRAFFIC_AI's last step (0x40b952): y becomes the plane height of
+ * the car's chunk, which 0x40ede0 returns whether or not it clamped. */
+static void ground_car(traffic_car *c, const a2_scene *scene)
+{
+    float gy;
+    c->at = a2_scene_track_chunk(scene, c->at >= 0 ? c->at : c->chunk, c->x, c->z);
+    if (a2_scene_chunk_height(scene, c->at, c->x, c->z, &gy))
+        c->y = gy;
+}
+
 static int place(traffic_car *c, const a2_scene *scene)
 {
     float a[3], b[3];
@@ -176,6 +187,7 @@ static int place(traffic_car *c, const a2_scene *scene)
     float dx = b[0] - a[0], dz = b[2] - a[2];
     if (dx * dx + dz * dz > 1e-6f)
         c->yaw = atan2f(dx, -dz) * 180.0f / (float)M_PI;
+    ground_car(c, scene);
     return 1;
 }
 
@@ -338,6 +350,7 @@ static void spawn(a2_traffic *t, traffic_car *c, int chunk, int side)
     c->half_len = t->half_lens[kind];
     c->half_wid = t->half_wids[kind];
     c->chunk = chunk;
+    c->at = -1;
     c->side = side;
     c->lane = 0;
     c->t = 0.0f;
@@ -534,16 +547,15 @@ static void sync_car(a2_traffic *t, traffic_car *c, const a2_scene *scene,
     c->lane_from = c->lane;
     c->lane_mix = 1.0f;
     c->t = 0.0f;
-    c->y = p0[1];
     int w1 = a2_aiw_link(aiw, c->w0, A2_AIW_STRAIGHT);
     if (w1 >= 0 && wp_pos(aiw, w1, p1, NULL, NULL)) {
         float sx = p1[0] - p0[0], sz = p1[2] - p0[2], l2 = sx * sx + sz * sz;
         if (l2 > 1e-3f) {
             float u = ((c->x - p0[0]) * sx + (c->z - p0[2]) * sz) / l2;
             c->t = u < 0.0f ? 0.0f : u > 1.0f ? 1.0f : u;
-            c->y = p0[1] + (p1[1] - p0[1]) * c->t;
         }
     }
+    ground_car(c, scene);
     c->d.y = c->y;
     (void)t;
 }
@@ -684,6 +696,7 @@ static void put_at(a2_traffic *t, traffic_car *c, const a2_scene *scene, const s
     if (lane < 0)
         return;
     c->chunk = chunk;
+    c->at = -1;
     c->lane = c->lane_from = lane;
     c->lane_mix = 1.0f;
     c->t = 0.0f;
@@ -1049,6 +1062,7 @@ int a2_traffic_car_box(const a2_traffic *t, int i, struct a2_cbox *box)
     box->z = c->z;
     /* forward is (sin yaw, -cos yaw); the engine's is (-sin h, cos h) */
     box->heading = (c->yaw + 180.0f) * (4096.0f / 360.0f);
+    box->fixed = 0;
     return 1;
 }
 
@@ -1068,6 +1082,19 @@ void a2_traffic_car_push(a2_traffic *t, int i, float dvx, float dvz)
     c->speed += sinf(r) * dvx - cosf(r) * dvz;
     if (c->speed < 0.0f)
         c->speed = 0.0f;
+}
+
+int a2_traffic_car_pos(const a2_traffic *t, int i, float p[3], int *chunk)
+{
+    if (!t || i < 0 || i >= t->count || !t->cars[i].alive)
+        return 0;
+    const traffic_car *c = &t->cars[i];
+    p[0] = c->x;
+    p[1] = c->y;
+    p[2] = c->z;
+    if (chunk)
+        *chunk = c->chunk;
+    return 1;
 }
 
 a2_drive *a2_traffic_drive(a2_traffic *t, int i, float *hl, float *hw, const char **anim)

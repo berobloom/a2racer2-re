@@ -1270,7 +1270,9 @@ things that had been inferred:
   **"Music is currently disabled in start_game()"**, which explains why no
   music plays; no `M_*.wav` files ship on the CD either.
 - CONFIRMED: `[PROGRAM] FOCUS` selects the render target — `0=BACK_SCREEN`
-  (video memory), `1=BUFFER_SCREEN` (system memory) — and ships as 1.
+  (video memory), `1=BUFFER_SCREEN` (system memory) — and ships as 1. (Session 16: the
+  accelerated RESOLUTION 3 / 4 override it with the back screen; see "Surfaces,
+  memory placement and the z-buffer depth".)
 - CONFIRMED: the `[wait_hi]` comment states that in 8-bit mode the given
   extension is used and **in 16-bit mode the extension is replaced with
   `.TGA`**, which is the general rule for this game's art: every `.pcx` has a
@@ -5027,14 +5029,17 @@ capture now settles why: **the port drew every stage mirrored left to right.**
   `back7.pcx` and `back2.pcx` and never opens `SCRL_HI.pcx`. The `scrl_lo` /
   `scrl_hi` panorama is what the Raser.ini comment says it is, the
   **unaccelerated** sky. The port's scrolling sky came from the software path.
-- `back1..7.pcx` are 128x128 cloud photographs. LIKELY Direct3D stretches a
+- `back1..7.pcx` are 128x128 cloud photographs. ~~LIKELY Direct3D stretches a
   background-material texture over the viewport, so it stands still whatever
-  the heading. The port now does that (`--sky 0` restores the panorama).
-- Not settled: under Wine the background shows as a smooth blue-to-pink
-  gradient that matches none of the seven images. The stage palettes are
-  identical at the sky's indices, so it is not a palette swap. SPECULATIVE:
-  Wine's ddraw does not draw viewport background textures, and the gradient
-  is its own fallback. Wine captures cannot show the real sky.
+  the heading.~~ **Wrong (session 16):** the game draws the image itself as two
+  scrolling, tinted screen quads; see "The accelerated sky, drawn by
+  Gfx_bkg.cpp".
+- ~~Not settled: under Wine the background shows as a smooth blue-to-pink
+  gradient that matches none of the seven images. SPECULATIVE: Wine's ddraw
+  does not draw viewport background textures, and the gradient is its own
+  fallback.~~ **Settled (session 16):** the gradient is the real sky, a
+  magnified 0.15 x 1/3 window of the image under a white-to-pink vertex tint,
+  and Wine draws it correctly.
 
 ## What spel.dat writes back to Game.ini (session 12)
 
@@ -6464,7 +6469,8 @@ offset table read the constants but not what they do.
   +8 / +0xc.
 - CONFIRMED (code), **the record builder 0x449840(A, B, hit)**, A the box
   whose side was crossed, B the box whose corner crossed it, +0x48 the
-  "moves" flag (0 for barriers and static scenery):
+  "moves" flag (0 only for the `.cmp` rail slabs; corrected in session 16,
+  see "Which box is static, and what the slip does"):
 
   | A | B | +4 | +8 | +0xc | point | normal |
   |---|---|---|---|---|---|---|
@@ -6475,9 +6481,8 @@ offset table read the constants but not what they do.
 
   So object +8 is the one whose corner touched, except in the second row,
   where it is the moving A. That row still gives B's corner in B's frame, a
-  point in the wrong object's frame, LIKELY a slip in the original (it
-  would skew the impulse's lever arm for a moving box hit by a barrier slab's
-  corner).
+  point in the wrong object's frame: a slip in the original, CONFIRMED and
+  measured in session 16 (below).
 - CONFIRMED: **0x441490 is not a frame bisection.** It reads the record,
   returns 0 if the object already separates (v . n > 0), otherwise adjusts the
   velocity along n and runs 0x44a0f0 again.
@@ -7717,3 +7722,231 @@ them.
 - Without racers (`--no-racers`), cops 1-4 on etappe1 each started the chase
   in their own chunk and the player was caught three times. No port
   deviation found.
+
+## The game timers, and the HUD in modes 3, 6 and 8 (session 16)
+
+- CONFIRMED (code): gm_clock's 12 timers (asserted 0..11) are 20-byte
+  records at **0x4d8d5c**: +0 the start tick, +8 in use (0 asserts), +0xc
+  the tick it was paused at (0 = running). The clock is the import at
+  [0x4fd408]. The API:
+  - **0x421260 start**: +0 = now, +0xc = 0;
+  - **0x421300 pause**: +0xc = now;
+  - **0x4213a0 resume**: when paused, +0 += now - +0xc, then +0xc = 0;
+  - **0x4214d0 read**: now - +0 less the paused stretch, in ms;
+  - 0x421680 and 0x421770 also take a timer index (0x421770 is called with
+    3 at 0x427ff4 in race init; 0x421680 adds to timer 11, 0x42a59e).
+    Not read in full.
+- CONFIRMED (code): **timer 3 is the race clock** (RACE TIJD, 0x419b3a /
+  0x419e2a). It is started at 0x4283d0, called from 0x42a43d in the
+  **start-line handler (chunk trigger 13, 0x42a420)**, which starts timers 0
+  and 11 beside it, once (it clears 0x48c888). A race begun past the line
+  (Game.ini `startchunk`) therefore never starts its clocks: in the session-16
+  Wine run from chunk 430 RACE TIJD read 00:00:0 and CHECKPOINT stood at
+  00:47:0 throughout. It is **paused in only two places**: 0x4283e0, the finish
+  line (reads it into 0x4d9e5c, then 0x421300(3)), and the P pause /
+  quit-question loop 0x4248d0, which pauses timers 8, 9, 10, 0, 3 and 11 and
+  resumes them at 0x424a39. **Nothing pauses it on a game over**, so it keeps
+  running through mode 6.
+- CONFIRMED (code): **nobody sees it run on**. set_game_mode
+  (0x424d20) sets **[0x4d9aa0] = 1 for modes 3, 6 and 8** (finish, game over,
+  police warning) and 0 for modes 0, 1 and 2. The HUD 0x41a8a0 tests it at
+  0x41a8b7 and, when it is set, jumps to 0x41a9fa: it skips the blinking
+  element 0x1d, both top-right panels (0x419b10 / 0x419e00), 0x41a410, the
+  time panels (0x41a5f0 / 0x41a780, the EXTRA TIJD flasher) and **the banner
+  slot** (0x41a95b). Only the pause / quit box (0x419300) and the tweak-mode
+  L readout (0x41aa15) are drawn either way. The finish panel and the
+  game-over texts are drawn by the modes' own callbacks.
+- CONFIRMED (code), a consequence: a banner raised while the flag is set
+  stays pending in 0x4882c0 and is only latched (with its 2000 ms blink) when
+  the HUD runs again. The police warning raises 49 / 50 at 0x415352 /
+  0x41535e, inside mode 8's begin, so the warning banner shows only once the
+  4 s warning camera is over.
+- CONFIRMED (runtime, Wine, twice): etappe1 from chunk 430, gas 9 s and
+  brake, racers' limits held at 1000 (gdb_banner.py, every frame). Mode 8
+  began at frame 470 / 407 with pending = **49** (EERSTE WAARSCHUWING) and
+  the HUD off; 0x4882c4 stayed -1 through it; mode 0 came back at frame 697 /
+  707 (4.0 s later) and **the next frame latched 49**. The captures show the
+  warning camera with no HUD and no banner, then the HUD back with EERSTE
+  WAARSCHUWING blinking. Evidence:
+  `reverse-engineering/captures/warning_banner_etappe1_c430_s16.{txt,jpg}`.
+- Port: `hud_off` (finished, arrested, or inside the warning's 4 s) hides
+  the panels, the radar, EXTRA TIJD and the banner slot, and RAISE_BANNER
+  now only sets a pending id that the HUD latches. Checked headless:
+  etappe1, `--drive-test --gas-brake 3 1`, out of time at 43.0 s, and the
+  game-over capture shows TIJD IS OM / RACE OVER with no HUD.
+
+## Which box is static, and what the slip does (session 16; open question 53)
+
+- CONFIRMED (code): **only the rail slabs are static.** 0x449c10 writes
+  entry +0x48 = 0 and object -1 (0x449dbd / 0x449db3); 0x449a30 writes
+  +0x48 = 1 (0x449bf7) for every registered object, so columns (mass 0),
+  arrows, parked police and all vehicles count as moving. The session-14
+  table's "static scenery" row does not occur: a column goes through the
+  third arm (+4 = 1, 0x448eb0).
+- CONFIRMED (code), the caller 0x44a0f0 (esi walks the candidates at
+  0x4e6790, [esp+0x6c] is the moving object's own entry from 0x449de0):
+  - pass 1: 0x44a520(entry, self, move), then 0x449840(entry, self, hit);
+  - pass 2: 0x44a520(self, entry, -move), then 0x449840(self, entry, hit).
+  So the second arm (A moving, B static) is exactly **pass 2 against a rail
+  slab**: a slab corner crossing the car's side.
+- CONFIRMED (code): the stored point is B's raw corner. 0x44a520 copies it
+  from arg 2's corner array, `[edi + idx*12]` (0x44a628), untransformed.
+- CONFIRMED (code): the record's +4 picks the response in 0x4497f0: 0 goes
+  to the world response **0x449570**, 1 to 0x448eb0. So the slip reaches
+  0x449570 with r = the slab's local corner taken as the car's own lever arm.
+  A slab's corners are (-10, -1), (0, -1), (0, L+1), (-10, L+1) from the rail
+  start, so a start corner gives under 1 m and a far-end corner about L/10 m.
+- CONFIRMED (Unicorn, fit_wall.py's harness): a 1000 kg, 4.5 x 1.7 m car at
+  (2, 0, 25) m/s, n = (-1, 0, 0), e = 0.5. j = 3000 and the velocity change
+  are the same whatever the point (spin is not in the denominator), but the
+  yaw rate goes to **6.0 (the clamp)** with the original's point (0, 0, 136)
+  against **1.06** with a consistent one on the car's side (8.5, 0, 20), and
+  -0.05 at a start corner (0, 0, -1). At 0.5 m/s sideways: 1.80 against 0.26.
+- Port measurement (temporary log in contact.c, autopilot, no cops, no
+  clock): etappe1 **0** pass-2 slab hits, etappe5 580, of which **569 at
+  t = 0** (the port's own overlaps, which the original does not get into)
+  and **11 swept**, 3 of them at a far-end corner (L 110-135 units, so an
+  11-14 m lever in the original).
+- Port (session 17): **reproduced.** a2_cbox has a `fixed` flag, set only
+  on the rail slabs (a2_scene_rail_boxes). In a2_contact's second pass a
+  fixed box's corner is returned as self (at the contact) + the slab's
+  local corner turned by the car's heading, so the impulse's lever arm is
+  the slab corner itself, as 0x449570 takes it. Autopilot, no cops, no
+  clock: etappe1 200.3 s both ways (no pass-2 slab hits there), etappe5
+  261.1 s against 254.7 s with the consistent arm. Earlier the port gave
+  the corner its world position.
+
+## Surfaces, memory placement and the z-buffer depth (session 16; open question 6)
+
+- CONFIRMED (code): **Raser.ini [PROGRAM] FOCUS is overridden in the
+  accelerated modes.** The ini reader maps FOCUS 0 -> [0x489629] = 1 (the
+  backscreen) and 1 -> 2 (the bufferscreen) (0x420a82..0x420af0). The
+  RESOLUTION handler 0x420770 runs after it (from Skelet2D init, 0x420fe8),
+  and its RESOLUTION 3 and 4 arms (jump table 0x4208dc: 0x420844 /
+  0x420858) fall through to **0x420879, which writes [0x489629] = 1**. So the
+  shipped 16-bit mode always renders to the back buffer; the shipped
+  FOCUS=1 only applies to RESOLUTION 0, 1, 2 and 5.
+- CONFIRMED (code): the z-buffer, 0x44c930(focus, depth, w, h): a 0x6c-byte
+  DDSURFACEDESC, flags 0x47 (CAPS | HEIGHT | WIDTH | ZBUFFERBITDEPTH), caps
+  **DDSCAPS_ZBUFFER**, plus **DDSCAPS_SYSTEMMEMORY only for focus 2** (the
+  bufferscreen, 0x44c981). It is attached to the screen (0x4eabd8), the
+  backscreen (0x4eabdc) or the bufferscreen (0x4eabc0) by the focus (strings
+  "Z-buffer attachment to screen / backscreen / bufferscreen"). Both callers
+  (0x44c7e5 in the dplib init, called from 0x4316a0 with the focus, and
+  0x44cd12) pass a **constant depth of 16** (`push 0x10`) and the screen
+  size 0x49e72c / 0x49e730. The depth is not taken from the device's caps.
+- CONFIRMED (runtime, Wine, RESOLUTION=3, FOCUS=1, `WINEDEBUG=+ddraw`;
+  `reverse-engineering/captures/ddraw_surfaces_res3_s16.txt`):
+  - the primary: COMPLEX | FLIP | PRIMARYSURFACE | 3DDEVICE, one back
+    buffer, no memory flag asked for; 640x480, RGB 5:6:5;
+  - a 640x480 SYSTEMMEMORY | 3DDEVICE surface (the bufferscreen) is created
+    anyway;
+  - the z-buffer: DDSCAPS_ZBUFFER, 640x480, DDPF_ZBUFFER **16 bits**,
+    attached to the **back buffer**;
+  - the device: IDirect3D2::CreateDevice with the **HAL** GUID on the back
+    buffer (0x4ea7fc);
+  - textures go in pairs: a SYSTEMMEMORY | TEXTURE source and a
+    TEXTURE | VIDEOMEMORY | ALLOCONLOAD device surface, filled by
+    IDirect3DTexture2::Load (33 pairs, 128x128, in the first 25 s);
+  - every other surface (771 in 25 s, glyph and sprite sized) is a plain
+    SYSTEMMEMORY offscreen surface.
+- So the game **asks for video memory only for textures**. The flip chain
+  and the z-buffer state no memory, and the driver places them (Wine: video
+  memory, the z-buffer's caps coming back as 0x10024000). Sprites, fonts and
+  the bufferscreen are explicitly system memory. Where a real 1998 driver put
+  the flip chain and the z-buffer is the driver's choice and is not in the
+  binary.
+
+## The accelerated sky, drawn by Gfx_bkg.cpp (session 16; open question 48)
+
+- CONFIRMED (Wine 9.0 source, dlls/ddraw/viewport.c and material.c, from the
+  wine-mirror tag): SetBackground keeps the material and Clear(TARGET) fills
+  with its **diffuse colour only**; the material's hTexture is never read. A
+  `+ddraw` trace shows the game's background material is diffuse (1, 1, 1, 0),
+  so the viewport is cleared to white.
+- CONFIRMED (code): the sky is drawn by the game. `init_bkg` (0x4242c6 ->
+  0x418da0, D3D only) copies the back.pcx texture anim [0x49b028] (set by
+  0x45ce90, before it in init_game: 0x423df2) into [0x4a7d68], builds two
+  quads of D3DTLVERTEX at 0x4a7c68 (0x418ab0) and sets [0x4a7d74] = 1. Each
+  frame the loop calls **0x4190d0** (0x4251fc), which updates them and draws
+  each with SetRenderState(TEXTUREHANDLE) and
+  DrawPrimitive(TRIANGLEFAN, TLVERTEX, 4) (vtable +0x5c, +0x74; Gfx_bkg.cpp).
+- CONFIRMED (runtime, read back with gdb_skyquads.py on etappe0;
+  `reverse-engineering/captures/sky_quads_etappe0_s16.{txt,jpg}`): the quads
+  cover the viewport, (0, 0)-(639, 159.67) with v 0..1/3 and
+  (0, 159.67)-(639, 479) with v 1/3..1. The vertex colours are white at the
+  top and bottom edges and the horizon tint (0xc83838 there) along the split.
+  z / rhw come from the view distance (0x418760; 0.99687 / 0.003 there).
+- CONFIRMED (code + runtime): u runs from **1 - (player heading & 0x3ff) /
+  1024** to that + 0.15 (0x41911f..0x4191a3; the player object's transform
+  +0x78). So the sky turns with the car (not the camera), shows 0.15 of the
+  image, and repeats every quarter turn.
+- CONFIRMED (fit): rendering back1.pcx through the dumped quads, bilinear,
+  modulated by the vertex colours, matches the Wine capture's visible sky
+  (x 120-150, y 2-58) to a mean of **3.6/255**. back3 gives 7.8, the texture
+  without the tint 21.8, and the texture **run through the game's gamma**
+  (c*c >> 8) is far off (31+). So back.pcx is not darkened.
+- CONFIRMED (code, and under Unicorn, emu_skytint.py: 200 of 200), the tint
+  **0x418f00**: f = (2 |chunk - start| mod 2N) / N with chunk [0x4d9e44],
+  start [0x4a7c58] (0x42a460) and N [[0x4e6670] + 8] (LIKELY the track's
+  chunk count; etappe0's 778 fits the dump). With A = |sin(f pi/2)|,
+  B = |sin(f pi)|, C = |sin(f pi/4)| and every conversion truncating:
+  - horizon colour channel = trunc((255 - c0) B) + trunc(c0), c0 = 200 + 25C
+    (red), 55 + 175C (green), 55 (blue): 0xc83737 at the start, near white at
+    a quarter lap (f 0.5), gold 0xd9b237 at half a lap;
+  - specular alpha 128 + trunc(127A) at the top, trunc(255A) below, the
+    vertex fog factor, which does nothing with fog off (shipped);
+  - game timer 0 (s / 240) only reaches 0x418830, which builds a fog colour
+    (0x4ea820, render state 0x22 when [0x4ea81c] is set). Not followed.
+- Port: sky.c draws back<N> this way (a2_sky_horizon, the player's
+  heading), without gamma.
+
+## Traffic height, and the position-to-chunk walk (session 17)
+
+- CONFIRMED (code): **traffic sits on its chunk's plane every frame.**
+  HANDLE_TRAFFIC_AI ends with `call 0x40ede0` at 0x40b952 and
+  `fstp [esi+0x54]` at 0x40b957 (esi = the c_3dobject, stride 153). 0x40ede0
+  takes h = 0x442f00(chunk of vehicle +0x18, object x +0x50, z +0x58); when
+  h - 1 is above y it stores y = h - 1 and negates v_y (AI record +0x70).
+  On both paths it returns with **h still in st0**, and the caller stores
+  that as y. So the "clamp" is a hard set to the plane. Traffic calls the
+  pitch and roll (0x40ece0, 0x40ebd0) but **never the ride height 0x40ee80**
+  (the only callers of 0x40ee80 are the player 0x4014cc / 0x40fe64 and the
+  racer/cop states 0x409f37..0x40ac53). 0x40ede0's other callers are
+  0x4011e7 and 0x42605b (not followed).
+- CONFIRMED (code): **the engine integrator 0x4404a0 never moves y.** It
+  writes +0x50 and +0x58 and copies +0x54 through (0x4406a5 / 0x4406b3);
+  only 0x40ee80 integrates v_y into y.
+- CONFIRMED (code): **0x445a10 (position -> chunk) is a walk, not a
+  search.** Called by 0x442020 with the previous chunk as the hint, and by
+  the camera (0x414653). With f the chunk's forward (toward the next chunk,
+  the last toward chunk 0) and the test `(x - c).r`, r = (0,1,0) x f at
+  +0x30, "past chunk i" is (p - c_i).f >= 0. If the point is past the
+  hint it steps forward and returns the chunk before the first one it is
+  not past; otherwise it steps back to the first one it is strictly past.
+  Off either end it scans from chunk 0 (0x445c43), and if the point is past
+  every start line it returns n, one past the end.
+- Checked on the data (`reverse-engineering/tools/chunk_lookup.py`, all 7
+  tracks): for every .dmp waypoint, with its own chunk as the hint, the
+  walk and the port's global nearest-chunk-position lookup pick a chunk at
+  the **same plane height** to within 10 units in all but one case
+  (etappe5 wp 4905 at the last chunk, where the walk returns chunk 245,
+  49 units off). So that lookup was **not** why cars changed height. The
+  few waypoints far off any plane (etappe2 wp 3141 -293, 2912 -160,
+  1010/1015 -110; etappe1's slip road -26) are off with both lookups.
+- Port, the cause: traffic took y from the car's projection onto W0 -> W1,
+  but W0 is the waypoint **ahead**, so the projection clamped to t = 0 and the
+  car sat at W0's height until it got there and then stepped. Measured with
+  `A2_JUMP_LOG` (autopilot, cops on, every stage), per-frame traffic height
+  steps over 4 units: etappe1 366, etappe4 1038, etappe5 1274, typically
+  5-10 units (one chunk's rise) and up to 90. The car sat 5-9 units off the
+  road, below it downhill and above it uphill.
+- Port (session 17): traffic.c's ground_car tracks the car's chunk with
+  a2_scene_track_chunk (0x445a10, hinted by the previous one) and sets y
+  to a2_scene_chunk_height of that chunk (0x442f00, no neighbour step).
+  Afterwards: 3 / 7 / 5 on etappe1 / 4 / 5, all of them recycles.
+- The other per-frame jumps in the same runs are not bugs: the recycler
+  moves a car 3-8 km, always from and to at least 1000 units (100 m) from
+  the player, mostly 2500-3800; racers fall about 4 units a frame after a
+  collision throws them up (0x4497f0's dv_y); and the player's 300-800 unit
+  jumps are the port's autopilot unwedge (main.c, a test crutch only).

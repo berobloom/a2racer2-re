@@ -77,7 +77,8 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   COP MODE is Game.ini `copland`, which menu.dat sets when the player is
   named COPLAND. It gives the player the police car, confirmed under Wine.
   See discoveries.md "COP MODE".
-- SPECULATIVE: `lan_main.cpp` is dead code from a shared codebase (no network imports/strings anywhere).
+- **WITHDRAWN (session 16):** `lan_main.cpp` is not network code at all but the
+  **language** module (open-questions #16, session 9).
 
 ## Misc
 

@@ -131,9 +131,17 @@ int a2_contact(const a2_cbox *self, float dx, float dz, const a2_cbox *other, fl
         best = t1;
         float cx, cz, wx, wz;
         corner_of(other, c1, &cx, &cz);
-        rot(cx, cz, other->heading, &wx, &wz);
-        point[0] = other->x + wx;
-        point[1] = other->z + wz;
+        if (other->fixed) {
+            /* the slip: the slab's corner, untransformed, as our own arm
+             * from where we are at the contact */
+            rot(cx, cz, self->heading, &wx, &wz);
+            point[0] = self->x + dx * t1 + wx;
+            point[1] = self->z + dz * t1 + wz;
+        } else {
+            rot(cx, cz, other->heading, &wx, &wz);
+            point[0] = other->x + wx;
+            point[1] = other->z + wz;
+        }
         side_normal(self, s1, normal);
         hit = 1;
     }

@@ -44,9 +44,12 @@ a2_sky *a2_sky_load(const a2_archive *rcs, int back)
         a2_image_free(&im);
         return NULL;
     }
-    a2_gfx_gamma_rgba(im.rgba, (size_t)im.width * im.height); /* LIKELY: a PCX like the rest */
-    s->tex = a2_gfx_texture_from_image(&im, 0); /* repeat, so the wrap is free */
     s->still = back >= 1 && back <= 7;
+    /* LIKELY for the panorama, a PCX like the rest; back<N> is not darkened
+     * (fitted against a Wine capture, session 16) */
+    if (!s->still)
+        a2_gfx_gamma_rgba(im.rgba, (size_t)im.width * im.height);
+    s->tex = a2_gfx_texture_from_image(&im, 0); /* repeat, so the wrap is free */
     fprintf(stderr, "sky: %s (%dx%d)\n", name, im.width, im.height);
     a2_image_free(&im);
     if (!s->tex) {
@@ -64,7 +67,24 @@ void a2_sky_free(a2_sky *s)
     free(s);
 }
 
-void a2_sky_draw(const a2_sky *s, float yaw_deg, int w, int h)
+unsigned a2_sky_horizon(int n_chunks, int start, int chunk)
+{
+    if (n_chunks <= 0)
+        return 0xc83737;
+    /* f = (2 |chunk - start| mod 2n) / n, 0..2 over a lap; every conversion
+     * is _ftol, which truncates (checked against the original under Unicorn,
+     * emu_skytint.py: 200 of 200) */
+    int d = chunk - start;
+    double f = (double)((2 * (d < 0 ? -d : d)) % (2 * n_chunks)) / n_chunks;
+    double b = fabs(sin(f * M_PI)), c = fabs(sin(f * M_PI / 4.0));
+    double base[3] = {200.0 + 25.0 * c, 55.0 + 175.0 * c, 55.0};
+    unsigned rgb = 0;
+    for (int k = 0; k < 3; k++)
+        rgb = (rgb << 8) | (unsigned)((int)((255.0 - base[k]) * b) + (int)base[k]);
+    return rgb;
+}
+
+void a2_sky_draw(const a2_sky *s, float yaw_deg, float heading, unsigned horizon, int w, int h)
 {
     if (!s || w <= 0 || h <= 0)
         return;
@@ -78,9 +98,9 @@ void a2_sky_draw(const a2_sky *s, float yaw_deg, int w, int h)
     /* Band height: the original's screen_h - screen_h/3. */
     float band = (float)h - (float)h / 3.0f;
     if (s->still) {
-        u0 = 0.0f;
-        du = 1.0f;
-        band = (float)h;
+        /* 0x419145..0x4191a3: u = 1 - (heading & 0x3ff) / 1024 .. + 0.15 */
+        u0 = 1.0f - (float)((int)heading & 0x3ff) / 1024.0f;
+        du = 0.15f;
     }
 
     glMatrixMode(GL_PROJECTION);
@@ -103,14 +123,34 @@ void a2_sky_draw(const a2_sky *s, float yaw_deg, int w, int h)
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     glBegin(GL_QUADS);
-    glTexCoord2f(u0, 0.0f);
-    glVertex2f(0.0f, 0.0f);
-    glTexCoord2f(u0 + du, 0.0f);
-    glVertex2f((float)w, 0.0f);
-    glTexCoord2f(u0 + du, 1.0f);
-    glVertex2f((float)w, band);
-    glTexCoord2f(u0, 1.0f);
-    glVertex2f(0.0f, band);
+    if (s->still) {
+        /* the two quads of 0x418ab0: white at the top and bottom edges, the
+         * horizon tint along the split a third of the way down, modulated */
+        float split = (float)h / 3.0f;
+        float hr = (float)((horizon >> 16) & 0xff) / 255.0f, hg = (float)((horizon >> 8) & 0xff) / 255.0f,
+              hb = (float)(horizon & 0xff) / 255.0f;
+        const float ys[3] = {0.0f, split, (float)h}, vs[3] = {0.0f, 1.0f / 3.0f, 1.0f};
+        for (int q = 0; q < 2; q++) {
+            for (int k = 0; k < 4; k++) {
+                int row = q + (k >= 2);
+                int edge = row != 1;
+                glColor3f(edge ? 1.0f : hr, edge ? 1.0f : hg, edge ? 1.0f : hb);
+                float u = (k == 1 || k == 2) ? u0 + du : u0;
+                glTexCoord2f(u, vs[row]);
+                glVertex2f((k == 1 || k == 2) ? (float)w : 0.0f, ys[row]);
+            }
+        }
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    } else {
+        glTexCoord2f(u0, 0.0f);
+        glVertex2f(0.0f, 0.0f);
+        glTexCoord2f(u0 + du, 0.0f);
+        glVertex2f((float)w, 0.0f);
+        glTexCoord2f(u0 + du, 1.0f);
+        glVertex2f((float)w, band);
+        glTexCoord2f(u0, 1.0f);
+        glVertex2f(0.0f, band);
+    }
     glEnd();
 
     glDepthMask(GL_TRUE);

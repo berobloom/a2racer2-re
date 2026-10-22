@@ -1,0 +1,9 @@
+f1 t0.02 mode 0 hudoff 0 pending -1 latched -1 tick 0
+f470 t7.30 mode 8 hudoff 1 pending 49 latched -1 tick 0
+f697 t11.32 mode 0 hudoff 0 pending 49 latched -1 tick 0
+f698 t11.34 mode 0 hudoff 0 pending -1 latched 49 tick 38199846
+# run 2 (screenshot sheet: s021 s024 s030 s035 s037 / s038..s042)
+f1 t0.02 wall 1792619913.05 mode 0 hudoff 0 pending -1 latched -1 tick 0
+f407 t6.84 wall 1792619919.87 mode 8 hudoff 1 pending 49 latched -1 tick 0
+f707 t10.86 wall 1792619923.89 mode 0 hudoff 0 pending 49 latched -1 tick 0
+f708 t10.87 wall 1792619923.90 mode 0 hudoff 0 pending -1 latched 49 tick 40521200

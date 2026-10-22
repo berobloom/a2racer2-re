@@ -83,6 +83,8 @@ void a2_traffic_car_push(a2_traffic *t, int i, float dvx, float dvz);
  * drive state for the AI contact pass, NULL when it is out of play, with its
  * half length and width (world units) and anim.  After that pass moved them,
  * a2_traffic_sync brings the lane bookkeeping up to date. */
+/* Debug: the drawn position and chunk of car i; 0 when it is not alive. */
+int a2_traffic_car_pos(const a2_traffic *t, int i, float p[3], int *chunk);
 a2_drive *a2_traffic_drive(a2_traffic *t, int i, float *hl, float *hw, const char **anim);
 void a2_traffic_sync(a2_traffic *t, const a2_scene *scene, const struct a2_aiw *aiw);
 
