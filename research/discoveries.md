@@ -1292,6 +1292,11 @@ things that had been inferred:
   end exactly on a 68-byte boundary, so no record is truncated; only the
   header count is high. A sweep of etappe0, 2 and 6 every 60 chunks in the
   port shows no missing buildings.
+- Checked (port, session 20): etappe1, 3 and 5 every 60 chunks plus the
+  tall extra-plane spans inside each race (start/finish 47-763, 101-539,
+  71-795) show no missing buildings either. The bare views at etappe1 c0 /
+  c780, etappe3 c540+ and the start of etappe5 are road outside the race,
+  where `--start-chunk` finds no lanes, not gaps.
 - CONFIRMED: **arg 0 is the circuit flag** (`1` = city/stad, `0` = highway/
   snelweg), and it reads 1,0,1,0,1,0,1 for etappe0..6 — independently matching
   the circuit/point-to-point split derived from the trigger markers and object
