@@ -103,9 +103,13 @@ in `port/web/`:
 - the old fixed-function GL runs on Emscripten's LEGACY_GL_EMULATION (WebGL
   1). `web/glshim.c` covers what that misses, each found with the probe
   `web/gltest.c`: textures whose sides are not powers of two (black under
-  GL_REPEAT) are scaled up on upload; indexed draws with 32-bit indices from
+  GL_REPEAT) are scaled up on upload, unless they are clamped to the edge,
+  which WebGL 1 takes at any size (scaling the HUD's sprites by a fraction
+  drew thin extra lines in its digits); indexed draws with 32-bit indices from
   client memory (drawn as nothing) become 16-bit batches;
-  glPushAttrib / glPopAttrib and glIsEnabled are tracked; and the canvas's
+  glPushAttrib / glPopAttrib (with the alpha function and the current colour:
+  the skid marks' `glAlphaFunc(GL_GREATER, 0)` once outlived its pair and put
+  pink fringes on every colour-keyed edge) and glIsEnabled are tracked; and the canvas's
   one WebGL context is put back to its defaults when the race takes it and
   when it hands it back;
 - the menu shows its 640x480 picture through that same GL path instead of an

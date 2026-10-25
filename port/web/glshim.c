@@ -10,9 +10,13 @@
 #undef glIsEnabled
 #undef glDepthMask
 #undef glBlendFunc
+#undef glColor3f
+#undef glColor4f
+#undef glColor4ub
 #undef glPushAttrib
 #undef glPopAttrib
 #undef glBindTexture
+#undef glTexParameteri
 #undef glPixelStorei
 #undef glTexImage2D
 #undef glTexSubImage2D
@@ -37,9 +41,12 @@ typedef struct {
     unsigned char on[NCAPS];
     GLboolean depth_mask;
     GLenum blend_s, blend_d;
+    GLint alpha_func; /* read back at push: the emulation answers glGet for it */
+    GLfloat alpha_ref;
+    GLfloat color[4]; /* tracked: the emulation has no glGet for the current colour */
 } state;
 
-static state cur = {{0}, GL_TRUE, GL_ONE, GL_ZERO};
+static state cur = {{0}, GL_TRUE, GL_ONE, GL_ZERO, GL_ALWAYS, 0.0f, {1.0f, 1.0f, 1.0f, 1.0f}};
 static state stack[DEPTH];
 static int top;
 
@@ -86,9 +93,34 @@ void a2web_glBlendFunc(GLenum s, GLenum d)
     glBlendFunc(s, d);
 }
 
+void a2web_glColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
+{
+    cur.color[0] = r;
+    cur.color[1] = g;
+    cur.color[2] = b;
+    cur.color[3] = a;
+    glColor4f(r, g, b, a);
+}
+
+void a2web_glColor3f(GLfloat r, GLfloat g, GLfloat b)
+{
+    a2web_glColor4f(r, g, b, 1.0f);
+}
+
+void a2web_glColor4ub(GLubyte r, GLubyte g, GLubyte b, GLubyte a)
+{
+    cur.color[0] = r / 255.0f;
+    cur.color[1] = g / 255.0f;
+    cur.color[2] = b / 255.0f;
+    cur.color[3] = a / 255.0f;
+    glColor4ub(r, g, b, a);
+}
+
 void a2web_glPushAttrib(GLbitfield mask)
 {
     (void)mask; /* everything tracked is saved whatever the mask */
+    glGetIntegerv(GL_ALPHA_TEST_FUNC, &cur.alpha_func);
+    glGetFloatv(GL_ALPHA_TEST_REF, &cur.alpha_ref);
     if (top < DEPTH)
         stack[top] = cur;
     top++;
@@ -109,12 +141,20 @@ void a2web_glPopAttrib(void)
         a2web_glDepthMask(s->depth_mask);
     if (s->blend_s != cur.blend_s || s->blend_d != cur.blend_d)
         a2web_glBlendFunc(s->blend_s, s->blend_d);
+    /* The skid marks set glAlphaFunc(GL_GREATER, 0) inside their pair; left
+     * there, the scenery's 0.5 cut-off was gone for the rest of the race and
+     * every colour-keyed edge drew a pink fringe. */
+    glAlphaFunc((GLenum)s->alpha_func, s->alpha_ref);
+    if (memcmp(s->color, cur.color, sizeof s->color) != 0)
+        a2web_glColor4f(s->color[0], s->color[1], s->color[2], s->color[3]);
 }
 
 /* ------------------------------------------------------------ textures */
 
 enum { MAXTEX = 8192 };
 static struct { unsigned short w, h, W, H; } texsize[MAXTEX]; /* by name */
+/* GL_REPEAT is the default; a texture clamped on both axes may keep its size */
+static unsigned char clamp_s[MAXTEX], clamp_t[MAXTEX];
 static GLuint bound;
 static GLint unpack_align = 4;
 
@@ -144,6 +184,17 @@ void a2web_glBindTexture(GLenum target, GLuint tex)
     glBindTexture(target, tex);
 }
 
+void a2web_glTexParameteri(GLenum target, GLenum pname, GLint param)
+{
+    if (target == GL_TEXTURE_2D && bound < MAXTEX) {
+        if (pname == GL_TEXTURE_WRAP_S)
+            clamp_s[bound] = param == GL_CLAMP_TO_EDGE;
+        else if (pname == GL_TEXTURE_WRAP_T)
+            clamp_t[bound] = param == GL_CLAMP_TO_EDGE;
+    }
+    glTexParameteri(target, pname, param);
+}
+
 void a2web_glPixelStorei(GLenum pname, GLint param)
 {
     if (pname == GL_UNPACK_ALIGNMENT)
@@ -155,6 +206,13 @@ void a2web_glTexImage2D(GLenum target, GLint level, GLint ifmt, GLsizei w, GLsiz
                         GLint border, GLenum fmt, GLenum type, const void *px)
 {
     int W = pot(w), H = pot(h), b = bpp(fmt);
+    /* WebGL 1 takes any size clamped to the edge (without mipmaps, which the
+     * port never makes).  Scaling those too stretched sprites and glyphs by a
+     * fraction, doubling some columns: thin extra lines in the HUD digits. */
+    if (bound < MAXTEX && clamp_s[bound] && clamp_t[bound]) {
+        W = w;
+        H = h;
+    }
     if (bound < MAXTEX) {
         texsize[bound].w = (unsigned short)w;
         texsize[bound].h = (unsigned short)h;
@@ -391,8 +449,13 @@ void a2web_gl_reset(void)
     cur.depth_mask = GL_TRUE;
     cur.blend_s = GL_ONE;
     cur.blend_d = GL_ZERO;
+    cur.alpha_func = GL_ALWAYS;
+    for (int i = 0; i < 4; i++)
+        cur.color[i] = 1.0f;
     top = 0;
     memset(texsize, 0, sizeof texsize);
+    memset(clamp_s, 0, sizeof clamp_s);
+    memset(clamp_t, 0, sizeof clamp_t);
     bound = 0;
     unpack_align = 4;
     memset(arr, 0, sizeof arr);
