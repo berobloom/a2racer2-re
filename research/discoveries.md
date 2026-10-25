@@ -1248,6 +1248,36 @@ things that had been inferred:
   **`_vang` guardrails, viaduct spans, treelines and fences** — all
   colour-keyed. An earlier note in the port had `_gra2` and `_vang` swapped,
   which drew building facades along the guardrail planes.
+- CONFIRMED (data, session 20): "`_gra2` = building facades" holds for the
+  **city** atlases only. `e01_gra2.tga` holds **no facades at all** (road
+  surface with lane lines, plain asphalt, a colour-key band), and
+  `e03_Gra2` / `e05_Gra2` are half road surface, half apartment/office
+  blocks. On the motorway stages most list-2 planes are flat (y = 0, slip
+  roads and underpasses such as etappe1 chunks 338-341), and the tall ones
+  sit in a few spans: etappe3 165-171 and 526-545, etappe5 113-123,
+  139-150, 321-336 and 562-653. Extra-plane counts: etappe0/6 1738, etappe2
+  1370, etappe4 2022 against etappe1 569, etappe3 204, etappe5 472. So
+  etappe1/3/5 are open motorway **by design**, not missing art: all four
+  plane atlases exist for every track, and every `.omp` object on all seven
+  tracks resolves to a mesh in RCS.IMG. The port draws the buildings in
+  those spans (rendered at etappe3 c160, etappe5 c110, etappe1 c625), and
+  the Wine capture `captures/warning_banner_etappe1_c430_s16.jpg` of the
+  original shows the same empty motorway at etappe1 c430.
+- CONFIRMED (data, session 20): **etappe4 (Rotterdam) breaks the `_vang`
+  pattern** -- `E04_vang.TGA` is a **building-facade atlas** (canal houses,
+  office and apartment blocks), not guardrails, so Rotterdam's 2,234
+  rail-list planes are mostly facades (tall spans at chunks 57-103, 279-322,
+  348-384, 516-633, 686-756, 775-835; y up to 752). It is also the **only
+  32 bpp TGA** in RCS.IMG (262,683 bytes against 197,147): the header's
+  descriptor byte is 0x00, i.e. **0 alpha bits**, and the fourth byte is 0
+  in all 65,536 texels. The port took that byte as alpha, so the whole atlas
+  was transparent and Rotterdam lost most of its buildings; `port/src/tga.c`
+  now reads alpha only when the descriptor declares alpha bits. LIKELY, not
+  verified at runtime: the original ignores the byte too (it uploads to
+  16-bit surfaces with a colour key).
+- CONFIRMED (archive): `e04_gra2x.TGA` (RCS.IMG #636) is a variant of the
+  Rotterdam facade atlas that **nothing references** -- the string `gra2x`
+  appears in neither spel.dat nor any .ini. A leftover asset.
 - CONFIRMED: **arg 0 is the circuit flag** (`1` = city/stad, `0` = highway/
   snelweg), and it reads 1,0,1,0,1,0,1 for etappe0..6 — independently matching
   the circuit/point-to-point split derived from the trigger markers and object

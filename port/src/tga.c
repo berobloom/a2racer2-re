@@ -79,6 +79,11 @@ int a2_tga_decode(a2_image *im, const uint8_t *data, size_t size, const char *na
         return -1;
     }
     int top_down = (desc & 0x20) != 0;
+    /* The low nibble of the descriptor is the alpha bit count.  E04_vang.TGA,
+     * the one 32 bpp file, declares 0 and its fourth byte is 0 everywhere;
+     * taking that as alpha made Rotterdam's whole rail-plane atlas -- its
+     * building facades -- invisible. */
+    int has_alpha = nchan == 4 && (desc & 0x0F) != 0;
     for (int y = 0; y < h; y++) {
         int src = top_down ? y : (h - 1 - y);
         const uint8_t *s = px + (size_t)src * w * nchan;
@@ -88,7 +93,7 @@ int a2_tga_decode(a2_image *im, const uint8_t *data, size_t size, const char *na
             d[x * 4 + 0] = s[x * nchan + 2];
             d[x * 4 + 1] = s[x * nchan + 1];
             d[x * 4 + 2] = s[x * nchan + 0];
-            d[x * 4 + 3] = (nchan == 4) ? s[x * nchan + 3] : 255;
+            d[x * 4 + 3] = has_alpha ? s[x * nchan + 3] : 255;
         }
     }
     free(px);
