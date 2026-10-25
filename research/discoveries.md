@@ -1278,6 +1278,20 @@ things that had been inferred:
 - CONFIRMED (archive): `e04_gra2x.TGA` (RCS.IMG #636) is a variant of the
   Rotterdam facade atlas that **nothing references** -- the string `gra2x`
   appears in neither spel.dat nor any .ini. A leftover asset.
+- STRONGLY SUPPORTED (static, session 20): **spel.dat never sets
+  `D3DRENDERSTATE_CULLMODE` (0x16)**, so the device keeps Direct3D's default,
+  `D3DCULL_CCW` -- clockwise faces drawn, as the port's
+  `glFrontFace(GL_CW)` + back-face culling does. Every `SetRenderState`
+  call (vtable +0x5C) with a constant state sets 0x01, 0x04, 0x07-0x09,
+  0x11-0x15, 0x1B, 0x1C, 0x22 or 0x29; the six with the state in a register
+  (0x41af65, 0x41f48a, 0x432748, 0x459fea and kin) all store the value to
+  the texture-handle cache 0x4ea834 first, i.e. TEXTUREHANDLE. Not checked
+  at runtime.
+- CONFIRMED (data, session 20): the `.omp` count of etappe2 (981) and
+  etappe6 (1556) is **one more than the records present**, and both files
+  end exactly on a 68-byte boundary, so no record is truncated; only the
+  header count is high. A sweep of etappe0, 2 and 6 every 60 chunks in the
+  port shows no missing buildings.
 - CONFIRMED: **arg 0 is the circuit flag** (`1` = city/stad, `0` = highway/
   snelweg), and it reads 1,0,1,0,1,0,1 for etappe0..6 — independently matching
   the circuit/point-to-point split derived from the trigger markers and object
