@@ -129,13 +129,13 @@ void m_draw_bars(menu *m, m_canvas *c, int x, int y, int car, int with_parts)
         m_blit_part(c, &bar, 0, 0, fill, bar.h, bx, by);
         if (have_rip)
             m_blit_part(c, &rip, 0, 0, fill, rip.h, bx, by);
-        /* labels and values are Windows text in the original: stand-ins */
-        m_gdi_text_ink(m, c, 47, bx - 1, by - 19, label[k]);
+        /* labels and values in STDFONT, placed on a capture of the original */
+        m_text_ink(c, &m->a.font[M_FONT_STD], 47, bx + 5, by - 19, label[k]);
         char v[16];
         float shown = bar_min[k] + (bar_max[k] - bar_min[k]) * (float)pct[k] * 0.01f;
         snprintf(v, sizeof v, "%d", (int)shown);
-        m_gdi_text_ink(m, c, 31, bx + 156 - 8 * (int)strlen(v), by + 2, v);
-        m_gdi_text_ink(m, c, 31, bx + 166, by + 2, k == 0 ? "km/h" : "%");
+        m_text_ink(c, &m->a.font[M_FONT_STD], 31, bx + 156 - 8 * (int)strlen(v), by - 2, v);
+        m_text_ink(c, &m->a.font[M_FONT_STD], 31, bx + 168, by - 2, k == 0 ? "km/h" : "%");
     }
 }
 

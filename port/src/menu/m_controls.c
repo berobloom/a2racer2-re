@@ -88,7 +88,9 @@ void m_controls_draw(menu *m, m_canvas *c)
         m_draw_sprite(m, c, m_anim_frame(m, 12 + k, device(m) == k ? 1 : 0), tx[k], ty[k]);
     /* the sensitivity panel: red (anim 17 frame 1, sprite 17) for the keyboard */
     m_draw_sprite(m, c, m_anim_frame(m, 17, device(m) == 0 ? 1 : 0), 193, 342);
-    m_gdi_text_ink(m, c, 31, 254, 358, "Gevoeligheid");
+    /* grey (ink 100) and at (242, 351) on a capture with the keyboard; white
+     * while the slider is live is the port's guess */
+    m_text_ink(c, &m->a.font[M_FONT_STD], sens_active(m) ? 31 : 100, 242, 351, "Gevoeligheid");
     /* 0x40332c: the sensitivity slider on hot area 7 (215,391), drawn only
      * for a joystick or wheel (the capture with the keyboard shows the empty
      * panel; the drag 0x403840 is guarded by device 2 or 3) */

@@ -170,10 +170,6 @@ int m_anim_frame(const menu *m, int anim, int frame);
 void m_draw_sprite(menu *m, m_canvas *c, int index, int x, int y);
 /* get_centered_text: x1 + ((x2 - x1 + 1) - n * cell) / 2 */
 void m_text_centred(m_canvas *c, const m_font *f, int x1, int x2, int y, const char *s);
-/* the Windows system-font text of draw_control_text (stand-in) */
-void m_gdi_text(menu *m, m_canvas *c, int x, int y, const char *s);
-/* the same in a colour, with a black drop shadow (the property bars, ...) */
-void m_gdi_text_ink(menu *m, m_canvas *c, int ink, int x, int y, const char *s);
 void m_request_open(menu *m, const char *title, const char *text,
                     void (*done)(menu *m, int yes), int arg);
 void m_garage_load(menu *m);

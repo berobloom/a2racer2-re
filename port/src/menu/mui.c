@@ -32,41 +32,6 @@ void m_text_centred(m_canvas *c, const m_font *f, int x1, int x2, int y, const c
     m_text(c, f, x1 + ((x2 - x1 + 1) - m_text_width(f, s)) / 2, y, s);
 }
 
-void m_gdi_text(menu *m, m_canvas *c, int x, int y, const char *s)
-{
-    const m_font *f = &m->a.font[M_FONT_STD];
-    static uint8_t dark[256 * 8 * 17];
-    static int made = 0;
-    if (!made) {
-        for (size_t i = 0; i < sizeof dark; i++)
-            dark[i] = f->glyphs[i] == M_KEY ? M_KEY : 0;
-        made = 1;
-    }
-    m_font black = *f;
-    black.glyphs = dark;
-    for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
-            if (dx || dy)
-                m_text(c, &black, x + dx, y + dy, s);
-    m_text(c, f, x, y, s);
-}
-
-void m_gdi_text_ink(menu *m, m_canvas *c, int ink, int x, int y, const char *s)
-{
-    const m_font *f = &m->a.font[M_FONT_STD];
-    static uint8_t dark[256 * 8 * 17];
-    static int made = 0;
-    if (!made) {
-        for (size_t i = 0; i < sizeof dark; i++)
-            dark[i] = f->glyphs[i] == M_KEY ? M_KEY : 0;
-        made = 1;
-    }
-    m_font black = *f;
-    black.glyphs = dark;
-    m_text(c, &black, x + 1, y + 1, s);
-    m_text_ink(c, f, ink, x, y, s);
-}
-
 /* ---- the yes/no requester (janeereq.cpp, 0x402430 / 0x402680) ---------- */
 
 #define REQ_X 119 /* (640 - 401) / 2: panel sprite 150 (anim 56), 401x222 */

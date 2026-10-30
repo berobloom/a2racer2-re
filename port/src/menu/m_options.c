@@ -145,15 +145,15 @@ void m_options_draw(menu *m, m_canvas *c)
     m_draw_sprite(m, c, m_anim_frame(m, 44, o->resolution == 3 ? 1 : 0), 407, 322);
     m_draw_sprite(m, c, m_anim_frame(m, 44, o->difficulty == 0 ? 1 : 0), 250, 427);
     m_draw_sprite(m, c, m_anim_frame(m, 44, o->difficulty == 1 ? 1 : 0), 407, 427);
-    /* labels: Windows text in the original; stand-ins */
-    m_gdi_text_ink(m, c, 31, 255, 104, "Geluidseffecten");
-    m_gdi_text_ink(m, c, 31, 255, 175, "Muziek");
-    m_gdi_text_ink(m, c, 31, 287, 312, "320 x 200");
-    m_gdi_text_ink(m, c, 31, 287, 340, "640 x 480");
-    m_gdi_text_ink(m, c, 31, 451, 328, "3D Kaart");
-    m_gdi_text_ink(m, c, 31, 295, 433, "Makkelijk");
-    m_gdi_text_ink(m, c, 31, 452, 433, "Moeilijk");
-    m_gdi_text_ink(m, c, 31, 598, 466, "v1.01");
+    /* labels: STDFONT, placed on a capture of the original (v1.01 not checked) */
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 255, 112, "Geluidseffecten");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 255, 183, "Muziek");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 287, 312, "320 x 200");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 287, 340, "640 x 480");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 452, 329, "3D Kaart");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 295, 434, "Makkelijk");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 452, 434, "Moeilijk");
+    m_text_ink(c, &m->a.font[M_FONT_STD], 31, 598, 466, "v1.01");
 }
 
 static int in(int x, int y, int rx, int ry, int w, int h)

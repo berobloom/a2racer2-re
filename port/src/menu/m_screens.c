@@ -19,16 +19,19 @@ static void main_draw(menu *m, m_canvas *c)
     m_text(c, std, 266, 286, "Volgende etappe");
     m_text(c, std, 506, 286, "Besturing");
 
-    /* player panel: Windows text in the original (draw_control_text) */
+    /* player panel: STDFONT as it is (its own black edge, no shadow), the
+     * labels in ink 31 and the values in 0x3a; every string but the name
+     * matches a capture of the original pixel for pixel, the name (empty
+     * there) is placed with the other values */
     char buf[64];
-    m_gdi_text(m, c, 206, 115, "Naam");
-    m_gdi_text(m, c, 206, 146, "Budget");
-    m_gdi_text(m, c, 206, 203, "Schade");
-    m_gdi_text(m, c, 291, 115, m_slot_name(&m->career));
-    snprintf(buf, sizeof buf, "FL %d", m_slot_int(&m->career, M_SLOT_MONEY));
-    m_gdi_text(m, c, 291, 146, buf);
+    m_text_ink(c, std, 31, 206, 114, "Naam");
+    m_text_ink(c, std, 31, 206, 145, "Budget");
+    m_text_ink(c, std, 31, 206, 201, "Schade");
+    m_text_ink(c, std, 0x3a, 296, 114, m_slot_name(&m->career));
+    snprintf(buf, sizeof buf, "Fl %d", m_slot_int(&m->career, M_SLOT_MONEY));
+    m_text_ink(c, std, 0x3a, 296, 145, buf);
     snprintf(buf, sizeof buf, "%d %%", m_slot_int(&m->career, M_SLOT_DAMAGE));
-    m_gdi_text(m, c, 295, 203, buf);
+    m_text_ink(c, std, 0x3a, 296, 201, buf);
 
     /* the car on its turntable (anim per car, 0x42df54); box sprite 133 at
      * (432, 107), frames centred on the box's anchor */

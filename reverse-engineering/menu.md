@@ -152,11 +152,24 @@ minus the frame's anchor (CONFIRMED against the capture).
   wrapped to 320 px from (165, 170), 26 px lines; JA / NEE plates (151, lit
   152) at (145, 313) / (335, 313) with SMALLBT labels. JA answers yes; NEE and
   Escape no. The port's requester matches a capture pixel for pixel.
-- **Windows text**: some labels are drawn through DrawTextA in the Windows
-  system font with a colour and a black outline/shadow (main screen's player
-  panel, the garage's property bar labels and values). The port uses STDFONT
-  stand-ins there.
-  CONFIRMED (session 13): menu.dat never creates or selects a font.
+- **Panel labels are STDFONT, not Windows text** (CONFIRMED, session 19,
+  captures). The player panel, the option labels, "Gevoeligheid" and the
+  garage's property-bar labels and values match **STDFONT drawn as it is**,
+  pixel for pixel. That means the glyph's own one-pixel black edge, no extra
+  outline or shadow, and the ink recoloured.
+  - 18 strings were fitted on main_idle, orig_options, orig_controls and
+    orig_garage, all at 0 pixels off.
+  - Inks: labels 31 (251,251,255), player values 0x3a (179,183,255),
+    property-bar labels 47 (255,255,139), Gevoeligheid with the keyboard
+    100 (107,107,123).
+  - The budget reads **"Fl %d"**, not "FL".
+  - Positions are in m_screens.c, m_options.c, m_controls.c and m_garage.c.
+  - Not checked: v1.01 (no fit).
+
+  The earlier reading, DrawTextA in the system font with a stand-in, was
+  wrong for these labels. Wine's system font cannot produce STDFONT glyphs.
+  What draw_control_text 0x4111a0 draws, if anything on these screens, is
+  open question 61. The code facts below (session 13) still stand:
   - It imports no CreateFont* call.
   - The style table at 0x439d38 ({font, bk mode, bk colour, text colour} ×
     4) holds font 0 in every entry, and nothing writes to it.
@@ -165,9 +178,6 @@ minus the frame's anchor (CONFIRMED against the capture).
     default font, the Windows **system font**.
   - The alignment is DT_SINGLELINE|DT_VCENTER with DT_CENTER (mode 0),
     DT_LEFT (mode 1) or DT_RIGHT (mode 2), inside the control's client rect.
-
-  Wine substitutes its own system font, so the captures do not show the
-  Windows 98 look either. The stand-ins stay.
 
 ## Garage (m_garage.cpp)
 
@@ -203,10 +213,9 @@ minus the frame's anchor (CONFIRMED against the capture).
   centred in a width of 225: `x = 214 + (225 - 8n) / 2` resp. 10n, at y 345
   and 365. (get_centered_text computes `x1 + ((x2 - x1 + 1) - n*cell) / 2`.)
 - Damage icon anim 20 at (349, 180); device icon anim 21 at (506, 333).
-- The player panel's labels and values (Naam, Budget, Schade, "FL 812000",
-  "7 %") are **Windows text**: DrawTextA (USER32) with the system font,
-  white on a black outline, from draw_control_text 0x411170. They cannot be
-  reproduced from the game's data; the port draws a stand-in.
+- The player panel's labels and values (Naam, Budget, Schade, "Fl 812000",
+  "7 %") are STDFONT: labels in ink 31 at x 206, values in ink 0x3a at x 296,
+  rows y 114 / 145 / 201 (see "Panel labels are STDFONT" above).
 
 ## Career: SLOTS.RAS, menu.ini, the race handoff
 

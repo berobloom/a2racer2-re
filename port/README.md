@@ -1009,9 +1009,9 @@ reads the results back.
   (`reverse-engineering/tools/menutools.py diff`); apart from the items
   below they match exactly. The Smacker decoder (`src/menu/msmacker.c`)
   matches ffmpeg frame for frame and sample for sample on all four videos.
-- **Approximations**: labels menu.dat draws as Windows text (DrawTextA in the
-  system font: the player panel, the property bars, the stage plates, option
-  labels) are STDFONT stand-ins. Focus follows the original: a screen reopens on its last
+- The player panel, property-bar and option labels are STDFONT, as in the
+  original. They match the captures pixel for pixel; see "Panel labels are
+  STDFONT" in reverse-engineering/menu.md. Focus follows the original: a screen reopens on its last
   focused button until the next race.
 - The race reads its keys from Game.ini [INPUT] (Windows VK codes), so the
   controls screen's bindings apply in a2view.
