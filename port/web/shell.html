@@ -32,6 +32,8 @@
   progress { width: 100%; height: 8px; margin-top: 12px; accent-color: var(--accent); }
   #log { font: 12px/1.4 ui-monospace, monospace; color: var(--muted); white-space: pre-wrap;
          max-height: 120px; overflow: auto; margin-top: 12px; }
+  a { color: var(--text); }
+  code { font: 13px ui-monospace, monospace; }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -40,6 +42,11 @@
   <div id="panel">
     <h1>A2 Racer II</h1>
     <p id="status">Starting…</p>
+    <p id="get" class="hidden">
+      Don't have it? The Redump disc image is on the Internet Archive:
+      <a href="https://archive.org/download/Redump.org14618/A2%20Racer%20II%20%28Netherlands%29%20%28v1.01%29.7z">A2&nbsp;Racer&nbsp;II&nbsp;(Netherlands)&nbsp;(v1.01).7z</a>.
+      Unpack it, mount the .cue/.bin (or turn it into an ISO, e.g. with bchunk), and choose the disc's <code>data</code> folder.
+    </p>
     <progress id="progress" class="hidden" max="100" value="0"></progress>
     <div id="pick" class="row hidden">
       <label class="btn" for="folder">Choose the game folder…</label>
@@ -83,6 +90,7 @@
     }
     const list = all.filter((f) => dir(f) === dir(rcs) && !SKIP.test(f.name));
     $('pick').classList.add('hidden');
+    $('get').classList.add('hidden');
     $('progress').classList.remove('hidden');
     let done = 0;
     for (const f of list) {
@@ -137,6 +145,7 @@
         status('This port needs the original game\'s files, which it does not include. ' +
                'Choose your A2 Racer II folder once; the files are copied into this browser.');
         $('pick').classList.remove('hidden');
+        $('get').classList.remove('hidden');
       }
     },
   };
