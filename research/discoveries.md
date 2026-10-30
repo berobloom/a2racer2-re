@@ -8070,3 +8070,37 @@ them.
   0x4260b9 does after the step: y onto the plane, and v_lat, v_y, rpm, skid
   and roll set to 0. The car is still driven by the port's own model, not
   handle_basic_ai, as before.
+
+## Race position: the same-chunk tie, and when it is counted (session 19)
+
+- CONFIRMED (code): **0x408780 (obj, pos) decides a tie.** It takes obj's
+  waypoint (c_3dobject +0x20) and that waypoint's first link that is not -1,
+  in the order +0x14, +0x1c, +0x18, then the back link +0x20 (not turned
+  round). It returns 1, "pos is behind obj", when
+  `(pos - obj) . (next_wp - wp) < 0` (xz). The expression it actually compares
+  with 0 is that dot product divided by |next - wp| + |pos - obj|, a sum
+  rather than a product, so only the sign counts. If the waypoint has no link
+  at all, it uses the bearing instead (0x401690): behind when it is strictly
+  between 0x400 and 0xc00.
+- CONFIRMED (code): **0x408c00** (the player's position) counts a racer as
+  ahead when its progress (+0x60) is above 0x4d9e70, and on a tie unless
+  0x408780(player, racer xz) says it is behind. **0x408cb0** ranks each racer
+  the same way, with 0x408780 called on the racer itself: against the player
+  (0x408d4f) and against each other racer (0x408e0b).
+- Runtime (port, autopilot, etappe1 and etappe3, logging every 3rd frame and
+  measuring along the chunk walk 0x445a10):
+  - Before the change, the port gave every tie to the player. It ranked the
+    player wrongly in 128 of 435 and 288 of 543 frames with a racer within
+    1.5 chunks, always too high.
+  - With 0x408780 the counts are 24 and 8. They are near side-by-side
+    moments, where the waypoint's direction and the chunk's direction
+    disagree on who is in front.
+  - The port's nearest-chunk lookup never jumped by more than 2 chunks on any
+    waypoint of the 7 tracks (one exception: etappe3 chunk 0 → 61). So it is
+    not a source of wrong positions.
+- Port bug, found from a user report ("I should have finished 2nd but was
+  3rd"): main.c latched the finishing position from the last value the HUD
+  had drawn. The HUD skips the position while the player is pulled over,
+  at overlay detail 0 and with the HUD hidden, so an overtake made then was
+  not counted. The position is now counted every frame until the finish,
+  as 0x409051 does in the original.

@@ -27,7 +27,8 @@
  *
  * The grid is the original's: one car a chunk back from STARTCHUNK, in the
  * player's lane, the racers in the places the player does not hold.
- * The port's own choice: the ranking's tie-break (the original's 0x408780 is not traced).
+ * Ranking ties (same chunk count) are split by 0x408780: along the waypoint
+ * the first car is on, is the other in front of it?
  */
 #ifndef A2_RACERS_H
 #define A2_RACERS_H

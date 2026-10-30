@@ -269,8 +269,10 @@ void a2_racers_free(a2_racers *r)
 
 void a2_racers_set_player(a2_racers *r, const a2_ai_player *p)
 {
-    if (r && p)
+    if (r && p) {
         r->player = *p;
+        r->player.rank = a2_racers_position(r, p->progress_abs) - 1;
+    }
 }
 
 void a2_racers_register(const a2_racers *r, a2_aiw *w)
@@ -478,6 +480,25 @@ static void st_held(racer *c, a2_racers *r, float dt)
     a2_ai_body(&c->c, &r->env, dt);
 }
 
+/* 0x408780: is (x, z) behind the vehicle on waypoint `wp`?  Measured along
+ * that waypoint's first link (+0x14, +0x1c, +0x18, then the back link +0x20,
+ * not turned round) from the waypoint to the next; with no link at all, by
+ * the bearing from the vehicle's heading (strictly 0x400..0xc00). */
+static int is_behind(const a2_aiw *w, int wp, const a2_drive *d, float ox, float oz, float x,
+                     float z)
+{
+    static const int TRY[4] = {A2_AIW_STRAIGHT, A2_AIW_LANE_DOWN, A2_AIW_LANE_UP, A2_AIW_BACK};
+    int next = -1;
+    for (int k = 0; k < 4 && next < 0; k++)
+        next = a2_aiw_link(w, wp, TRY[k]);
+    float a[3], b[3];
+    if (next < 0 || !a2_aiw_wp(w, wp, a, NULL, NULL) || !a2_aiw_wp(w, next, b, NULL, NULL)) {
+        int br = a2_ai_bearing(d, x, z);
+        return br > 0x400 && br < 0xc00;
+    }
+    return (x - ox) * (b[0] - a[0]) + (z - oz) * (b[2] - a[2]) < 0.0f;
+}
+
 /* 0x409540: the time spent in the chunk, and progress */
 static void track_chunk(a2_racers *r, racer *c, float dt)
 {
@@ -547,14 +568,24 @@ void a2_racers_update(a2_racers *r, float dt, float race_time)
             fprintf(stderr, "\n");
         }
     }
-    /* 0x408cb0: ranks, by progress (ties: the one further along the road) */
+    /* 0x408cb0: ranks, by progress; a tie goes to whichever is in front
+     * along the racer's own waypoint (0x408780) */
     for (int i = 0; i < r->count; i++) {
         racer *c = &r->cars[i];
         int ahead = 0;
-        for (int j = 0; j < r->count; j++)
-            if (j != i && r->cars[j].alive && r->cars[j].progress > c->progress)
+        for (int j = 0; j < r->count; j++) {
+            const racer *o = &r->cars[j];
+            if (j == i || !o->alive)
+                continue;
+            if (o->progress > c->progress ||
+                (o->progress == c->progress &&
+                 !is_behind(r->w, c->wp, &c->c.d, c->c.d.x, c->c.d.z, o->c.d.x, o->c.d.z)))
                 ahead++;
-        if (r->player.progress_abs > (float)c->progress)
+        }
+        float pp = r->player.progress_abs;
+        if (pp > (float)c->progress ||
+            ((int)pp == c->progress &&
+             !is_behind(r->w, c->wp, &c->c.d, c->c.d.x, c->c.d.z, r->player.x, r->player.z)))
             ahead++;
         c->rank = ahead;
     }
@@ -622,14 +653,24 @@ float a2_racer_progress(const a2_racers *r, int i)
 int a2_racers_position(const a2_racers *r, float player_progress)
 {
     int ahead = 0;
-    if (r)
-        for (int i = 0; i < r->count; i++)
-            /* A racer that has finished is ahead of a player who has not:
-             * its progress stops at the finish, which the player's own count
-             * can pass by a chunk on the frame it crosses. */
-            if (r->cars[i].alive &&
-                (r->cars[i].finished || a2_racer_progress(r, i) > player_progress))
-                ahead++;
+    if (!r)
+        return 1;
+    const a2_ai_player *p = &r->player;
+    for (int i = 0; i < r->count; i++) {
+        const racer *c = &r->cars[i];
+        if (!c->alive)
+            continue;
+        /* A racer that has finished is ahead of a player who has not:
+         * its progress stops at the finish, which the player's own count
+         * can pass by a chunk on the frame it crosses. */
+        if (c->finished || (float)c->progress > player_progress)
+            ahead++;
+        /* 0x408c00: in the same chunk the racer is ahead unless it is behind
+         * the player along the player's waypoint (0x408780) */
+        else if ((float)c->progress == player_progress && p->d &&
+                 !is_behind(r->w, p->wp, p->d, p->x, p->z, c->c.d.x, c->c.d.z))
+            ahead++;
+    }
     return ahead + 1;
 }
 

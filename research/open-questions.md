@@ -991,3 +991,13 @@ phrasing may not be the original's.)*
     cops still use the global nearest-chunk lookup with a one-chunk step back
     rather than 0x445a10's walk. On the waypoints both give the same height
     (chunk_lookup.py); positions off the waypoints were not checked.
+
+## New questions (session 19)
+
+61. **What does draw_control_text 0x4111a0 draw?** The labels it was thought
+    to draw are STDFONT: the player panel, the options, Gevoeligheid and the
+    garage's property bars. They match the captures pixel for pixel; see
+    menu.md "Panel labels are STDFONT". Either it draws text that was not
+    captured, or it is called with empty strings, or it is not called on
+    these screens at all. Next: break on DrawTextA under Wine on the main
+    screen and log the strings.

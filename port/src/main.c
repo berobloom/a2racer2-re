@@ -2839,6 +2839,12 @@ int main(int argc, char **argv)
                 progress_chunk = ch;
                 player_progress += (float)step;
             }
+            /* 0x409051: the position is counted every frame until the
+             * finish, not only when the HUD draws it -- the HUD is skipped
+             * while pulled over and at overlay detail 0, and a position left
+             * over from then was what the finish booked. */
+            if (!finished)
+                final_pos = a2_racers_position(racers, player_progress);
 
             /* Collisions, with the original's impulse (collide_impulse):
              * barriers (the .cmp rails, a world collision), the scenery the
@@ -3595,7 +3601,6 @@ int main(int argc, char **argv)
             aip.wp = a2_aiw_nearest(aiw, aip.chunk, car.x, car.y, car.z, 1);
             aip.progress = player_progress - (float)player_chunk0;
             aip.progress_abs = player_progress;
-            aip.rank = racers ? a2_racers_position(racers, player_progress) - 1 : 0;
             aip.skid = drv.skid;
             aip.stopped = drv.stopped;
             /* the game mode 0x4d9a7c: 8 the police sequence, 6 game over,
