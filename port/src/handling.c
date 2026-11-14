@@ -100,10 +100,10 @@ int a2_handling_load(a2_handling_table *t, const char *datadir)
          * The drag coefficient is field 8, which the earlier reading had as the
          * centre-of-gravity height: it is the field the drag cluster loads
          * beside the air density and the frontal area, and its values are
-         * better Cds than radii -- 0.38 for an ordinary car, 0.33 for the
+         * better Cds than radii: 0.38 for an ordinary car, 0.33 for the
          * Diablo, 0.65 for the bus. That last one is what decides it: a bus's
          * Cd really is about 0.65, while its centre of gravity is nowhere near
-         * 0.65 m off the ground. Marked LIKELY rather than certain -- the
+         * 0.65 m off the ground. Marked LIKELY rather than certain: the
          * multiply has not been traced end to end. */
         h->wheel_radius_table = fld(p, 22); /* the real radius, recorded not used */
         h->cd_table = fld(p, 8);            /* the real Cd, recorded not used */
@@ -164,7 +164,7 @@ float a2_handling_wheel_radius(const a2_handling *h, int upgraded, float top_spe
     int top = a2_handling_top_gear(h, upgraded);
     /* The table gives the wheel radius outright in field 22, and the game's own
      * driveline formula proves it: at 0x40e299 it computes
-     * `gear * final * 9.554 / field22`, and 9.554 is 60/(2*pi) -- the constant
+     * `gear * final * 9.554 / field22`, and 9.554 is 60/(2*pi): the constant
      * that turns road speed into engine rpm, with the radius as the divisor.
      * The values are the radii they look like: 0.29-0.33 m for a car, 0.50 for
      * the bus. Feeding the rated top speeds back through gives 4350-6610 rpm
@@ -172,7 +172,7 @@ float a2_handling_wheel_radius(const a2_handling *h, int upgraded, float top_spe
      * should do.
      *
      * This replaces deriving it from the assumption that a car sits exactly on
-     * the redline at its rated top speed -- which those rpm figures show it
+     * the redline at its rated top speed, which those rpm figures show it
      * does not.
      *
      * **The model does not use it**, and here is why: feeding
@@ -182,8 +182,8 @@ float a2_handling_wheel_radius(const a2_handling *h, int upgraded, float top_spe
      * should take 13 s to 100 km/h does it in 5.9. Adding a traction limit off
      * the grip and CoG fields recovers the Trabant (9.9 s) but leaves the quick
      * cars three times too fast, because for them the cap never binds. Until
-     * the real torque curve is identified -- fields 35/36 are the best
-     * candidate -- the fitted radius below reproduces the game's own 0-100
+     * the real torque curve is identified, fields 35/36 are the best
+     * candidate, the fitted radius below reproduces the game's own 0-100
      * figures far better, so that is what is kept. */
     if (g[top] <= 0.0f || h->rpm_max <= 0.0f || top_speed_ms <= 0.0f)
         return 0.3f;
@@ -217,7 +217,7 @@ float a2_handling_drive_force(const a2_handling *h, int upgraded, int gear, floa
         *out_rpm = rpm;
 
     /* Torque curve: peak at rpm_torque, tapering either side.  The table gives
-     * the peak-torque rpm and the redline but no curve, so the shape is ours --
+     * the peak-torque rpm and the redline but no curve, so the shape is ours:
      * a simple parabola through the peak, floored so the engine never makes
      * nothing. */
     float x = (rpm - h->rpm_torque) / (h->rpm_max - h->rpm_torque > 1.0f
@@ -318,7 +318,7 @@ void a2_handling_calibrate(a2_handling *h, int upgraded, float top_speed_ms)
      * tractive force in top gear equals the drag plus rolling resistance.
      *
      * The alternative was to solve it against the table's own 0-100 time
-     * (field 10), which it then matched exactly for all seven cars -- but that
+     * (field 10), which it then matched exactly for all seven cars, but that
      * left every car drag-limited well short of its rated speed (a Trabant
      * stopped at 136 km/h against 151), because the synthesised torque curve
      * gives too much at the peak and too little at the top end.  The rated top
@@ -348,7 +348,7 @@ void a2_handling_calibrate(a2_handling *h, int upgraded, float top_speed_ms)
         h->torque_scale = 20.0f;
 }
 
-/* Time to 100 km/h under the calibrated model -- a diagnostic, to compare with
+/* Time to 100 km/h under the calibrated model: a diagnostic, to compare with
  * the table's own field 10. */
 float a2_handling_zero_to_100(const a2_handling *h, int upgraded)
 {

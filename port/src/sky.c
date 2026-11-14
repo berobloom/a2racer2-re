@@ -91,7 +91,7 @@ void a2_sky_draw(const a2_sky *s, float yaw_deg, float heading, unsigned horizon
     if (!s || w <= 0 || h <= 0)
         return;
 
-    /* scroll_x = (T[heading] + 1) * -(imgW/2), wrapped -- as a fraction of the
+    /* scroll_x = (T[heading] + 1) * -(imgW/2), wrapped, as a fraction of the
      * image width that is (sin(yaw) + 1) * -0.5 wrapped into [0, 1). */
     float u0 = (sinf(yaw_deg * (float)M_PI / 180.0f) + 1.0f) * -0.5f;
     u0 -= floorf(u0);

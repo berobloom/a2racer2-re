@@ -21,7 +21,7 @@ Confidence levels per AGENTS.md.
   2. **`getenv("NOCD")`** (0x4172ba → `fcn.0041c870`, a textbook MSVC `getenv`:
      scans the `environ` block at 0x44F9B0, length-compares the name, requires
      `'='` at name length). If the variable exists, it stores `NOCD[0]` as the
-     drive letter in the global 0x4456D0 and **returns immediately** — no drive
+     drive letter in the global 0x4456D0 and **returns immediately**: no drive
      scan, no existence check;
   3. otherwise `find_cdrom_drive` (0x418D20, `Hwinfo.cpp`) returns a drive
      letter from the pre-built drive list, or -1 → the fatal error;
@@ -50,7 +50,7 @@ bchunk "A2 Racer II (Netherlands) (v1.01).bin" "…​.cue" a2   # → a201.iso
 7z x a201.iso -ocd 'data/*'
 cp -r cd/data game && chmod -R u+w game
 
-# 2. Raser.ini: RESOLUTION=3 (640x480x16) — see the Ramp-device trap below.
+# 2. Raser.ini: RESOLUTION=3 (640x480x16); see the Ramp-device trap below.
 #    DEBUGON=1 enables debug.txt; TWEAK_MODE=1 enables the dev extras.
 
 # 3. an X display whose root window matches the requested mode
@@ -74,7 +74,7 @@ Verified with wine-9.0, Xvfb, ImageMagick `import`.
   `could not find mode` → `Initlib.cpp(1217) : could not set display mode`
   and hangs. An Xvfb screen of exactly `640x480x24` makes the 8-, 16- and
   32-bit 640x480 modes all available. (The older note that "Xvfb can't do
-  640x480x16" is wrong — Wine synthesises the 16bpp mode from a 24bpp root.)
+  640x480x16" is wrong: Wine synthesises the 16bpp mode from a 24bpp root.)
 - CONFIRMED: **do not run 8-bit modes under Wine.** `Raser.ini RESOLUTION=0/1`
   (8bpp) makes the device chooser (0x4601E0) request
   `IID_IDirect3DRampDevice` ({F2086B20-259F-11CF-A31A-00AA00B93356}), which Wine
@@ -89,12 +89,12 @@ Verified with wine-9.0, Xvfb, ImageMagick `import`.
 A ~40 s run of `spel.dat` produced 312,228 lines. High-value content:
 
 - **Archive ground truth.** `winlib Fileio.cpp(296)` logs every archive read as
-  `file open succeeded [name] IDX/COUNT pos OFFSET 3 0` — the entry index and
+  `file open succeeded [name] IDX/COUNT pos OFFSET 3 0`: the entry index and
   absolute byte offset inside the IMG. At startup the loader also dumps the
   whole directory as a `Bestand / Grootte` (name/size) table. Used in session 5
   to prove the named-IND layout (216 offsets + 801 sizes, all exact).
 - **Mesh loader.** `**** LOADING MESH **** / mesh : [name] / vertices : N /
-  triangles : M` — gives the `.d3d` header meaning directly.
+  triangles : M` gives the `.d3d` header meaning directly.
 - **D3D device enumeration**, texture-format enumeration, blend-mode caps.
 - Named init stages (`init_game`, `ini_load_all`, `set_game_etappe`,
   `init_3d_library`, …) and T_ARRAY allocations with element type + capacity

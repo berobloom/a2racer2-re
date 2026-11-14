@@ -34,7 +34,7 @@ int a2_image_decode(a2_image *im, const uint8_t *data, size_t size, const char *
  * The game stores per-track palettes this way (e00_pal.pcx is a 16x16 carrier). */
 int a2_pcx_palette(uint8_t out[768], const uint8_t *data, size_t size);
 
-/* Apply the game's colour key.  The key is (255, 0, 127) -- a rose pink, not
+/* Apply the game's colour key.  The key is (255, 0, 127): a rose pink, not
  * magenta: it is the dominant colour in 41 of the shipped textures and appears
  * in 54 of 106, whereas pure magenta appears in exactly one. */
 void a2_image_key_transparent(a2_image *im);

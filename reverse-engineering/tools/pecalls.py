@@ -7,7 +7,7 @@
                                                 immediates that point at strings
                                                 are shown as the string
 
-Session 12: used to list every Game.ini read/write in spel.dat and menu.dat
+Used to list every Game.ini read/write in spel.dat and menu.dat
 (see "What spel.dat writes back to Game.ini" in research/discoveries.md).
 """
 import os

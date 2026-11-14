@@ -4,8 +4,8 @@
  * save_options 0x408ab0): i32 effects on, i32 music on, u8 effects volume,
  * u8 music volume, i32 resolution, i32 difficulty; missing, it is created
  * with 1, 1, 80, 80, 0, 1 (init_options 0x408b00).  At START,
- * ini_write_options (0x401820) puts them into Raser.ini -- RESOLUTION, and
- * SFXVOLUME / MUSICVOLUME as 3100 - 30 * volume when on, 0 when off -- and
+ * ini_write_options (0x401820) puts them into Raser.ini (RESOLUTION, and
+ * SFXVOLUME / MUSICVOLUME as 3100 - 30 * volume when on, 0 when off) and
  * Game.ini [OPTIONS] Difficulty.
  *
  * The screen (form 0x430f60): effects / music check boxes (anim 46, at
@@ -99,7 +99,7 @@ void m_options_write_ini(const menu *m)
  * track (anim 43) at (x, y); the knob (anim 41) at
  * x + 8 + (w - knob_w - 16) * v / 100, clamped to x + 1 .. x + track_w;
  * between them the fill (anim 42) Blt-stretched from its whole sprite onto
- * (x + 8, y + 5) .. (knob, y + h - 5) -- so the stripes widen with the value
+ * (x + 8, y + 5) .. (knob, y + h - 5), so the stripes widen with the value
  * (0x4122e0, IDirectDrawSurface::Blt with two rects); the knob at y + 2. */
 #define BAR_X 377
 #define BAR_W 151

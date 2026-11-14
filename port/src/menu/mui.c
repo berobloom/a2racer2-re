@@ -95,7 +95,7 @@ static void req_draw(menu *m, m_canvas *c)
         for (int x = (y & 1) ^ 1; x < M_W; x += 2)
             c->px[y * M_W + x] = 0;
     /* the panel is drawn by its anchor (200, 111) at the screen centre, so it
-     * lands at x 120 -- one right of the (640 - 401) / 2 the buttons and text
+     * lands at x 120: one right of the (640 - 401) / 2 the buttons and text
      * are laid out from (measured: sprite 150 at (120, 129)) */
     m_sprite p;
     if (m_sprite_get(&m->a, m_anim_frame(m, 56, 0), &p) == 0)
@@ -442,7 +442,7 @@ void m_ui_mouse_move(menu *m, int x, int y)
 
 /* menu.dat acts on the mouse press, not the release: holding the button down
  * on GARAGE already shows the garage (Wine capture), and the screens' event
- * handlers play klik.wav as they take the event -- so the click is heard as
+ * handlers play klik.wav as they take the event, so the click is heard as
  * the button goes down. */
 void m_ui_mouse_button(menu *m, int down)
 {

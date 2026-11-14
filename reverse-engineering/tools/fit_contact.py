@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Compare a model of the swept corner test 0x44a520 with the original,
-run under Unicorn (emu_contact.py), on random boxes (session 14).
+run under Unicorn (emu_contact.py), on random boxes.
 
 Usage: fit_contact.py <spel.dat> [cases]
 """

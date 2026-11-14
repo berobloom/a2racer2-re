@@ -113,18 +113,18 @@ struct a2_scene {
     int *chunk_inst_count;
 };
 
-/* ------------------------------------------------------------- textures */
+/* Textures */
 
 /* Which texture each .rmp plane list uses.
  *
- * CONFIRMED mechanism (session 6): textures are bound through the anim system.
+ * CONFIRMED mechanism: textures are bound through the anim system.
  * Every track has an `E0x_ALGEMENE_TEXTURES_ANIM` in spel.dat's static anim
- * table, and each of them has exactly **four** frames -- matching the four
- * plane lists -- in the same order on all six tracks:
+ * table, and each of them has exactly **four** frames, matching the four
+ * plane lists, in the same order on all six tracks:
  *
  *     [0] e0x_gras   [1] e0x_gra2   [2] e0x_weg   [3] e0x_vang
  *
- * CONFIRMED order (session 7): `Raser.ini`'s `[ETAPPES]` table names the four
+ * CONFIRMED order: `Raser.ini`'s `[ETAPPES]` table names the four
  * textures per track **in plane-list order**, which settles what was open
  * question #31:
  *
@@ -132,7 +132,7 @@ struct a2_scene {
  *
  * so list 0 -> _weg, list 1 -> _gras, list 2 -> _gra2, list 3 -> _vang.  (The
  * anim table's own frame order is gras/gra2/weg/vang, which is NOT the list
- * order -- binding by frame index would mis-assign all four.)
+ * order: binding by frame index would mis-assign all four.)
  *
  * What the atlases actually hold, read off the decoded images:
  *   _weg   road surface        _gras  ground/grass
@@ -145,7 +145,7 @@ struct a2_scene {
  * true-colour so it is preferred. */
 /* The game names all four lists itself, in its own overflow messages:
  * "Too many road-planes", "land-planes", "extra-planes", "rail-planes", in
- * this order -- which lines up with the Raser.ini [MAPS] suffixes weg / gras /
+ * this order, which lines up with the Raser.ini [MAPS] suffixes weg / gras /
  * gra2 / vang. */
 static const char *const list_texture_suffix[A2_RMP_LISTS][4] = {
     {"_Weg.tga", "_weg.tga", "_weg.pcx", NULL},    /* list 0: road-planes */
@@ -217,7 +217,7 @@ static unsigned load_texture(const a2_archive *rcs, const char *prefix, const ch
     return 0;
 }
 
-/* ---------------------------------------------------------- plane lists */
+/* Plane lists */
 
 static int build_list(plane_batch *b, const a2_track *tr, int list)
 {
@@ -269,7 +269,7 @@ static void free_list(plane_batch *b)
     memset(b, 0, sizeof(*b));
 }
 
-/* ---------------------------------------------------------- .omp meshes */
+/* .omp meshes */
 
 /* Look up (or upload) a texture by its archive name. */
 static unsigned cached_texture(a2_scene *s, const a2_archive *rcs, const char *name)
@@ -361,8 +361,7 @@ static int find_or_load_mesh(a2_scene *s, const a2_archive *rcs, const char *mes
     }
     /* No shading: MESH.CPP's loader writes every vertex colour as 0x00FFFFFF
      * and specular 0 (0x455cfa / 0x455d08), and the transform copies them
-     * (0x454dfc), so a mesh is drawn at its texture's own colour.  (The port
-     * used to shade by a key light of its own, down to 45%.) */
+     * (0x454dfc), so a mesh is drawn at its texture's own colour. */
     for (uint32_t i = 0; i < m.vertex_count; i++) {
         const a2_vertex *sv = &m.vertices[i];
         g->verts[i].x = sv->x;
@@ -411,12 +410,12 @@ static int find_or_load_mesh(a2_scene *s, const a2_archive *rcs, const char *mes
  *
  * Only two shapes exist in the shipped data, and the mesh names say what each
  * one is.  The traffic lights have three frames whose mesh names end in the
- * Dutch colour initial -- c_stoplg / c_stoplo / c_stoplr and c_stplg2 /
- * c_stplo2 / c_stplr2, i.e. **g**roen, **o**ranje, **r**ood -- so frame order
+ * Dutch colour initial (c_stoplg / c_stoplo / c_stoplr and c_stplg2 /
+ * c_stplo2 / c_stplr2, i.e. **g**roen, **o**ranje, **r**ood), so frame order
  * is green, amber, red.  The roadworks arrows have two (A_pijl0 / A_pijl1,
  * and likewise for A_lpijl and c_pijl), which flash.
  *
- * The durations are code, not data (session 13).  The traffic-light handler
+ * The durations are code, not data.  The traffic-light handler
  * 0x429480 (.omp type 4) shows frame 2 / 0 / 1 for the global state 0x48c484
  * = 0 / 3 / 2, which steps on timer 1: red 5000 ms, green 5000 ms, amber
  * 500 ms (0x42951d; 0x4295a0 starts it red).  The arrow handler 0x4296b0
@@ -528,7 +527,7 @@ static int build_objects(a2_scene *s, const a2_track *tr, const a2_archive *rcs,
          * pylons, barriers and cameras are knocked over instead (see
          * a2_scene_props_step).  The original can push the arrows (mass
          * 13000) and police cars (1300, damped by 0x4293a0); the port cannot,
-         * so anything on the driving line itself stays passable -- the
+         * so anything on the driving line itself stays passable: the
          * shipped tracks park police cars 1-8 units from a lane waypoint, and
          * the autopilot has no way round static objects. */
         in->solid = o->type == 5 || o->type == 8 || o->type == 10;
@@ -568,7 +567,7 @@ static int build_objects(a2_scene *s, const a2_track *tr, const a2_archive *rcs,
     return 0;
 }
 
-/* ------------------------------------------------------------------ api */
+/* API */
 
 /* One carriageway's running lanes in `chunk`, ordered across the road from
  * the median outward (so the last is the slow lane), for a list driven in
@@ -1360,7 +1359,7 @@ int a2_scene_blit(const a2_scene *s, const char *tex_name, int x, int y, int w, 
  *
  * The original keeps one shared quad, S_SHADOW_ANIM (init_car_shadow_object,
  * 0x410df0), and the engine's vehicle draw loop calls the shadow hook
- * (0x41d460) for every vehicle just before drawing it -- player, racers,
+ * (0x41d460) for every vehicle just before drawing it: player, racers,
  * traffic and police alike.  For each car the hook:
  *   - takes the quad's corners from the car mesh's bounding box (x and z of
  *     four box corners), so the shadow is the car's own footprint;
@@ -1714,7 +1713,7 @@ int a2_scene_collide_objects(const a2_scene *s, int chunk, float *x, float *z, f
     return hit;
 }
 
-/* ------------------------------------------------------------ knock-over props
+/* Knock-over props
  *
  * The .omp type handlers registered by 0x429310 (table 0x48c2b4) run every
  * frame for the objects in a window of chunks (0x4408fc).  Three of them knock

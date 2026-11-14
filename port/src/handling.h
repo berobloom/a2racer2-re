@@ -1,8 +1,8 @@
 /* The vehicle physics model at VA 0x484B18 in spel.dat.
  *
- * 16 records of 238 bytes: `char name[14]` then 56 fields.  Unlike CARS.DAT --
+ * 16 records of 238 bytes: `char name[14]` then 56 fields.  Unlike CARS.DAT,
  * which gives the seven player cars a per-gear *speed ceiling* and an
- * acceleration constant -- this table is a physical model in **real-world
+ * acceleration constant, this table is a physical model in **real-world
  * units**, and covers all 16 vehicle types including the police car, the ADAC
  * van and every traffic vehicle.
  *
@@ -35,38 +35,38 @@ typedef struct {
      * their sum is the wheelbase.  The game itself adds them (0x40d042), they
      * differ for the traffic vehicles (1.06 and 1.46, a rearward CoG) where the
      * racers have them equal, and the sums land on the real cars almost exactly
-     * -- Trabant 2.02 against a real 2.02, Porsche 2.30 against 2.27, Diablo
+     *: Trabant 2.02 against a real 2.02, Porsche 2.30 against 2.27, Diablo
      * 2.66 against 2.65, and 8.00 for an 11.5 m bus.  With field 8 they are the
      * standard trio for axle load and weight transfer. */
     float cog_to_front; /* field 5,  m */
     float cog_to_rear;  /* field 6,  m */
     float wheelbase;    /* fields 5 + 6, m */
-    float wheel_radius_table; /* field 22, m -- the radius the table states */
-    float cd_table;     /* field 8, the real Cd -- recorded, not used */
+    float wheel_radius_table; /* field 22, m: the radius the table states */
+    float cd_table;     /* field 8, the real Cd: recorded, not used */
     /* Field 9 is the frontal area, which the game reads next to the air density
      * it pairs with in the drag term: 1.80 m^2 for a car, 1.77 for the Porsche,
-     * 1.70 for the Diablo and 9.00 for the bus.  This used to be derived as
-     * width x height, which was within about 5% and so never looked wrong. */
+     * 1.70 for the Diablo and 9.00 for the bus.  Width x height comes within
+     * about 5%, which hides the difference. */
     float frontal_area; /* field 9,  m^2 */
     /* Fields 15-20 are two per-axle triples, front then rear, and the rear is
      * always the stiffer of the two.  The third of each triple orders exactly
-     * by how quick the car is -- Trabant 0.59/0.65, Astra 1.52/1.90, Porsche
-     * 2.05/2.35, Diablo 2.95/3.50, every traffic vehicle a flat 1.05 -- which
+     * by how quick the car is (Trabant 0.59/0.65, Astra 1.52/1.90, Porsche
+     * 2.05/2.35, Diablo 2.95/3.50, every traffic vehicle a flat 1.05), which
      * is what marks it as cornering grip.  The first of each (8.43 traffic,
      * 10.7-16.0 racers) and the second (1.11 racers, 1.70 traffic) are not
      * identified. */
-    float grip_front; /* field 17 -- Pacejka D, front */
-    float grip_rear;  /* field 20 -- Pacejka D, rear  */
+    float grip_front; /* field 17: Pacejka D, front */
+    float grip_rear;  /* field 20: Pacejka D, rear  */
     /* Field 54, the blanket lateral-grip multiplier.  The tyre function at
      * 0x40e530 multiplies it into *both* axles' Pacejka output:
      *     F_lat = -axle_load * D * f54 * sin(C * atan(B * slip))
      * (loaded at 0x40e59d, stashed at [esp+0x14], applied to the front at
      * 0x40e5bb and the rear at 0x40e5d6).  It is 1.20 for all seven racers and
-     * 1.00 for all nine traffic vehicles -- a flat 20% cornering advantage.
+     * 1.00 for all nine traffic vehicles: a flat 20% cornering advantage.
      * Because the force is proportional to the axle load, D * f54 *is* the
      * peak lateral acceleration in g, which is what lateral_limit() uses. */
     float grip_mult;  /* field 54 */
-    /* Field 53, the brake coefficient -- peak braking in g.  The brake function
+    /* Field 53, the brake coefficient: peak braking in g.  The brake function
      * at 0x40d7d0 is the drive function with the gear train removed:
      *     F_brake = -axle_load * f53 * brake_input      (0x40d801, 0x40d822)
      * so f53 * gravity is the deceleration directly.  It orders monotonically
@@ -78,19 +78,19 @@ typedef struct {
     float brake_coef; /* field 53 */
     /* Field 52: `f52 * 0.8` caps the drive force at that multiple of the axle
      * load (0x40db50 compares, 0x40dbdb..0x40dbec rebuilds it clamped; 0.8 is
-     * the global at 0x484ab0).  1.50 for every vehicle -- a 1.20 g cap -- and
+     * the global at 0x484ab0).  1.50 for every vehicle, a 1.20 g cap, and
      * 4.50 for the Diablo, i.e. 3.60 g.  Recorded; the port's longitudinal
      * model is single-body rather than per-axle, so it has nothing to clamp. */
     float traction_cap; /* field 52 */
     /* Field 38: the fraction of drive force sent to the front axle.  The drive
      * function stores `f38 * F` to one output and `(1 - f38) * F` to the other
      * (0x40db4a/0x40db4d, with the `1 -` at 0x40db0e).  It is 1.00 for exactly
-     * RACER_2 (Astra) and RACER_3 (Golf) -- the fleet's two front-wheel-drive
-     * cars -- and 0.00 for the other fourteen, so 1 = FWD and 0 = RWD.  (The
+     * RACER_2 (Astra) and RACER_3 (Golf), the fleet's two front-wheel-drive
+     * cars, and 0.00 for the other fourteen, so 1 = FWD and 0 = RWD.  (The
      * real Trabant 601 is front-wheel drive too; the table says 0.00.)
      * Recorded; the port drives the whole body, not two axles. */
     float drive_front; /* field 38 */
-    /* Field 55 is the **engine sound sample index** -- an *integer*, not a
+    /* Field 55 is the **engine sound sample index**: an *integer*, not a
      * float, which is why it reads as 0.00 through a float dump (it is read as
      * an integer at 0x410c41).  The SNDFX player 0x4286a0 indexes a table of
      * 87 nineteen-byte filenames at VA 0x48BAF0, and the six values this field
@@ -118,9 +118,9 @@ typedef struct {
     float zero_to_100; /* field 10, seconds */
     /* Two numbers the table does not hold, solved for at load time so that the
      * model reproduces the figures the game itself publishes:
-     *   wheel_radius -- set so the redline in top gear lands on CARS.DAT's
+     *   wheel_radius, set so the redline in top gear lands on CARS.DAT's
      *                   rated top speed;
-     *   torque_scale -- set so a standing start reaches 100 km/h in this
+     *   torque_scale, set so a standing start reaches 100 km/h in this
      *                   vehicle's own `zero_to_100`.
      * The table gives power, peak-torque rpm and the redline but no torque
      * *curve*, so the curve's shape is ours and these two solve it to the
@@ -129,7 +129,7 @@ typedef struct {
     float torque_scale;
     /* Shape of the synthesised torque curve: torque = peak * (1 - k*x^2) with
      * x the fraction of the way from the peak-torque rpm to the redline.  A
-     * smaller k is a flatter curve -- less low-end, more top-end.  Solved
+     * smaller k is a flatter curve: less low-end, more top-end.  Solved
      * together with torque_scale so the car hits both its rated top speed and
      * the table's own 0-100 time. */
     float torque_falloff;
@@ -137,7 +137,7 @@ typedef struct {
      * upgraded block): the gear selector fcn.0040e190 compares engine rpm
      * against a downshift threshold of `(f36 - 0.05) * rpm_torque` and an
      * upshift threshold built from f35 and the redline, which is why the
-     * upgraded box carries its own pair.  They are *not* a torque curve --
+     * upgraded box carries its own pair.  They are *not* a torque curve:
      * the table has none.  Kept raw here; the port shifts on its own rule. */
     float f35, f36, f47, f48;
     /* The stock rated top speed, so the curve shape can be solved against the
@@ -163,7 +163,7 @@ int a2_handling_find(const a2_handling_table *t, const char *anim_name);
 int a2_handling_top_gear(const a2_handling *h, int upgraded);
 
 /* Wheel radius, in metres, derived so that the redline in top gear lands on
- * `top_speed_ms` -- CARS.DAT's own rated top speed for that car.  The table has
+ * `top_speed_ms`: CARS.DAT's own rated top speed for that car.  The table has
  * no wheel size, and calibrating it this way makes the two tables agree instead
  * of letting the physics drift away from the speeds the game advertises. */
 float a2_handling_wheel_radius(const a2_handling *h, int upgraded, float top_speed_ms);
@@ -184,11 +184,11 @@ float a2_handling_resist_force(const a2_handling *h, float v);
 
 /* Peak lateral acceleration, m/s^2, straight off the tyre model.  Because the
  * game's lateral force is `-axle_load * D * f54 * sin(...)` and the load is the
- * axle's share of m*g, the peak of the sine gives a limit of `D * f54 * g` --
+ * axle's share of m*g, the peak of the sine gives a limit of `D * f54 * g`:
  * no fitted constant needed.  `A2_GRIP_REFERENCE` is only the fallback for a
  * vehicle whose grip fields are missing; it is kept at the value the port used
  * to fit for the Trabant, which the derived law puts at 0.62 * 1.20 * 9.81 =
- * 7.30 -- the fit was right to within 4%. */
+ * 7.30: the fit was right to within 4%. */
 #define A2_GRIP_REFERENCE 7.0f
 float a2_handling_lateral_limit(const a2_handling *h);
 
@@ -207,7 +207,7 @@ float a2_handling_brake_limit(const a2_handling *h);
  * table: `motor` multiplies field 24 (power) by 1.3 and fields 25 (peak-torque
  * rpm) and 23 (redline) by 1.1; `banden` multiplies the Pacejka B and D of both
  * axles (fields 15, 17, 18, 20) by 1.2.  The port's tyre model has no B, so of
- * `banden` only the D -- the grip peak -- has an effect.  Call after
+ * `banden` only the D, the grip peak, has an effect.  Call after
  * a2_handling_calibrate: calibration solves the curve against the *stock*
  * figures, and the upgrade then moves the car away from them as in the game. */
 void a2_handling_apply_upgrades(a2_handling *h, int motor, int banden);

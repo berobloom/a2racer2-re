@@ -1,4 +1,4 @@
-"""`CARS.DAT` — player-car performance table.
+"""`CARS.DAT`: player-car performance table.
 
 Layout is CONFIRMED from the reader in `init_player_car` (plr_car.cpp,
 fcn.004256A0 in spel.dat), which does exactly two reads and then closes:
@@ -17,18 +17,18 @@ plus 7 handling values:
     float accel     [6];   // stock
     float accel_up  [6];   // with the gearbox/engine upgrade
     float max_speed [6];   // stock, metres/second (x3.6 = km/h)
-    float max_speed_up[6]; // upgraded -- gains a 6th gear
+    float max_speed_up[6]; // upgraded: gains a 6th gear
     float handling  [7];   // not yet identified
 
 The speed arrays read as real gear ratios: the Trabant tops out at 41.889 m/s
 (151 km/h) stock and 45.889 (165 km/h) upgraded; the Diablo at 66.667 (240 km/h)
-and 70.944 (255 km/h).  Stock cars have a zero in the 6th slot -- a 5-speed box
+and 70.944 (255 km/h).  Stock cars have a zero in the 6th slot: a 5-speed box
 -- while the upgraded array fills it in, which matches the `VERSNELLINGSBAK`
 (gearbox) item in garage.ini.
 
 Block B, 24 bytes = 6 floats, is three (a, b) pairs, e.g. (3, 20) (3, 20)
 (3, 20) for the Trabant and (2, 30) (3, 15) (5, 40) for the Diablo.  Not yet
-identified -- plausibly per-axle or per-upgrade handling/damage constants.
+identified: plausibly per-axle or per-upgrade handling/damage constants.
 
 garage.ini names the 7 populated slots: Trabant, Astra, VW, VW, BMW, Porsche,
 Diablo (the comments there disagree slightly with the item blocks, which call

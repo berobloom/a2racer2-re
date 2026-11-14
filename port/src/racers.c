@@ -190,7 +190,7 @@ a2_racers *a2_racers_create(a2_scene *scene, const a2_archive *rcs, const a2_ani
     /* The grid (0x4111a9 .. 0x4112e5): the player's position is taken
      * first, each racer takes the next free one, 0..3, and stands at
      * STARTCHUNK - position (wrapped, 0x4426e0) in lane 4, which 0x442150
-     * clamps to the chunk's last lane -- one car a chunk, in a line in the
+     * clamps to the chunk's last lane: one car a chunk, in a line in the
      * player's lane. */
     int taken[4] = {0};
     if (cfg->player_position >= 0 && cfg->player_position < 4)
@@ -284,7 +284,7 @@ void a2_racers_register(const a2_racers *r, a2_aiw *w)
     }
 }
 
-/* ------------------------------------------------- the transition table */
+/* The transition table */
 
 /* 0x401780: the player is close behind this racer, and it leads */
 static int c_player_behind(a2_racers *r, racer *c)
@@ -368,7 +368,7 @@ static void transitions(a2_racers *r, racer *c, float dt)
     }
 }
 
-/* ------------------------------------------------------------- the states */
+/* The states */
 
 static const int ORDER[3] = {A2_AIW_STRAIGHT, A2_AIW_LANE_DOWN, A2_AIW_LANE_UP};
 
@@ -456,7 +456,7 @@ static void st_unstick(racer *c, a2_racers *r, float dt)
     }
 }
 
-/* 0x409ed0: finished -- engine off, the steering wound to 100 */
+/* 0x409ed0: finished, engine off, the steering wound to 100 */
 static void st_done(racer *c, a2_racers *r, float dt)
 {
     c->c.engine_off = 1;
@@ -591,7 +591,7 @@ void a2_racers_update(a2_racers *r, float dt, float race_time)
     }
 }
 
-/* ------------------------------------------------------------- the rest */
+/* The rest */
 
 void a2_racers_draw(const a2_racers *r, const a2_scene *scene, int near_chunk, int radius)
 {
@@ -731,7 +731,7 @@ int a2_racers_sound_sources(const a2_racers *r, a2_sound_src *out, int max)
     return n;
 }
 
-/* ------------------------------------------------- for the police (cops.c) */
+/* For the police (cops.c) */
 
 int a2_racer_ai(const a2_racers *r, int i, a2_ai_target *t)
 {

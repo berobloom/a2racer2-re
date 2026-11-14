@@ -73,7 +73,7 @@ Derived from imports, embedded source paths, INI documentation, and data files. 
 - **World/objects**: obj_main/obj_phys/obj_dmg; triggers (`init_all_triggers`, `check_racer_trigger`, "EINDE_WEG trigger"); track objects from .omp (`init_track_object_types`); bbox.cpp for bounds.
 - **Renderer**: the app transforms/projects/lights in x87 float and submits
   `D3DTLVERTEX` triangle lists to `IDirect3DDevice2::DrawIndexedPrimitive`
-  (see spel-architecture.md §K — it is NOT a software rasterizer).
+  (see spel-architecture.md §K: it is NOT a software rasterizer).
   rd_chunk/rd_main/rd_drmap/rd_rail; chunk culling (visiblechunks=30, "Adac chunk vs player chunk"); textures via txt_main/txt_reml/txt_vbrd (E0x_ALGEMENE_TEXTURES_ANIM animated textures); skidmarks, clouds, radar (surface-drawn road map), dashboard, 2D overlay, 3D font (init_3dfont/init_ascii_fonts).
 - **Sound**: snd_main, engine fx (init_sndfx_engine), WINMM mixer volume control, DSOUND positional (3dsound=1).
 - **Paths/cameras**: pth_main (track path from .pth), pth_heli (helicopter camera), cameras 1-4, ev_stcam (static cam), ev_start.

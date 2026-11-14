@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run handle_basic_ai's helpers (traffic driving, session 15) symbolically.
+"""Run handle_basic_ai's helpers (traffic driving) symbolically.
 
   0x406fd0(obj, wp, ai)        the yaw rate toward waypoint `wp`
   0x406e10(r, wp, &pos, len)   "has the car reached `wp`?"

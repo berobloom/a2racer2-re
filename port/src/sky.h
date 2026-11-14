@@ -9,8 +9,7 @@
  * SCRL_HI.pcx.
  *
  * That viewport background is only the clear colour (its material's diffuse,
- * white).  What shows is Gfx_bkg.cpp's own pair of screen quads (session 16,
- * read back from the running game): 0x4190d0 draws them every frame as
+ * white).  What shows is Gfx_bkg.cpp's own pair of screen quads (read back from the running game): 0x4190d0 draws them every frame as
  * D3DTLVERTEX triangle fans over the whole viewport, the upper third with
  * v 0..1/3 and the rest with v 1/3..1, a u window 0.15 wide starting at
  * 1 - (player heading & 0x3ff) / 1024, so the sky turns with the car and
@@ -23,9 +22,9 @@
  * The software renderer's scrolling sky (`gfx_sky.cpp`), kept behind
  * --scrolling-sky:
  *
- * Raser.ini's [MAPS] table names the sky per track in args 6 and 7 -- the
+ * Raser.ini's [MAPS] table names the sky per track in args 6 and 7, the
  * developers' comment calls them the "Lores/Hires unaccelerated filename of
- * the sky" -- and every track names the same pair, `scrl_lo` / `scrl_hi`.
+ * the sky", and every track names the same pair, `scrl_lo` / `scrl_hi`.
  * Both ship in RCS.IMG: SCRL_LO.pcx is 480x200 and SCRL_HI.pcx 960x320.
  * "scrl" is scroll: it is a panorama blitted behind the 3D scene, not a mesh
  * or a dome, and it is bound outside the anim system (no `scrl` entry exists
@@ -43,7 +42,7 @@
  * the constant at 0x47F6F0.  The table is built at runtime, so whether it is
  * sine or cosine cannot be read out of the image; sine is assumed here.
  * fcn.0041E9D0 then splits the source window into one or two blit rectangles,
- * which is only DirectDraw's inability to wrap a blit -- GL_REPEAT does it in
+ * which is only DirectDraw's inability to wrap a blit: GL_REPEAT does it in
  * one quad.
  */
 #ifndef A2_SKY_H

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ---- bit reader: bits come from the least significant end of each byte -- */
+/* ---- bit reader: bits come from the least significant end of each byte, */
 
 typedef struct {
     const uint8_t *p;

@@ -2,7 +2,7 @@
  *
  * RC.IMG uses the binary IND (u16 count + count x u32 offsets) and each entry is
  * an 8-bit paletted sprite: `u16 width, height, anchor_x, anchor_y;` then
- * width*height indices, with 0xFF transparent.  The palette is external -- the
+ * width*height indices, with 0xFF transparent.  The palette is external: the
  * game loads the per-track one named by Raser.ini [PALET].
  *
  * Useful runs in the shipped RC.IMG:
@@ -42,8 +42,8 @@ void a2_sprite_draw(const a2_sprites *s, int index, float x, float y, float scal
 
 /* Draw the sub-rectangle (sx, sy, sw, sh) of sprite `index` into the screen
  * rectangle (x, y, dw, dh).  Several HUD sprites are little sheets holding a
- * group of pieces -- 425 carries the top-right brackets and 426 the damage and
- * turbo bar frames, the speed bracket and the "km/h" mark -- and the pieces
+ * group of pieces: 425 carries the top-right brackets and 426 the damage and
+ * turbo bar frames, the speed bracket and the "km/h" mark, and the pieces
  * stretch to whatever width the element needs. */
 void a2_sprite_draw_sub(const a2_sprites *s, int index, int sx, int sy, int sw, int sh, float x,
                         float y, float dw, float dh);

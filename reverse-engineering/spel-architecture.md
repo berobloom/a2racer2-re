@@ -1,4 +1,4 @@
-# spel.dat — initialization & main-loop architecture
+# spel.dat: initialization & main-loop architecture
 
 Static analysis of `data/spel.dat` (PE32 i386, MSVC, .text = 0x401000..0x47F0B5, entry 0x471400).
 All addresses are VA (image base 0x400000). Confidence levels per AGENTS.md.
@@ -6,7 +6,7 @@ All addresses are VA (image base 0x400000). Confidence levels per AGENTS.md.
 > **Session-5 correction.** Sections D/I/J below were written on the premise that
 > spel.dat contains a *software* rasterizer. That premise is **wrong**: the game
 > drives **real Direct3D 2** (DirectX 5), acquired via
-> `IDirectDraw2::QueryInterface(IID_IDirect3D2)` at 0x44C760 — which needs no
+> `IDirectDraw2::QueryInterface(IID_IDirect3D2)` at 0x44C760, which needs no
 > `LoadLibraryA`, because `ddraw.dll` loads `d3dim.dll` itself. The corrected
 > account is in §K and in `research/discoveries.md`; the sections below are kept
 > for their (still valid) address work, but their rendering *conclusions* are
@@ -23,7 +23,7 @@ crt_mainCRTStartup @ 0x471400            (MSVC CRT: GetVersion, heap/ioinit,
         │    ├─ 0x4209B0 ("raser.ini")      config: reads Raser.ini (incl. [IMG] RCSFILE,
         │    │                               [PROGRAM] RESOLUTION/FOCUS) via ini wrappers
         │    ├─ 0x420750, 0x464C80, 0x431D60, 0x421B40, 0x421FD0   (window/display prep)
-        │    ├─ 0x420FE0 (2 args: hInst?)    "Initing 2d skelet" — Skelet2D init
+        │    ├─ 0x420FE0 (2 args: hInst?)    "Initing 2d skelet": Skelet2D init
         │    │    └─ creates the DirectDraw object (call site 0x421029 → 0x466110)
         │    ├─ 0x420760
         │    ├─ 0x44C7B0 (device, 10, 10, 0x1000)   dplib 3D device init (D3DLIB.CPP-style):
@@ -34,7 +34,7 @@ crt_mainCRTStartup @ 0x471400            (MSVC CRT: GetVersion, heap/ioinit,
         │    │    ├─ "init lights"         0x44D5B0
         │    │    ├─ "init materials"      0x44E990
         │    │    ├─ "add a viewport"      0x45CAE0/0x45CBE0
-        │    │    └─ "clear z-buffer"      0x44CAB0  (real DDSCAPS_ZBUFFER surface — see §K)
+        │    │    └─ "clear z-buffer"      0x44CAB0  (real DDSCAPS_ZBUFFER surface, see §K)
         │    ├─ 0x41C1F0
         │    ├─ init_game @ 0x423D20  (gm_init.cpp)  "==== Entry init_game ===="
         │    │    ├─ set_game_display: 0x420730 (mode 0..5) + 0x441E90
@@ -50,7 +50,7 @@ crt_mainCRTStartup @ 0x471400            (MSVC CRT: GetVersion, heap/ioinit,
         │
         ├─ start_game @ 0x424E30
         │    ├─ 0x424D20(1), 0x427FD0()
-        │    ├─ **sets 0x4D9A78 = 1**  (g_game_running — main-loop keepalive)
+        │    ├─ **sets 0x4D9A78 = 1**  (g_game_running: main-loop keepalive)
         │    ├─ init 8 objects: ids from 0x4D9E94, objects at 0x4E48E0 stride 0xA0, via 0x43FC40
         │    ├─ init 8 more (0x485B58, stride 0x58) via 0x43FC40
         │    └─ debug-key checks (key_pressed 0x466910): 'T','M',CTRL,SPACE,'I'
@@ -78,7 +78,7 @@ exit_skelet2d @ 0x4211C0    ("Exiting 2d skelet")
 "Ready"
 ```
 
-### handle_game @ 0x424A70 — per-frame pipeline, ACTUAL order (from call sites):
+### handle_game @ 0x424A70: per-frame pipeline, ACTUAL order (from call sites):
 
 | # | call | name (debug string) | role |
 |---|---|---|---|
@@ -93,17 +93,17 @@ exit_skelet2d @ 0x4211C0    ("Exiting 2d skelet")
 | 9 | 0x434460 | check_player_damage | damage |
 | 10 | 0x434380 | draw_2d_display | HUD overlay |
 | 11 | 0x4168C0 | update_game_screen | radar surface, blits, flip to screen |
-| 12+ | 0x421870, 0x424D20, 0x4214D0, 0x4286A0, 0x4281B0, 0x424D20, 0x403340, 0x408ED0, 0x41BDD0, 0x420760, 0x4689F0, 0x464EF0, 0x441CD0, 0x4248D0 | (unnamed) | sound/timer/sky/etc. sub-updates — to be identified |
+| 12+ | 0x421870, 0x424D20, 0x4214D0, 0x4286A0, 0x4281B0, 0x424D20, 0x403340, 0x408ED0, 0x41BDD0, 0x420760, 0x4689F0, 0x464EF0, 0x441CD0, 0x4248D0 | (unnamed) | sound/timer/sky/etc. sub-updates: to be identified |
 
 Ordering note: input handling (steps 6-7) runs AFTER render (step 5) in the same
-iteration — input affects the NEXT frame's render. No frame-skip logic found in
+iteration: input affects the NEXT frame's render. No frame-skip logic found in
 handle_game itself; render_game has an internal 100 ms minimum interval.
 
 ### Timing sources (CONFIRMED by import call-site scan)
 
 - QueryPerformanceCounter / timeGetTime: only inside the game-timer functions
   (0x441BD0 region, sites 0x441BE0/0x441C0B/0x441D20/0x441D4E).
-- GetTickCount: 19 sites — progress bar (0x41C1F0 region), update_game_screen (0x416B05),
+- GetTickCount: 19 sites, progress bar (0x41C1F0 region), update_game_screen (0x416B05),
   render_game throttle (0x425AA6), texture anims (0x41AAF9), gm_clock timers (0x4218EC).
 - Framecount timing: CRT time() via 0x474110 (start/stop at 0x425450/0x425470).
 - input polling: GetAsyncKeyState via wrapper 0x466910 (key_pressed).
@@ -161,11 +161,11 @@ handle_game
      └─ 0x442700 ×2  OBJECT3D execute (object render via virtual "objectfuncion")
           └─ object function table dispatch (call eax) → mesh draw
 
-dplib (SUPERSEDED heading — it is a wrapper over REAL Direct3D 2; see §K):
+dplib (SUPERSEDED heading: it is a wrapper over REAL Direct3D 2; see §K):
   device (0x44C7B0/0x44CC80) → viewport (0x45CAE0, VIEWPORT.CPP) → lights (LIGHT.CPP),
   materials (MATERIAL.CPP), meshes (MESH.CPP, .d3d loader), textures (TEXT.CPP/TGA.CPP,
   TXFORMAT.CPP formats), draw-order (DRWORDER.CPP: "clipped execute failed"/"execute
-  failed" @ 0x448BA0), z-buffer [NOT software — real DDraw surface, see §K]
+  failed" @ 0x448BA0), z-buffer [NOT software: real DDraw surface, see §K]
   (D3DLIB.CPP "init z-buffer"/"clear z-buffer",
   attached to "bufferscreen"/"backscreen"/"screen")
   └─ final pixels to DirectDraw surfaces (surface.cpp wrappers), flip at 0x458340
@@ -174,7 +174,7 @@ update_game_screen @ 0x4168C0: radar redraw, sprite/dashboard blits via [esi]/[e
   indirect surface calls, GetTickCount, 0x459360, then page flip.
 ```
 
-**D3D question — the earlier answer here was WRONG; see §K.** It is true that
+**D3D question: the earlier answer here was WRONG; see §K.** It is true that
 spel.dat has exactly one `LoadLibraryA` site (0x47AE63, loading `user32.dll` from
 the MSVC CRT) and no d3dim/d3drm/glide strings. But that proves nothing about
 D3D: Direct3D 1-5 is reached through `IDirectDraw::QueryInterface`, and
@@ -211,34 +211,34 @@ init_main → 0x4209B0("raser.ini") → 0x420C00-region (skelet2d_set_image_file
    0x46AB10: GetPrivateProfileStringA("[IMG]", "RCSFILE", ...)  → "rcs"
    default filename "Resource.img"/"Resource.ind" (globals 0x4895E5/0x4895D5)
    builds "<base>.img" + "<base>.ind" by copying base + appending ".img"/".ind"
-open helpers: 0x46DC50(name, x) — file path/open (winlib Filepath/Fileio);
+open helpers: 0x46DC50(name, x): file path/open (winlib Filepath/Fileio);
 IND parsing and entry lookup not yet fully traced (next on the list).
-Mesh load: MESH.CPP region 0x441DB0 ("loading triangle data {\n", "vertices : %d\n")
-— .d3d models read from RCS.IMG entries.
+Mesh load: MESH.CPP region 0x441DB0 ("loading triangle data {\n", "vertices : %d\n"):
+.d3d models read from RCS.IMG entries.
 ```
 
 ## G. Evidence highlights
 
 - "Calling 'X()'" / "Entry X ====" debug strings precede every stage call in
-  main/init_main/handle_game — direct, unambiguous function naming.
+  main/init_main/handle_game: direct, unambiguous function naming.
 - Call sites of all DirectX/API imports verified individually (capstone scan).
 - Exactly 1 LoadLibraryA (user32.dll) + 1 GetProcAddress site in the CRT region.
 - The 11 named handle_game stages are in exact call order in 0x424A70's body.
-- start_game sets the loop flag that main() tests — loop semantics proven.
+- start_game sets the loop flag that main() tests: loop semantics proven.
 
 ## H. Unknowns
 
 - The 14 unnamed per-frame callees in handle_game (steps 12+).
 - What the dd3ddfx (3Dfx) detection actually switches (mode table? rendering flag?).
 - The byte-level pixel fill loop (texture fetch addressing, wrap/clamp,
-  z-buffer width per pixel) — not yet disassembled.
+  z-buffer width per pixel), not yet disassembled.
 - .d3d / rmp / pmp loader layouts (MESH.CPP loader partially identified).
 - Input-device selection logic (game.ini [INPUT] DEVICE=1..4 → di_dev.cpp).
 
 ## I. Renderer internals (session 3 findings)
 
 ### Projection & math (CONFIRMED)
-- Entire pipeline is **x87 float** — 0 `fistp`/fixed-point conversions anywhere in
+- Entire pipeline is **x87 float**: 0 `fistp`/fixed-point conversions anywhere in
   .text; ~255 total x87 divides, all in per-vertex/projection/normalization code
   (divides that sit in loops belong to collision routines like 0x4246C5, not pixel loops).
 - Perspective focal constant **1024.0 at 0x49B014**; projection = `fdiv [0x49B014]`
@@ -256,16 +256,16 @@ Mesh load: MESH.CPP region 0x441DB0 ("loading triangle data {\n", "vertices : %d
 - Attached to the "bufferscreen" through the winlib surface layer; cleared per
   column (0x44CB70) via 0x45D3A0 (surface rect clear → vtable+0x30).
 - Depth testing therefore exists, alongside DRWORDER's draw-order sort
-  (painter's algorithm) — hybrid visibility.
+  (painter's algorithm): hybrid visibility.
 
 ### Screen composition (CONFIRMED)
 - "bufferscreen" (0x4EA9C8) is a T_ARRAY (bounds-checked array template) of
   **per-column sub-surface objects** (one per screen column X): each element is a
   rect {x,y,w,h} + surface interface ptr (+0x2C); a parallel byte-array of
-  per-column activity flags at +0x10. Columns are cleared/blitted individually —
+  per-column activity flags at +0x10. Columns are cleared/blitted individually:
   consistent with a chunked/column-based screen update scheme.
 - Primary surface is **locked once** at init (0x662D0, `IDirectDrawSurface::Lock`
-  vtable+0x50 — the single Lock call site in the binary); blits: 74 sites of
+  vtable+0x50: the single Lock call site in the binary); blits: 74 sites of
   vtable+0x5C (`Blt`), 5 of +0x58 (`BltFast`), unlock ×2 (+0x54).
 
 ### dplib device (CONFIRMED)
@@ -282,7 +282,7 @@ Mesh load: MESH.CPP region 0x441DB0 ("loading triangle data {\n", "vertices : %d
   OBJECT3D), 0x4286A0, 0x467050/0x4670F0 (sound), 0x4700E0 (transform helper).
 
 ### Rasterizer conclusion
-**SUPERSEDED — see §K.** This paragraph concluded "software, float-math,
+**SUPERSEDED: see §K.** This paragraph concluded "software, float-math,
 affine-mapped, painter+z-buffer hybrid ... remaining unknown is the byte-level
 inner fill loop". There is no inner fill loop in spel.dat: the game submits
 D3DTLVERTEX triangle lists to Direct3D. What survives from it: float math,
@@ -299,21 +299,21 @@ mesh render (0x453CF0 region)
  ├─ 0x455970             draw execution
  │    ├─ 0x454AB0        build draw order
  │    │    ├─ z-buffer path  (0x454EE0 loop): triangles written directly to
- │    │    │     index buffer [obj+0xA0] — no sort (depth via z-buffer)
+ │    │    │     index buffer [obj+0xA0], no sort (depth via z-buffer)
  │    │    └─ painter path   (0x454F69): triangles + depth key collected,
  │    │          sorted via 0x470860 (comparator 0x454A60), then written
  │    │          to [obj+0xA0]
  │    └─ DrawPrimitive: call device vtable+0x78 with
  │          (flags=4, type=3=TRIANGLELIST, vertex buf [obj+0x88],
  │           ?, index buf [obj+0xA0], count [obj+0xA4], stride=8)
- │          — the device object lives at [0x4EA7FC], vtable offsets mirror
+ │          The device object lives at [0x4EA7FC], vtable offsets mirror
  │            real DirectDraw (0x18 CreateSurface-like, 0x5C GetAvailableVidMem,
  │            0x78 DrawPrimitive)
  └─ 0x455700             texture memory management (vid-mem checks, caps 1/2/8)
 ```
 
 ### Triangle data format (CONFIRMED)
-- Triangles = 3×int16 column indices (6-byte records at [obj+0x98]) — each int16
+- Triangles = 3×int16 column indices (6-byte records at [obj+0x98]): each int16
   is a screen COLUMN X coordinate; per-column byte arrays at [obj+0x90] gate
   visibility (a triangle is drawn only if the sum of its 3 column bytes ≠ 0).
 - Vertex records carry int16 u/v texture coordinates (reads at 0x443560:
@@ -328,10 +328,10 @@ mesh render (0x453CF0 region)
   with caps 7 (DDSCAPS_3DDEVICE|DDSCAPS_ZBUFFER|DDSCAPS_TEXTURE) to decide
   whether the z-buffer mode is used.
 - Vtables located in .data/.rdata (0x482004 device-ish, 0x482080 texture/object,
-  0x47F9B0 T_ARRAY-ish) — entries are thunks into the 0x44xxxx/0x43xxxx regions.
+  0x47F9B0 T_ARRAY-ish): entries are thunks into the 0x44xxxx/0x43xxxx regions.
 
 
-## K. Renderer — corrected account (session 5)
+## K. Renderer: corrected account (session 5)
 
 ### Direct3D acquisition and device choice (CONFIRMED)
 
@@ -411,10 +411,10 @@ matrices 0x4EA4B4 / 0x4EA418 (0x455080 is a texture-coordinate remap, not lighti
 
 Two session-3 conclusions are **retracted**:
 
-- *"affine texture mapping, because there are no per-pixel divides"* — the
+- *"affine texture mapping, because there are no per-pixel divides"*: the
   rasterizer is not in this binary; D3DTLVERTEX carries `rhw`, so perspective
   correction is available and is the driver's choice.
-- *"software z-buffer"* — it is a real DirectDraw `DDSCAPS_ZBUFFER` surface for
+- *"software z-buffer"*: it is a real DirectDraw `DDSCAPS_ZBUFFER` surface for
   D3D's use (`init z-buffer` / `z-buffer initialized : 1` at runtime), with
   0x417870's `GetAvailableVidMem(caps=3DDEVICE|ZBUFFER|TEXTURE)` being the
   standard DX5 fit check.

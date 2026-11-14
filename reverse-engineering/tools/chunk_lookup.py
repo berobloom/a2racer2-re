@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare two position -> chunk lookups on a track's waypoints (session 17).
+"""Compare two position -> chunk lookups on a track's waypoints.
 
   nearest  the port's old a2_scene_nearest_chunk: the chunk whose position is
            nearest in xz, over the whole track, then a2_scene_road_height's

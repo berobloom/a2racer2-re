@@ -67,7 +67,7 @@ class Tracer:
         self.stub(0x464ca0, lambda t: 0)           # debug print
         self.stub(0x464e50, self._assert)          # assert
 
-    # ------------------------------------------------------------ set-up
+    # Set-up
     def reset(self):
         self.mem = {}      # addr -> sympy expr (4-byte float slot)
         self.mem8 = {}     # addr -> sympy expr (8-byte double slot)
@@ -104,7 +104,7 @@ class Tracer:
 
     vals = {}
 
-    # ------------------------------------------------------------ symbols
+    # Symbols
     def _name(self, a):
         for lo, hi, namer in self.regions:
             if lo <= a < hi:
@@ -133,7 +133,7 @@ class Tracer:
         self.vals.setdefault(str(s), v)
         return s
 
-    # ------------------------------------------------------------ stubs
+    # Stubs
     def _assert(self, t):
         self.log.append('ASSERT')
         return 0
@@ -146,7 +146,7 @@ class Tracer:
         return None  # eax already holds the concrete result? no -> compute
     # (ftol is implemented below in _hook because it must read the FPU)
 
-    # ------------------------------------------------------------ hook
+    # Hook
     def _ea(self, op):
         m = op.mem
         a = m.disp
@@ -387,7 +387,7 @@ class Tracer:
                     self.reg[self.cs.reg_name(op.reg)] = None
                     break
 
-    # ------------------------------------------------------------ running
+    # Running
     def call(self, fn, args, this=None):
         esp = self.STK + 0x80000
         words = []

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run spel.dat's mesh bounding-box routine 0x455f20 under Unicorn on a few
-known vertices and print the corner layout and radius (session 13).
+known vertices and print the corner layout and radius.
 
 Usage: bbox_emu.py <spel.dat>"""
 import struct

@@ -35,7 +35,7 @@ void a2_drive_init(a2_drive *d, float x, float y, float z, float heading)
 
 float a2_drive_heading_rad(const a2_drive *d) { return d->heading * HEAD_TO_RAD; }
 
-/* ------------------------------------------------------------------ input */
+/* Input */
 
 /* 0x4269c0, the stuur_model 0 arms (0x426b0e and 0x426c6d). */
 void a2_drive_keys(a2_drive *d, unsigned keys, float dt)
@@ -104,7 +104,7 @@ void a2_drive_keys(a2_drive *d, unsigned keys, float dt)
     }
 }
 
-/* -------------------------------------------------------------- the model */
+/* The model */
 
 /* 0x40e9f0: this gear's acceleration per throttle percent, the speed as a
  * fraction of the gear's top speed, and the engine rpm (800..9000 across the
@@ -389,7 +389,7 @@ static void integrate(a2_drive *d, float dt)
     d->v_fwd = nf;
 }
 
-/* The original's collision response (session 13, fitted under Unicorn with
+/* The original's collision response (fitted under Unicorn with
  * reverse-engineering/tools/emu_collide.py; see discoveries.md "The collision
  * impulse").  The car is a box (the vehicle table's length x width, metres)
  * with inverse mass M1 and inverse inertia I1 = 12 / (m (l^2 + w^2))

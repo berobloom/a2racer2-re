@@ -97,7 +97,7 @@ int m_career_load(m_career *c, const char *datadir)
     if (d && size == sizeof c->slot) {
         memcpy(c->slot, d, size);
     } else {
-        /* load_slot: "File %s does not exist" -- start every slot fresh, with
+        /* load_slot: "File %s does not exist", start every slot fresh, with
          * the start budget and the default keys (37 39 38 40 17 18, 50) */
         static const int keys[7] = {37, 39, 38, 40, 17, 18, 50};
         int keep = c->active;

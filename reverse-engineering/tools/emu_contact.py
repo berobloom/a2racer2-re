@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run spel.dat's collision contact code concretely under Unicorn (session 14).
+"""Run spel.dat's collision contact code concretely under Unicorn.
 
 The 76-byte collision entry (0x449a30 fills them at 0x4e6790): four corners,
 x/y/z each, at +0x00..+0x2c (the mesh's bottom face, bbox corners 0, 1, 5,

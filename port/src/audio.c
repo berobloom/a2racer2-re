@@ -78,7 +78,7 @@ static int voice_of(const a2_audio *a, int h)
     return v;
 }
 
-/* --------------------------------------------------------------- loading */
+/* Loading */
 
 static int rd16(const uint8_t *p) { return p[0] | (p[1] << 8); }
 static uint32_t rd32(const uint8_t *p)
@@ -148,7 +148,7 @@ static sample *get_sample(a2_audio *a, int index)
     return s->pcm ? s : NULL;
 }
 
-/* ----------------------------------------------------------------- mixing */
+/* Mixing */
 
 /* DirectSound volume and pan to linear gains: a buffer at volume v is
  * attenuated by v/100 dB, and a pan p attenuates the far side by |p|/100 dB. */
@@ -202,7 +202,7 @@ static void mix(void *ud, Uint8 *stream, int len)
     }
 }
 
-/* ------------------------------------------------------------------- API */
+/* API */
 
 a2_audio *a2_audio_open(const a2_archive *rcs, int sfx_volume, int positional)
 {

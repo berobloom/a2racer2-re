@@ -1,4 +1,4 @@
-/* a2view -- free-fly viewer for an A2 Racer II stage.
+/* a2view: free-fly viewer for an A2 Racer II stage.
  *
  *   a2view <datadir> [etappe0] [--start-chunk N] [--atlas NAME.tga]
  *           [--autopilot] [--drive-test] [--no-traffic] [--no-objects]
@@ -102,7 +102,7 @@ static int toi_take(const toi_hit *t, int kind, int idx, float n[2], float p[2])
 }
 
 /* The impulse of one step's contact (0x4497f0, applied by 0x440fb0 right
- * after the step's move), with each obstacle's own parameters -- the same
+ * after the step's move), with each obstacle's own parameters: the same
  * ones the collision blocks after the move use:
  *   barriers   restitution 0.2 against the world
  *   scenery    columns immovable at 0.1, arrows 13000 kg and parked police
@@ -204,7 +204,7 @@ static int engine_contact(float pre_x, float pre_z, float pre_h, float half_wid,
 
 /* The view presets of fcn.00414B70 (table 0x41507C).  Each sets the engine
  * camera's offset in the car's frame (0x447770, camera +0xa4) and either a
- * look target -- the car plus (0, 10, 0), 0x4477f0 -- or none (0x4478c0: look
+ * look target (the car plus (0, 10, 0), 0x4477f0) or none (0x4478c0: look
  * along the car).  `smooth` is what the arm does to the follow lag: set it to
  * 0.245 (0x4475a0), make the camera rigid (0x4476d0: off, factor 1), or
  * leave it as the last preset left it.  Preset 3 also hides the car (object
@@ -234,8 +234,8 @@ static const struct {
  * only for the player: the slot is the player's car type [0x4d9e2c].  Per
  * slot the 88-byte table at 0x48C968 gives the sheet and position; the frames
  * come from RC.IMG through anim 27 (hires), lit = frame 2*car, unlit =
- * 2*car+1.  Those anim entries are RC.IND indices **plus one** -- all 14 line
- * up exactly once shifted -- so the sprite numbers below are the 0-based ones.
+ * 2*car+1.  Those anim entries are RC.IND indices **plus one**, all 14 line
+ * up exactly once shifted, so the sprite numbers below are the 0-based ones.
  * Four slots match the shipped sheets pixel for pixel with their unlit sprite,
  * which is how the shift was confirmed.  Hires (anim 27) art is used because
  * the port renders the true-colour sheets. */
@@ -388,7 +388,7 @@ static float drive_yaw_deg(const a2_drive *d)
     return d->heading * (360.0f / 4096.0f) + 180.0f;
 }
 
-/* The radar, bottom-left: gfx_radr.cpp (session 15).
+/* The radar, bottom-left: gfx_radr.cpp.
  *
  * create_radar (0x41cda0) takes the chunks' bounding box (0x41cc90), padded by
  * 3840 units on every side, and makes a surface of it at 60 units a pixel,
@@ -588,14 +588,14 @@ static void apply_view(const camera *c)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     /* forward is (sin yaw, sin pitch, -cos yaw); undoing that needs a +yaw
-     * rotation about Y and a -pitch rotation about X.  (The yaw sign was wrong
-     * here at first and only showed up on stages whose heading is not 0.) */
+     * rotation about Y and a -pitch rotation about X.  A wrong yaw sign only
+     * shows on stages whose heading is not 0. */
     glRotatef(-c->pitch, 1.0f, 0.0f, 0.0f);
     glRotatef(c->yaw, 0.0f, 1.0f, 0.0f);
     glTranslatef(-c->pos[0], -c->pos[1], -c->pos[2]);
 }
 
-/* The vertical view angle, measured off the original (session 14): its
+/* The vertical view angle, measured off the original: its
  * Trabant on the start grid in preset 1, at rest so the camera sits exactly
  * on the preset, is 136 px wide on a 640x480 capture; the port's draws 152 px
  * at 60 degrees and 125 at 70, i.e. width x tan(fov/2) = 87.6, so 65.6
@@ -773,14 +773,14 @@ typedef struct {
     float yaw;   /* degrees */
     float speed; /* m/s, matching CARS.DAT units */
     int gear;
-    /* Body attitude, driven by CARS.DAT's three (damping, factor) pairs --
+    /* Body attitude, driven by CARS.DAT's three (damping, factor) pairs:
      * tweak menu items 7 "Rolhoek factoren", 8 "Pitch factoren" and 9 "Hoogte
      * factoren".  `factor` sets how far the body moves, `damping` how quickly
      * it gets there; both are the car's own numbers, only the scale is ours. */
     float roll, pitch_ang, ride;
     /* Degrees between where the body points and where the car is going:
      * travel is along `yaw - slip`.  Zero except in and just after a handbrake
-     * slide -- the only thing in the port that breaks the rear loose. */
+     * slide: the only thing in the port that breaks the rear loose. */
     float slip;
     /* Equipment from Game.ini [PLAYER]: `abs` is the flag 0x4a63c8 that the
      * upgrade applier 0x428400 sets and only the brake function reads. */
@@ -1109,7 +1109,7 @@ int main(int argc, char **argv)
     /* Raser.ini's [MAPS] row for this track: the game's own configuration, so
      * the plane-list textures, the circuit flag and the menu name all come
      * from data rather than from guesses here. */
-    /* Game.ini [OPTIONS] Nrlaps, default 2 -- the game's own default. */
+    /* Game.ini [OPTIONS] Nrlaps, default 2: the game's own default. */
     int nr_laps = a2_ini_int(datadir, "Game.ini", "[OPTIONS]", "Nrlaps", 2);
     /* Game.ini [INPUT]: the bound keys as Windows VK codes (spel.dat 0x42393b) */
     int key_left = a2_ini_int(datadir, "Game.ini", "[INPUT]", "LEFT", 37);
@@ -1138,7 +1138,7 @@ int main(int argc, char **argv)
     int difficulty = a2_ini_int(datadir, "Game.ini", "[OPTIONS]", "difficulty", 1);
     /* Where the player starts.  The original reads Game.ini [OPTIONS] STARTCHUNK
      * (a test variable, commented out in the shipped file) and, when it is
-     * unset, derives it in init_game from the chunk carrying **trigger 13** --
+     * unset, derives it in init_game from the chunk carrying **trigger 13**:
      * starting one chunk before it (fcn.0042A460).  --start-chunk overrides
      * both, as the ini key does in the original. */
     if (start_chunk < 0)
@@ -1217,8 +1217,8 @@ int main(int argc, char **argv)
     a2_font *fnt_label = NULL, *fnt_time = NULL, *fnt_speed = NULL, *fnt_value = NULL,
             *fnt_pct = NULL, *fnt_small = NULL, *fnt_fin_title = NULL, *fnt_fin_value = NULL;
     {
-        /* Raser.ini's [PALET] gives two palettes per track -- "first arg is the
-         * version for 8-bit mode, second is the version for 16-bit mode" --
+        /* Raser.ini's [PALET] gives two palettes per track ("first arg is the
+         * version for 8-bit mode, second is the version for 16-bit mode")
          * and every track names the same 16-bit one, e02_pl16.pcx.  The port
          * renders in true colour, so that is the one whose colours the HUD art
          * was authored against; the 8-bit per-track palette is the fallback. */
@@ -1242,7 +1242,7 @@ int main(int argc, char **argv)
                 memcpy(radar_road, pal + 13 * 3, 3); /* the radar's road, colour 0xd */
                 fprintf(stderr, "hud: palette %s\n", palname);
                 /* The HUD's four faces, and their glyph sets say exactly what
-                 * each one is for -- a font carries nothing it does not need:
+                 * each one is for: a font carries nothing it does not need:
                  *
                  *   olfnt01  h17  ' ' A-Z             every label
                  *   olfnt02  h25  0-9 . - / :         race time, POSITIE, RONDE
@@ -1302,7 +1302,7 @@ int main(int argc, char **argv)
      * every circuit, so the trigger is the mechanism and the gantry is only
      * its visible marker.  See research/discoveries.md. */
     /* Stages with checkpoint triggers are point-to-point; the rest are the
-     * city circuits ("Stedenrace") and are scored by laps instead -- which is
+     * city circuits ("Stedenrace") and are scored by laps instead, which is
      * why language.ini carries RONDE INFO / RONDE / LAATSTE RONDE and
      * NIEUW RONDE RECORD alongside the checkpoint wording. */
     int circuit = 0;
@@ -1345,7 +1345,7 @@ int main(int argc, char **argv)
     int lap_ms[8] = { 0 };
     /* The banner slot: 0x4882c0 takes a pending language.ini id, the HUD
      * (0x41a95b) latches it into 0x4882c4 with the GetTickCount, and for 2000
-     * ms draws it while (ticks / 100) is odd -- 100 ms on, 100 ms off -- as
+     * ms draws it while (ticks / 100) is odd (100 ms on, 100 ms off) as
      * HUD element 76, centred on (160, 40) of the 320x240 layout, in the
      * label font (font 10, olfnt01 / lo_fnt1).  Nine ids ever go through it:
      * 31, 44, 45, 46, 47, 48, 49, 50, 51.  A new raise replaces the old. */
@@ -1366,7 +1366,7 @@ int main(int argc, char **argv)
      * 40 TOTAL LOSS, 1 shows 41 TIJD IS OM, 2 shows 42 GEARRESTEERD.  The
      * arrest already ends the race through `arrested`; this records which of
      * the three it was, as its language.ini id, and `arrested` now means any of
-     * them -- the race is over and the car is brought to a stop. */
+     * them: the race is over and the car is brought to a stop. */
     int game_over_msg = 0;
     /* Ctrl + Space + I in the original (0x424fbe..0x424ff2): sets the flag
      * 0x4d9eb8 that add_damage (0x428390) tests before adding anything, and
@@ -1437,7 +1437,7 @@ int main(int argc, char **argv)
      * is 0x42a4d0 and it does four things: refill the turbo tank to 100 if the
      * turbo upgrade is owned (0x428060), reset the damage (0x4281c0), play
      * sample 47 `repair.wav` and raise banner 48 QUICK SERVICE.  It is a
-     * service stop, not a petrol stop -- it never touches a fuel quantity, and
+     * service stop, not a petrol stop: it never touches a fuel quantity, and
      * QUICK SERVICE is this banner rather than a cheat label. */
     int service_chunk[16];
     int service_count = 0;
@@ -1462,7 +1462,7 @@ int main(int argc, char **argv)
     /* The posted limit comes from the **triggers**, not from the sign objects.
      * The game keeps it in a single global (0x48C480) that triggers 4, 5, 6
      * and 8 overwrite with 50, 70, 100 and 120 km/h, and the camera compares
-     * the speed -- `(int)(v * 3.6)`, so km/h -- straight against it.
+     * the speed (`(int)(v * 3.6)`, so km/h) straight against it.
      *
      * This matters because the painted signs disagree with it: every trigger-5
      * chunk sits on an `A_MAX80S` sign and every trigger-6 chunk on an
@@ -1569,7 +1569,7 @@ int main(int argc, char **argv)
      *                    toeren2 engine note
      *   BANDEN           doubles the lateral grip (0x40f5bd, 0x40f9ec)
      *   TURBO            fills the turbo tank
-     *   ABS              brakes 0.5 harder (0x40f2a1) -- it prevents nothing
+     *   ABS              brakes 0.5 harder (0x40f2a1): it prevents nothing
      *   VERSNELLINGSBAK  the upgraded CARS.DAT arrays and their 6th gear
      *   INJECTIE         nothing at all */
     int up_motor = a2_ini_int(datadir, "Game.ini", "[PLAYER]", "MOTOR", 0);
@@ -1608,8 +1608,8 @@ int main(int argc, char **argv)
      * sub-mode 1, 41 TIJD IS OM (0x424b80..0x424b9a).  The bonus is computed
      * once, at 0x424344:
      *     bonus_s = (int)( 10 * dist[etappe] / (top * k) )
-     * with dist a per-stage table built on the stack at 0x4242e7 -- 142, 110
-     * and 142 for etappe 1, 3 and 5, 0 for the circuits -- `top` the car's
+     * with dist a per-stage table built on the stack at 0x4242e7 (142, 110
+     * and 142 for etappe 1, 3 and 5, 0 for the circuits) `top` the car's
      * CARS.DAT top-gear ceiling in m/s plus 4 if the motor is owned (0x410b00),
      * and k 0.4 on EASY, 0.65 on HARD ([OPTIONS] difficulty; 0x47f76c,
      * 0x47f770).  It reads as a distance over a speed: the time to cover
@@ -1632,7 +1632,7 @@ int main(int argc, char **argv)
         }
     }
 
-    /* The car's own size, from its mesh -- CARS.DAT has performance but no
+    /* The car's own size, from its mesh: CARS.DAT has performance but no
      * dimensions.  A Diablo is 18.8 units wide against the Trabant's 16.4. */
     float car_half_width = a2_car_half_width(car_slot);
     float car_half_len = a2_car_half_length(car_slot);
@@ -1704,7 +1704,7 @@ int main(int argc, char **argv)
                                        difficulty);
     a2_traffic_set_limits(traffic, &track);
     /* The police.  The speed limit they enforce is the per-chunk .pmp trigger,
-     * not the limit signs standing by the road -- see cops.h. */
+     * not the limit signs standing by the road: see cops.h. */
     a2_cops *cops = NULL;
     if (!no_cops && have_cars && aiw) {
         a2_cops_config cc = {0};
@@ -1838,7 +1838,7 @@ int main(int argc, char **argv)
     glAlphaFunc(GL_GREATER, 0.5f);
     glClearColor(0.42f, 0.55f, 0.72f, 1.0f);
 
-    /* Game.ini [OPTIONS] visiblechunks -- "Sets the number of visible chunks
+    /* Game.ini [OPTIONS] visiblechunks: "Sets the number of visible chunks
      * (Def.=30)".  Read rather than hardcoded, so the port's draw distance
      * tracks the same knob the original uses. */
     int radius = a2_ini_int(datadir, "Game.ini", "[OPTIONS]", "visiblechunks", 30);
@@ -1868,11 +1868,11 @@ int main(int argc, char **argv)
     const int tweak_mode = a2_ini_int(datadir, "Raser.ini", "[HELPDESK]", "TWEAK_MODE", 0);
     int show_rails = 0;
     int show_traffic = 1;
-    /* Game.ini [GFX OPTIONS] overlay_detail -- "Overlay detail level. This can
+    /* Game.ini [GFX OPTIONS] overlay_detail: "Overlay detail level. This can
      * be adjusted by the player when pressing the 'detail' key. Default=3 (full
      * detail: radar, all overlay graphics. (min=0, max=3)".  The original
      * cycles it on **D** (fcn.00424EE0: ++detail, wrapping past 3 to 0), and
-     * gates each element on it -- the checkpoint text, for one, draws only
+     * gates each element on it: the checkpoint text, for one, draws only
      * above level 2 (fcn.0041A5F0).  `disable_overlay` locks it off entirely. */
     int overlay_detail = a2_ini_int(datadir, "Game.ini", "[GFX OPTIONS]", "overlay_detail", 3);
     if (overlay_detail < 0 || overlay_detail > 3)
@@ -2123,8 +2123,8 @@ int main(int argc, char **argv)
             /* The keys Game.ini [INPUT] binds, as VK codes (defaults LEFT 37,
              * RIGHT 39, UP 38 gas, DOWN 40 brake, EXTRA1 17 Ctrl turbo, EXTRA2
              * 18 Alt handbrake); the menu's controls screen rebinds them.
-             * W/A/S/D used to steer here too, but D is the original's
-             * overlay-detail key, so drive mode leaves the letters alone
+             * D is the original's overlay-detail key, so drive mode leaves
+             * W/A/S/D alone
              * unless they are bound; fly mode still uses W/A/S/D. */
             a2_input in = read_input(device, joy, k, key_left, key_right, key_up, key_down,
                                      key_turbo, key_handbrake);
@@ -2136,7 +2136,7 @@ int main(int argc, char **argv)
             }
             /* Turbo, on EXTRA1.  Watching the original drive under Wine with the
              * key held: the TURBO bar starts **full**, drains steadily while
-             * held, and does **not** refill during the race -- it was still at
+             * held, and does **not** refill during the race: it was still at
              * the level it had reached six seconds after release.  The boost is
              * large: 153 km/h rose to 202 over about four seconds, well past
              * the car's rated top speed.
@@ -2183,7 +2183,7 @@ int main(int argc, char **argv)
                 }
                 steer = lane_follow_steer(scene, &car, ch0, car_lane, 3);
                 /* Look further ahead than we steer by, and ease off when that
-                 * point is well off the nose -- otherwise a Trabant at 150 km/h
+                 * point is well off the nose, otherwise a Trabant at 150 km/h
                  * simply runs wide on etappe0's city corners. */
                 float ahead = lane_follow_steer(scene, &car, ch0, car_lane, 8);
                 float bend = ahead < 0.0f ? -ahead : ahead;
@@ -2267,8 +2267,8 @@ int main(int argc, char **argv)
                  * the section has only one.  After three failed attempts, put
                  * the car back on the lane centre a few chunks behind and let
                  * it have another run at it.  This is a crutch for the headless
-                 * test runs only -- it keeps a wedged autopilot from turning a
-                 * whole-stage regression into a no-result -- and nothing like it
+                 * test runs only, it keeps a wedged autopilot from turning a
+                 * whole-stage regression into a no-result, and nothing like it
                  * exists in the original. */
                 if (auto_stuck_tries >= 3) {
                     /* Escalate: the first reposition often drops the car right
@@ -2293,10 +2293,10 @@ int main(int argc, char **argv)
                         break;
                     }
                     /* the first attempt backs off; a repeat at the same
-                     * place goes past it instead -- a corner the
+                     * place goes past it instead: a corner the
                      * lane-follower keeps hitting (etappe2 chunk 112) */
                     int back = auto_stuck_runs > 1 ? ch0 + 3 * auto_stuck_runs : ch0 - 3;
-                    /* Keep the lane on the first attempt -- a plain setback in
+                    /* Keep the lane on the first attempt: a plain setback in
                      * the same lane is what clears most wedges, and rotating
                      * straight away can drop the car somewhere worse.  Only
                      * start trying other lanes once the simple version has
@@ -2334,7 +2334,7 @@ int main(int argc, char **argv)
                     turbo_left = 0.0f;
             }
             /* An arrest ends the race.  The original switches to game mode 6,
-             * `ev_g_ovr.cpp`, with the sub-mode 0x4867A4 set to 2 -- the arrest
+             * `ev_g_ovr.cpp`, with the sub-mode 0x4867A4 set to 2: the arrest
              * arm of the game-over sequence, whose callbacks are the only two
              * fetches of 42 GEARRESTEERD and 43 RACE OVER.  So the player stops
              * driving; the race clock keeps running only so the opponents'
@@ -2343,7 +2343,7 @@ int main(int argc, char **argv)
              * state with no edge latch in the code: T adds 180 000 ms to timer
              * 11 and raises 44 EXTRA TIJD (0x424fa5), on point-to-point stages
              * only; I makes the car invincible (above), on any stage.  Held, T
-             * keeps adding time every frame -- read that way from the code,
+             * keeps adding time every frame: read that way from the code,
              * not tried in the running game. */
             /* 47 COP MODE as the start camera hands over (0x416ccd) */
             if (copland && !cop_banner_done) {
@@ -2578,10 +2578,7 @@ int main(int argc, char **argv)
                      * impulse changes it. */
                     float vn = vx * hit.n[0] + vz * hit.n[1];
                     /* At t = 0 0x441490 returns 0 and the car is not moved;
-                     * the impulse that follows in the step turns it away.
-                     * (The port re-tested at t = 0 as well for a while, after
-                     * a car pinned at etappe1 chunk 330; with the traffic on
-                     * both carriageways that no longer happens.) */
+                     * the impulse that follows in the step turns it away. */
                     static int overlap_dev = -1;
                     if (overlap_dev < 0)
                         overlap_dev = getenv("A2_FAITHFUL_OVERLAP") == NULL;
@@ -2669,8 +2666,8 @@ int main(int argc, char **argv)
                 a2_wheels_update_player(&wheels, drv.v_fwd, drv.steer, gmy, dt);
             }
             /* 0x425a90: while skidding (intensity >= 4), every 100 ms, a pair
-             * of puffs at each rear wheel -- 10 * f6 behind the car, 9 units
-             * either side, 3 up -- carried along at 0.6 of the car's velocity
+             * of puffs at each rear wheel (10 * f6 behind the car, 9 units
+             * either side, 3 up) carried along at 0.6 of the car's velocity
              * (per frame, as the original moves them). */
             if (smoke && drv.skid >= 4 && race_time - smoke_last >= 0.1f) {
                 smoke_last = race_time;
@@ -2687,7 +2684,7 @@ int main(int argc, char **argv)
              * ahead of the car and rand() % 18 - 9 across, 5 up, standing
              * still.  That is inside the bonnet, and a puff rises only
              * 10 vy in all (vy is damped 0.9 a frame), so it barely shows
-             * -- by the original's own numbers. */
+             *: by the original's own numbers. */
             if (smoke && arrested && damage >= 99) {
                 float now = drive_test ? (float)over_frames / 30.0f : SDL_GetTicks() / 1000.0f;
                 if (go_smoke_last < 0.0f || now - go_smoke_last >= 0.2f) {
@@ -2823,11 +2820,10 @@ int main(int argc, char **argv)
             /* Chunks travelled, counted the way the original keeps its
              * 0x4d9e70: a running sum of chunk-to-chunk steps, with the step
              * taken the short way round so a circuit's index wrap counts as
-             * one chunk forward.  It used to be (lap - 1) * chunks + chunk,
-             * which on a circuit drops a whole lap between the index wrap and
-             * the start/finish line -- where every circuit starts the car --
-             * and so ranked the player a lap down there.  The racers' rubber
-             * band reads this, which is how that showed up. */
+             * one chunk forward.  (lap - 1) * chunks + chunk would drop a
+             * whole lap between the index wrap and the start/finish line,
+             * where every circuit starts the car; the racers' rubber band
+             * reads this. */
             {
                 int step = ch - progress_chunk;
                 if (scene_chunks > 0) {
@@ -2840,7 +2836,7 @@ int main(int argc, char **argv)
                 player_progress += (float)step;
             }
             /* 0x409051: the position is counted every frame until the
-             * finish, not only when the HUD draws it -- the HUD is skipped
+             * finish, not only when the HUD draws it: the HUD is skipped
              * while pulled over and at overlay detail 0, and a position left
              * over from then was what the finish booked. */
             if (!finished)
@@ -3001,7 +2997,7 @@ int main(int argc, char **argv)
             /* The racers and the cops are vehicles to the engine too: the
              * same impulse, the car table's mass, restitution 0.2 for a racer
              * and 0.3 for a cop (init_physics callers), and each takes its
-             * share.  (Until session 13 the player passed through them.) */
+             * share. */
             for (int kind = 0; kind < 2; kind++) {
                 int whoa = -1;
                 float pa[2] = {0.0f, 0.0f};
@@ -3129,17 +3125,17 @@ int main(int argc, char **argv)
             if (circuit && !finished && scene_chunks > 16 && finish_chunk >= 0) {
                 /* A lap is counted exactly as the original counts it.
                  * `check_racer_trigger` gives trigger **15**
-                 * (TRIGGER_FINISH_VALID) one job -- set an armed flag on the
-                 * racer -- and trigger **14** (TRIGGER_FINISH_POSITION) checks
+                 * (TRIGGER_FINISH_VALID) one job, set an armed flag on the
+                 * racer, and trigger **14** (TRIGGER_FINISH_POSITION) checks
                  * that flag, and only then increments the lap counter and
                  * compares it with Nrlaps.  The chunk-0 marker (trigger 9) has
                  * nothing to do with laps: its handler sets a crossed flag and
                  * toggles three booleans, which is chunk-index wrap
                  * bookkeeping.
                  *
-                 * The shipped circuits place the two one chunk apart -- 524 and
+                 * The shipped circuits place the two one chunk apart (524 and
                  * 525 on etappe0/6, 16 and 17 on etappe2, 329 and 330 on
-                 * etappe4 -- so crossing the line disarms and the very next
+                 * etappe4), so crossing the line disarms and the very next
                  * chunk re-arms for the following lap.  The car starts one
                  * chunk *before* the line, so its first crossing is unarmed and
                  * scores nothing, which is what makes the first fire the real
@@ -3156,7 +3152,7 @@ int main(int argc, char **argv)
                      * set; the saved count is the lap's own either way.  The
                      * circuits carry no checkpoints, so that count is 0. */
                     /* and raises 31 NIEUW RONDE RECORD for a record lap,
-                     * otherwise 45 LAATSTE RONDE (0x4298d5 / 0x429921) --
+                     * otherwise 45 LAATSTE RONDE (0x4298d5 / 0x429921):
                      * on every lap, the code has no test for the last one */
                     if ((int)(last_lap * 1000.0f) < save.lap_record) {
                         save.lap_record = (int)(last_lap * 1000.0f);
@@ -3253,7 +3249,7 @@ int main(int argc, char **argv)
              * while the car is in the trigger's chunk, and services it only
              * when the car's waypoint (object +0x20, the nearest one on its
              * side, 0x443da0) is a pump: runtime record +4 == 2, the .dmp's
-             * f1 -- two waypoints per station, off the road on the forecourt
+             * f1: two waypoints per station, off the road on the forecourt
              * or the slip road, both in the trigger chunk's list.  So it takes
              * driving in to the pump; passing on the road does nothing.
              * Then: the tank refilled if TURBO is owned, the damage reset,
@@ -3286,9 +3282,9 @@ int main(int argc, char **argv)
             }
 
             /* The finish, as the game books it: the track time and the race
-             * record at the line (0x4299b6), then -- at the end of the
+             * record at the line (0x4299b6), then (at the end of the
              * victory sequence in the original (0x415690), straight away
-             * here -- the prize for the position plus 2000 per radar knocked
+             * here) the prize for the position plus 2000 per radar knocked
              * over, and finished = 1. */
             if (finished && !result_booked) {
                 result_booked = 1;
@@ -3337,7 +3333,7 @@ int main(int argc, char **argv)
              * lag on, each frame moves the camera `factor` of the way to where
              * it wants to be (the code divides by dt and multiplies by it
              * again, so it is per frame).  The port scales that to 30 frames a
-             * second, since the original's step is its frame rate -- ours.
+             * second, since the original's step is its frame rate: ours.
              * Then (0x447f78..0x448111, camera +0x80, set to 1 by the
              * constructor 0x447119 and never cleared) the lagged position is
              * turned into the car's frame (0x45e970, the transpose), its
@@ -3898,7 +3894,7 @@ int main(int argc, char **argv)
          * frame starts from car.speed (drv.v_fwd = car.speed), which was
          * taken before this pass, so keep the push: without this the
          * forward part of every hit from behind was lost a frame later
-         * while its spin and sideways part stayed -- a racer on the bumper
+         * while its spin and sideways part stayed: a racer on the bumper
          * bounced off a car that jumped ahead for one frame, and a cop's
          * shunt from behind became a spin. */
         if (drive_mode)
@@ -3991,10 +3987,10 @@ int main(int argc, char **argv)
         apply_view(&cam);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         /* The backdrop goes down first and writes no depth, so the scene draws
-         * straight over it -- the original blits it the same way. */
+         * straight over it: the original blits it the same way. */
         /* The backdrop is a 2D band across the top of the screen and knows
          * nothing about pitch, so it is wrong once the camera looks steeply
-         * down -- as the topview does.  Skip it there. */
+         * down, as the topview does.  Skip it there. */
         /* Debug (A2_JUMP_LOG): per-frame height and position jumps of every
          * vehicle, with the ground under it */
         if (drive_mode && getenv("A2_JUMP_LOG")) {
@@ -4057,8 +4053,8 @@ int main(int argc, char **argv)
         }
         /* Drives the traffic lights and roadworks arrows. */
         /* Animation time has to come off the same fixed step as the physics in
-         * a headless run, or the animated props -- the traffic lights among
-         * them -- run on wall-clock phase and the whole run stops being
+         * a headless run, or the animated props, the traffic lights among
+         * them, run on wall-clock phase and the whole run stops being
          * reproducible.  This was gated on `drive_test` alone, which is why two
          * `--autopilot` runs of etappe5 that differed in nothing but a log
          * string came in 47 s apart with 9 fewer traffic lane changes. */
@@ -4079,8 +4075,8 @@ int main(int argc, char **argv)
         a2_paths_draw(paths, scene);
         /* The finish flag (gfx: 0x41ad40 builds, 0x41ac00 waves, 0x41aee0
          * draws; Game.ini [GFX OPTIONS] finish_flag).  1.5 s after the finish
-         * (mode 3's tick, 0x41560f) a chequered flag -- S_SFX's 8x6 patch at
-         * u 0.4453..0.5078, v 0..0.047 -- waves across the screen in front of
+         * (mode 3's tick, 0x41560f) a chequered flag (S_SFX's 8x6 patch at
+         * u 0.4453..0.5078, v 0..0.047) waves across the screen in front of
          * the camera: a 17 x 11 grid, x -100 + 12.5c, y -75 + 15r, 10 strips
          * drawn, depth 100 + 10 sin(phase), phase = 4096 t / 2 s + 128c +
          * 64r, grey clamp(256 - (w + 10) * 6.4, 128, 255) at alpha 0x64, in
@@ -4201,10 +4197,8 @@ int main(int argc, char **argv)
         int hud_off = finished || arrested || race_time < pulled_until;
         if (hud && show_hud && overlay_detail > 0 && drive_mode) {
             /* RC.IMG also holds a speedometer dial (sprite 1, marked 20..250)
-             * with 19 baked needle frames at 32..50, and this HUD used to draw
-             * it bottom-right.  It is genuine art but it does not appear in the
-             * game's own HUD, so it is left unused rather than invented into
-             * the layout. */
+             * with 19 baked needle frames at 32..50.  It does not appear in
+             * the game's own HUD, so it stays unused. */
             a2_sprites_begin(win_w, win_h);
 
             if (font || fnt_label) {
@@ -4223,13 +4217,13 @@ int main(int argc, char **argv)
                  *
                  * and the radar bottom-left, which the original builds procedurally from the
                  * road rather than from a sprite (`create_radar`,
-                 * `draw_road_in_radar_surface`, gfx_radr.cpp) -- see hud_radar.
+                 * `draw_road_in_radar_surface`, gfx_radr.cpp): see hud_radar.
                  *
                  * The hires art is authored for 800x600 and drawn 1:1 there, so
                  * `s` is one of its pixels.  That it really is 1:1 shows in the
                  * labels: at the capture's scale olfnt01 puts SNELHEID at 90.1
                  * pixels against the font's own 90, POSITIE at 74.4 against 76
-                 * and RONDE at 58.7 against 60 -- no tracking, no scaling.
+                 * and RONDE at 58.7 against 60: no tracking, no scaling.
                  *
                  * Labels are language.ini strings 33..39 and 52..55 in olfnt01;
                  * the numbers are olfnt02/03/04, whose glyph sets say what each
@@ -4293,7 +4287,7 @@ int main(int argc, char **argv)
                     HUD_AT(fnt_label, a2_lang_get(lang, 33, "RACE TIJD"), 546, 4); /* element 38 */
                     /* the panel: element 57, anim 12 = sprite 313 at (485, 15) on
                      * the highways (0x419b10), element 51, anim 9 = sprite 311 at
-                     * (474, 15) on the circuits (0x419e00) -- every bracket of the
+                     * (474, 15) on the circuits (0x419e00): every bracket of the
                      * top-right group in one image */
                     if (circuit)
                         HUD_PANEL(311, 474.0f, 15.0f);
@@ -4325,8 +4319,8 @@ int main(int argc, char **argv)
                         }
                     }
 
-                    /* The highway panel (0x41a5f0): the literal word CHECKPOINT --
-                     * not a language.ini string -- over timer 11 as mm:ss:t, at the
+                    /* The highway panel (0x41a5f0): the literal word CHECKPOINT,
+                     * not a language.ini string, over timer 11 as mm:ss:t, at the
                      * top centre of the screen, built like RACE TIJD (screenshot of
                      * the original on etappe5: "CHECKPOINT 00:42:4" at 0.5 s into
                      * the race).  Not gated on overlay_detail.  Drawn here as the
@@ -4393,7 +4387,7 @@ int main(int argc, char **argv)
 
                     /* --- bottom right: damage, turbo, speed.  Every offset is
                      * measured off a 640x480 capture of the original (Wine,
-                     * etappe1, session 15) and given in the HUD's 800x600 units
+                     * etappe1) and given in the HUD's 800x600 units
                      * (capture px x 1.25; the original draws olfnt01 at 0.8 at
                      * 640x480), up from the bottom and in from the right. --- */
                     float save_right_b = right;
@@ -4417,7 +4411,7 @@ int main(int argc, char **argv)
                     if (overlay_detail >= 3) {
                         /* Both bars are an 11-frame 91x8 ladder in RC.IMG, in 10%
                          * steps, and in neither case is the step order the index
-                         * order -- these were read off by measuring how far the lit
+                         * order: these were read off by measuring how far the lit
                          * colour reaches in each frame.  The empty frames sit well
                          * away from their runs: 431 is the all-dark damage bar and
                          * 14 the all-dark chevron strip.  (122/125 and 134..144 are
@@ -4427,7 +4421,7 @@ int main(int argc, char **argv)
                         /* The turbo bar is sprite anim 21 (0x4961E8; HUD element 4's
                          * hires art), the plain orange chevrons, not the gradient
                          * set 11..21: matched against Wine captures with gamma
-                         * applied (session 15).  Its full frame is the gradient
+                         * applied.  Its full frame is the gradient
                          * strip 13, shown only at exactly 100%. */
                         static const int chevron[11] = { 449, 433, 439, 445, 446, 447,
                                                          448, 432, 450, 451, 13 };
@@ -4501,21 +4495,18 @@ int main(int argc, char **argv)
                  * posted signs and the radar bonus"):
                  *  - the original compares against a **posted** limit of
                  *    50/70/100/120 held in a global by `txt_vbrd.cpp`, with no
-                 *    tolerance -- a different set from the 60/80/120 and the
+                 *    tolerance: a different set from the 60/80/120 and the
                  *    10% the police use, and from the limit signs this reads;
                  *  - it shows **no text at all**: it plays sound sample 11 and
                  *    runs a palette fade to white, nothing more.
                  * There is in fact no fine system in the shipped game. The one
                  * text getter is reached either with a constant index or via
                  * the banner slot, and GEFLITST, POLITIE and all three BOETE
-                 * strings appear in neither set -- they are vestigial, as are
+                 * strings appear in neither set: they are vestigial, as are
                  * the fuel, breakdown and budget lines, and menu.dat has no
-                 * language subsystem to use them either. An earlier version of
-                 * this drew GEFLITST plus a fine of its own invention; that is
-                 * gone, and only the flash remains.
-                 * The earlier note here that the original "awards a radar bonus
-                 * when under the limit" was also wrong: the bonus is a
-                 * **collision** reward for knocking a camera over. */
+                 * language subsystem to use them either.
+                 * The radar bonus is a **collision** reward for knocking a
+                 * camera over, not an award for staying under the limit. */
                 if (race_time - flash_at < 2.5f) {
                     float age = race_time - flash_at;
                     if (age < 0.15f) {
@@ -4595,8 +4586,8 @@ int main(int argc, char **argv)
 
                 /* The game-over texts (ev_g_ovr.cpp).  The begin 0x416060
                  * renders two lines in font 14 (olfnt08) through 0x415c50:
-                 * the reason -- 40 TOTAL LOSS, 41 TIJD IS OM or 42
-                 * GEARRESTEERD by the sub-mode 0x4867a4 -- with its top at
+                 * the reason (40 TOTAL LOSS, 41 TIJD IS OM or 42
+                 * GEARRESTEERD by the sub-mode 0x4867a4) with its top at
                  * screen height / 4 over 1.5 s, and 43 RACE OVER at height / 2
                  * over 3 s, switched off until the first is done (0x4163c7).
                  * 0x415e80 blits a line a scanline at a time: with s = sin of
@@ -4729,8 +4720,8 @@ int main(int argc, char **argv)
         frames++;
         if (!over_since && (finished || arrested))
             over_since = SDL_GetTicks();
-        /* A headless test run ends itself a few seconds after the race does --
-         * by finishing or by any of the game-over arms -- instead of sitting
+        /* A headless test run ends itself a few seconds after the race does,
+         * by finishing or by any of the game-over arms, instead of sitting
          * on the result until the window is closed or the frame cap hits. */
         if (drive_test && (finished || arrested) && ++over_frames > 150) {
             fprintf(stderr, "drive-test: race over, exiting\n");

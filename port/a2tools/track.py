@@ -27,7 +27,7 @@ import struct
 
 from util import rd_u32, floats, u32s
 
-# ---------------------------------------------------------------- .rmp
+# .rmp
 
 PLANE_LEN = 104          # 4 vertices x 20 B + 2 triangles x 12 B
 RMP_LISTS = 4            # road-planes, land-planes, + two more (see below)
@@ -57,7 +57,7 @@ def load_rmp(data):
 
     Note: `plane_count_hint` equals the true total plane count for etappe2 and
     etappe4 only; for the other tracks it is a few hundred low.  It is not used
-    for parsing -- treat it as a stale authoring figure.
+    for parsing: treat it as a stale authoring figure.
     """
     hint, chunk_count = struct.unpack_from("<2I", data, 0)
     o = 8
@@ -107,7 +107,7 @@ def rmp_to_obj(chunks, which=None, name="road"):
     return "\n".join(out) + "\n"
 
 
-# ---------------------------------------------------------------- .pmp
+# .pmp
 
 PMP_WP_MAX = 12          # rd_chunk.cpp "chunk waypoint left overflow"
 
@@ -163,14 +163,14 @@ def load_pmp(data):
     return count, chunks
 
 
-# ---------------------------------------------------------------- .cmp / .dmp / .omp
+# .cmp / .dmp / .omp
 
 def load_cmp(data):
     """Rails (`c_rail g_rails`): u32 count, then count x 24 B = 6 floats.
 
     Referenced by the per-chunk rail index lists in .pmp, which partition this
     array exactly.  The 6 floats are two 3D points (rail segment start/end) or a
-    point plus extent -- not yet distinguished.
+    point plus extent, not yet distinguished.
     """
     n = rd_u32(data, 0)
     recs = [floats(data, 4 + i * 24, 6) for i in range(n)]
@@ -188,11 +188,11 @@ def load_dmp(data):
         float x, y, z;              // world position
         i32   links[4];             // waypoint indices, -1 = none
 
-    CONFIRMED (session 7): the dword that earlier notes called "field3" is the
+    CONFIRMED: the third dword is the
     waypoint's **y**, so the three coordinates are in natural order.  It equals
     the owning chunk's y for **28452 of 28461 waypoints** across the 7 tracks,
-    and the nine that differ are waypoints genuinely off the chunk centre --
-    among them the fuel-station slip road on etappe1 -- which is exactly what a
+    and the nine that differ are waypoints genuinely off the chunk centre,
+    among them the fuel-station slip road on etappe1, which is exactly what a
     per-waypoint height is for.  It tracks bridges: on etappe0 chunks 411-419 it
     runs 1, 2, 4, 6, 7, 6, 4, 2, 1.
 
@@ -251,7 +251,7 @@ def load_omp(data):
     return n, recs, short
 
 
-# ---------------------------------------------------------------- .pth
+# .pth
 
 def load_pth(data):
     """Camera paths (`pth_main.cpp`).  CONFIRMED: all 7 tracks parse byte-exactly.

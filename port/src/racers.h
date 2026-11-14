@@ -3,22 +3,22 @@
  * These are distinct from `traffic.c`: traffic exists to be overtaken and is
  * recycled once you leave it behind, whereas a racer runs the whole route and
  * has a finishing position.  Game.ini's `[RACERS]` section stores exactly that
- * per opponent -- "Arg 0: Zero based index of car the CPU racer had. Arg 1:
+ * per opponent: "Arg 0: Zero based index of car the CPU racer had. Arg 1:
  * Zero based position the CPU racer had when finished. Arg 2: Finish time of
- * the CPU racer in msecs" -- with `count=3` in the shipped file.
+ * the CPU racer in msecs", with `count=3` in the shipped file.
  *
  * Each racer is drawn with its own slot's `RACER_<n+1>_ANIM` mesh, chosen
  * next to the player's car as the original chooses them (see cars.h).
  *
- * The driving is the shipped game's AI, Game.ini ai_model = 0 (session 13;
- * the earlier port followed HANDLE_RACER_AI, which only ai_model = 1 runs).
+ * The driving is the shipped game's AI, Game.ini ai_model = 0 (HANDLE_RACER_AI
+ * only runs under ai_model = 1).
  * A racer is record 0-2 of the table at 0x4a55a0:
  *  - the transition table at 0x4a5410: 0 race, 1 the player is close behind
  *    the leader, 2 cut in front of the player, 7 held by the police (4 s),
  *    9 finished, 10 unstick (back off at 15 m/s), 11 far ahead (60 km/h);
  *  - it follows the .dmp waypoint graph by ScanPath (ai_world.h), avoiding
  *    waypoints other vehicles are on, and drives a physical car by throttle,
- *    brake and steering (ai_car.h) -- **the player's car**, with the player's
+ *    brake and steering (ai_car.h): **the player's car**, with the player's
  *    upgrades, scaled by the rubber band 0x4014e0;
  *  - it does not obey speed limits; its limit (+0x2c) only decides whether a
  *    cop chases it;

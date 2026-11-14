@@ -1,4 +1,4 @@
-# gdb Python script (session 14): put the original's racer cut-in (racer
+# gdb Python script: put the original's racer cut-in (racer
 # state 2) on the record.  Every frame, before the transition pass (0x403340),
 # the player is held BACK units behind the leading racer (rank 0), at its
 # heading and speed: the 0 -> 1 test 0x401780 wants the player within 100
@@ -158,7 +158,7 @@ class Frame(gdb.Breakpoint):
 
 bp = Frame()
 
-# SCAN=True (session 15, question 54): log every ScanPath (0x409670) a racer
+# SCAN=True (question 54): log every ScanPath (0x409670) a racer
 # in state 2 runs, and each waypoint it tests with the obstacle-list read
 # 0x40c3a0 (returns at 0x40986d, 0x4098ce, 0x409917; the waypoint is in esi,
 # ebp, ebp) with the ids copied to 0x4a5bd8.

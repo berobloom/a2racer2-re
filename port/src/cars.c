@@ -103,7 +103,7 @@ const char *a2_car_anim_name(int slot)
  *   3 r_bmw    17.1x39.2   4 r_porche 17.4x43.4  5 r_clk    17.9x46.0
  *   6 r_diablo 18.8x48.0
  *
- * CARS.DAT itself has no dimensions -- it is a performance table -- so these
+ * CARS.DAT itself has no dimensions, it is a performance table, so these
  * come from the geometry rather than from the data file.  Slots 7-9 are empty
  * and fall back to the Trabant's.
  */

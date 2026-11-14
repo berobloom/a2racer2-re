@@ -14,7 +14,7 @@
  * frame's AI is done, as the engine does.
  *
  * The model is a copy of the player's (0x40f0d0 / 0x40f3c0) with differences
- * that are kept here as the original has them -- notably it drives **the
+ * that are kept here as the original has them: notably it drives **the
  * player's car**: CARS.DAT is indexed by [0x4d9e2c], the player's car type,
  * with the player's gearbox and tyre upgrades.  See research/discoveries.md,
  * "The new AI model, traced". */

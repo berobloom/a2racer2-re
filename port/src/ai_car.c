@@ -6,7 +6,7 @@
 #define TWO_PI 6.28318548f
 #define HEAD_TO_RAD (TWO_PI / TURN) /* 0x484ad0 */
 
-/* ------------------------------------------------------- the rubber band */
+/* The rubber band */
 
 /* 0x482258: {upper, lower, gain} by (difficulty * 7 + etappe); the original
  * repeats each row for its three racers. */
@@ -54,7 +54,7 @@ float a2_ai_rubber_band(int racer, int lead, int difficulty, int etappe)
     return f;
 }
 
-/* -------------------------------------------------------- longitudinal */
+/* Longitudinal */
 
 /* 0x40eae0: the gear's top speed and acceleration both scale with the band. */
 static float gear_accel(const a2_ai_car *c, const a2_ai_env *e, float f, float bonus,
@@ -131,7 +131,7 @@ void a2_ai_longitudinal(a2_ai_car *c, const a2_ai_env *e, float factor, float bo
         d->v_fwd = -13.333f;
 }
 
-/* ------------------------------------------------------------ steering */
+/* Steering */
 
 static float wrap1(float a)
 {
@@ -249,7 +249,7 @@ void a2_ai_body(a2_ai_car *c, const a2_ai_env *e, float dt)
 
 void a2_ai_integrate(a2_ai_car *c, float dt) { a2_drive_integrate(&c->d, dt); }
 
-/* ------------------------------------------------------------- bearings */
+/* Bearings */
 
 static float atan_units(const a2_drive *d, float x, float z)
 {
@@ -284,7 +284,7 @@ int a2_ai_rel_angle(const a2_drive *d, float x, float z)
     return (int)a;
 }
 
-/* -------------------------------------------------------------- control */
+/* Control */
 
 void a2_ai_speed_control(a2_ai_car *c, const float far[3], int cop, float dt)
 {
@@ -332,7 +332,7 @@ void a2_ai_drive(a2_ai_car *c, const a2_ai_env *e, const float near[3], float fa
     a2_ai_body(c, e, dt);
 }
 
-/* ------------------------------------------------------------ collisions */
+/* Collisions */
 
 /* the integrator's frame: forward (-sin, cos), lateral (cos, sin) */
 void a2_ai_world_velocity(const a2_drive *d, float *vx, float *vz)

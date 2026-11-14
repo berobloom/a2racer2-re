@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Concrete fits of the object-world collision response 0x449570 (session 13).
+"""Concrete fits of the object-world collision response 0x449570.
 Run from the repo root: fit_wall.py (reads .work/game/spel.dat)."""
 import math,struct,sys
 sys.path.insert(0,'reverse-engineering/tools')

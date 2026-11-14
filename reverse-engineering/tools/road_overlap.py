@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Find where a track's road planes overlap at different heights (session 14).
+"""Find where a track's road planes overlap at different heights.
 
 For every waypoint of every chunk, collect the road-plane (.rmp list 0)
-triangles of chunks c-1..c+1 whose xz footprint contains it -- the set the
-port's a2_scene_road_height searches -- and report waypoints where those
+triangles of chunks c-1..c+1 whose xz footprint contains it, the set the
+port's a2_scene_road_height searches, and report waypoints where those
 triangles disagree in height by more than THRESH units, along with the
 waypoint's own y (.dmp f3, which follows bridges).
 

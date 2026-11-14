@@ -1,6 +1,6 @@
 #!/bin/sh
 # Drive the original menu.dat under Wine on a private Xvfb, for reference
-# captures (session 12).  Never touches the user's display.
+# captures.  Never touches the user's display.
 #
 #   winemenu.sh start <datadir> [prog]   Xvfb :98 (640x480x24) + wine ./menu.dat
 #                                        (or <prog>, e.g. spel.dat), waits 14 s

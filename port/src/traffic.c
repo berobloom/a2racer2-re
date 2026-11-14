@@ -22,13 +22,13 @@
  *     n_calibr 46.8 x 18.2     n_golf   41.4 x 18.9     n_astra  40.3 x 16.0
  *     n_polo   39.1 x 17.8
  *
- * They matter because a bus is 9.4 m long -- more than twice a car, and most of
+ * They matter because a bus is 9.4 m long: more than twice a car, and most of
  * a chunk.  Treating every vehicle as one small circle let the player drive
  * into the middle of a bus, and let the overtake check read a lane as clear
  * when the bus's centre happened to fall between two probe points.
  *
- * The road roller (N_WALS) used to be in this list at 8 m/s.  The original's
- * traffic spawner never picks it -- see SPAWN below -- so it is gone. */
+ * The road roller (N_WALS) is not in this list: the original's traffic
+ * spawner never picks it, see SPAWN below. */
 static const struct {
     const char *anim;
     float half_len;
@@ -45,7 +45,7 @@ static const struct {
  * index into TRAFFIC_KINDS.  The spawner (0x40cacd..0x40cb04) makes **two**
  * rand() % 12 draws: one picks the vehicle from the first column and the
  * other the behaviour from the second, so a car's speed is not tied to its
- * model -- a bus is as likely as a Golf to drive like behaviour 3. */
+ * model: a bus is as likely as a Golf to drive like behaviour 3. */
 static const int SPAWN_KIND[12] = {0, 0, 1, 1, 4, 4, 2, 3, 5, 5, 6, 6};
 static const int SPAWN_BEH[12] = {2, 3, 2, 3, 2, 3, 2, 2, 2, 3, 2, 3};
 /* The two traffic behaviours, from the emulated init_ai_states (see
@@ -210,7 +210,7 @@ static void body_axis_nearest(const traffic_car *c, float x, float z, float *ox,
 
 #define LANE_CHANGE_SECS 1.2f
 
-/* ---- ai_lane.cpp, the traffic arm (session 13) ----------------------------
+/* ai_lane.cpp, the traffic arm.
  *
  * change_lane (0x403660) runs every tick.  For each lane of the chunk it
  * fills a t_lane_info: the nearest vehicle on the first waypoint ahead
@@ -444,7 +444,7 @@ void a2_traffic_set_limits(a2_traffic *t, const a2_track *track)
      * limit, 10 -> stop (not used by the shipped tracks), 7 and 9 nothing.  A
      * car takes the limit as it enters the chunk and keeps it until the next
      * trigger, so this is the limit in force on each chunk for a car that has
-     * driven there from the start -- in chunk order on the player's side, and
+     * driven there from the start: in chunk order on the player's side, and
      * against it on the other. */
     if (!t || !track)
         return;
@@ -872,7 +872,7 @@ void a2_traffic_update(a2_traffic *t, const a2_scene *scene, const struct a2_aiw
         if (seg < 1e-3f)
             seg = 1.0f;
 
-        /* Speed, by the original's calc_speed (0x407140) -- the same
+        /* Speed, by the original's calc_speed (0x407140): the same
          * controller the racers use (see racers.c): the behaviour's preferred
          * speed less brake * |sin| of the angle to the road two chunks ahead
          * (that lookahead is ours), clipped to the speed limit in force, then
@@ -1126,7 +1126,7 @@ int a2_traffic_occupied(const a2_traffic *t, float x, float z, float radius)
         const traffic_car *c = &t->cars[i];
         if (!c->alive)
             continue;
-        /* Against the body axis, so a long vehicle blocks its whole length --
+        /* Against the body axis, so a long vehicle blocks its whole length,
          * otherwise a bus straddling two probe points reads as no obstacle. */
         float bx, bz;
         body_axis_nearest(c, x, z, &bx, &bz);

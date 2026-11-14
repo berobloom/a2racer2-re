@@ -30,7 +30,7 @@ static uint8_t *load(const char *dir, const char *stem, const char *ext, size_t 
     return data;
 }
 
-/* ------------------------------------------------------------------ .rmp */
+/* .rmp */
 
 static int parse_rmp(a2_rmp *out, const uint8_t *data, size_t size)
 {
@@ -95,7 +95,7 @@ static void free_rmp(a2_rmp *r)
     memset(r, 0, sizeof(*r));
 }
 
-/* ------------------------------------------------------------------ .pmp */
+/* .pmp */
 
 static int parse_pmp(a2_pmp *out, const uint8_t *data, size_t size)
 {
@@ -166,7 +166,7 @@ static void free_pmp(a2_pmp *p)
     memset(p, 0, sizeof(*p));
 }
 
-/* ------------------------------------------------- .cmp / .dmp / .omp */
+/* .cmp / .dmp / .omp */
 
 static int parse_cmp(a2_track *tr, const uint8_t *data, size_t size)
 {
@@ -257,7 +257,7 @@ static int parse_omp(a2_track *tr, const uint8_t *data, size_t size)
     return a2_cur_ok(&c) ? 0 : -1;
 }
 
-/* ------------------------------------------------------------------ api */
+/* API */
 
 /* Camera paths.  The original's loader (fcn.00433710, pth_main.cpp) rejects any
  * version other than -1, so we do the same. */

@@ -7,7 +7,7 @@
  *   .cmp  rails (guardrails)
  *   .dmp  the AI waypoint graph
  *   .omp  static scenery objects, each tagged with its chunk
- *   .pth  scripted object paths -- the helicopter, the aeroplane, a police car
+ *   .pth  scripted object paths: the helicopter, the aeroplane, a police car
  */
 #ifndef A2_TRACK_H
 #define A2_TRACK_H
@@ -50,44 +50,44 @@ typedef struct {
     /* Per-chunk trigger slots.  CONFIRMED from the engine: the dispatcher at
      * 0x442607 reads exactly these two words, at **+0xEC and +0xF0** of the
      * 388-byte runtime chunk record, looks each up in a 257-slot handler array
-     * at 0x4E5928 and calls it with the car index -- if the slot is non-null.
+     * at 0x4E5928 and calls it with the car index, if the slot is non-null.
      * The game registers handlers for values **0..48 only**, by walking its own
      * table at 0x48C488..0x48C54C (0x42a2b0), so everything else is inert.
      *
-     *   1  the speed camera -- its handler plays sample 11, `flits.wav`
+     *   1  the speed camera: its handler plays sample 11, `flits.wav`
      *   2  the service station (`BENZINE_STATION`): refills the turbo tank to
      *      100, resets the damage, plays sample 47 `repair.wav` and raises
-     *      banner 48 QUICK SERVICE.  It is a service stop, not a petrol stop --
+     *      banner 48 QUICK SERVICE.  It is a service stop, not a petrol stop:
      *      it never touches a fuel quantity.
      *   3, 48  share one handler, 0x415990 (unidentified; absent from the data)
      *   4/5/6/8  the posted speed limit: they write 50 / 70 / 100 / 120 into
      *      0x48C480, which is what the camera compares against, and blit sign
-     *      face 0/1/2/3.  Note the set is 4, 5, 6 and **8** -- not 4-7.  The
+     *      face 0/1/2/3.  Note the set is 4, 5, 6 and **8**, not 4-7.  The
      *      *police* limits are a separate system (2x default / 60 / 80 / 120,
      *      with a x1.1 tolerance) read by the cop AI; see discoveries.md.
-     *   7  sets a flag, 0x4a70d4 -- not a limit
+     *   7  sets a flag, 0x4a70d4, not a limit
      *   9  ZERO_CHUNK_MARKER (circuits, chunk 0)
      *   13 start line; clears 0x48c888
      *   14 FINISH_POSITION; 15 FINISH_VALID
      *   16 sets an (R,G,B) of (0,0,255) with 3.5 and 2000.0 and an enable flag
-     *      at 0x4dc9a8 -- LIKELY fog or haze; 17 looks like its "off".  Neither
+     *      at 0x4dc9a8: LIKELY fog or haze; 17 looks like its "off".  Neither
      *      appears in any shipped track.
      *   22-39 traffic signs on the highway stages.  tr_vbord.cpp has 18
      *      handlers, every one gated to etappe 1/3/5, and the values appear on
      *      exactly those three stages.  The signs are not placed as geometry:
      *      each handler calls the texture blitter 0x42ae90 with a slot picked
      *      by the etappe and a **frame picked by the trigger value**, so 22+k
-     *      and 31+k stamp frame k into a_TRFFC1 at (9, 122) and (9, 7) -- two
+     *      and 31+k stamp frame k into a_TRFFC1 at (9, 122) and (9, 7): two
      *      gantries, one per carriageway, four faces each.  The gantry itself
      *      never changes; only its texture does.
-     *   45 the checkpoint -- CONFIRMED by having a handler, 0x42a530, rather
+     *   45 the checkpoint: CONFIRMED by having a handler, 0x42a530, rather
      *      than only by its data correlation with the A_CHECK gantries
      *      (check_racer_trigger is a different dispatcher and covers only
      *      2, 9, 14, 15, 46 and 47)
      *
      * Null in the table, so inert through this path: 0, 10-12, **18-21**,
      * **40-44**, 46, 47.  For the lane triggers 18-21 and 40-43 that is the
-     * point -- they are the commonest values in the data (332 of them) and the
+     * point: they are the commonest values in the data (332 of them) and the
      * lane system reads the chunk slots directly.  46 FUEL_APPROACH and
      * 47 FINAL_APPROACH never appear in track data at all.
      * The stray data values **86, 94, 107, 130, 150 and 196** are likewise

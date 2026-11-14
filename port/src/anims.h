@@ -13,7 +13,7 @@
  * Evidence and the derivation of the 9-byte stride are in
  * research/discoveries.md.  The offsets are specific to the retail
  * `spel.dat` (MD5 556416bfff29667e455d8b0fc246b75c), so the reader validates
- * what it finds and simply reports failure on anything else -- the viewer then
+ * what it finds and simply reports failure on anything else: the viewer then
  * falls back to untextured meshes.
  */
 #ifndef A2_ANIMS_H

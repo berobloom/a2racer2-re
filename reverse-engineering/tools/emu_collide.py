@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Symbolic trace of spel.dat's object-object collision response 0x448eb0
-(session 13).  Two objects with symbolic mass terms (+0x60, +0x64), local
+.  Two objects with symbolic mass terms (+0x60, +0x64), local
 velocity (+0x6c..+0x74) and yaw rate (+0x7c), headings 0 (so local = world),
 and a symbolic contact point / normal in the collision record 0x4e6760.
 Prints the formula of every float the function stores.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Concrete fits of the object-object collision response 0x448eb0 (session 13).
+"""Concrete fits of the object-object collision response 0x448eb0.
 Run from the repo root: fit_collide.py (reads .work/game/spel.dat)."""
 import math,struct,sys
 sys.path.insert(0,'reverse-engineering/tools')

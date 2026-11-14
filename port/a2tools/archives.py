@@ -6,7 +6,7 @@ Two index formats exist (see reverse-engineering/file-formats.md):
    u16 count, then count x u32 offsets into the IMG blob.
    The IMG itself also starts with the same u16 count.
 
-2. Named IND (Mrcs.ind, RCS.IND) -- CONFIRMED, fixed layout:
+2. Named IND (Mrcs.ind, RCS.IND): CONFIRMED, fixed layout:
        u16 count;
        struct { char name[20]; u32 offset; } entries[count];   // 24 bytes each
    File length is exactly 2 + count*24 for both RCS.IND and Mrcs.ind.
@@ -14,7 +14,7 @@ Two index formats exist (see reverse-engineering/file-formats.md):
    `name` is a NUL-terminated string inside a 20-byte field; the bytes after
    the NUL are uninitialised leftovers from the writer's shared name buffer
    (which is why they trail off into ")*+,-./0123" and earlier file names).
-   They carry no meaning -- see research/discoveries.md ("text IND" question).
+   They carry no meaning: see research/discoveries.md ("text IND" question).
 
    Entry sizes are implicit: next offset - this offset, and IMG length for the
    last entry.  Verified against 216 (name, index, offset) triples logged by the

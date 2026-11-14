@@ -53,7 +53,7 @@ int m_text_width(const m_font *f, const char *s) { return (int)strlen(s) * f->w;
 /* Text lands on even x: every string measured in captures of the original
  * (Kwalificatie at 278 for a computed 279, the car name at 436 for 437, the
  * button labels) sits at its computed x rounded down to even, while sprites
- * keep odd positions -- LIKELY a word-aligned text blit. */
+ * keep odd positions: LIKELY a word-aligned text blit. */
 int m_text(m_canvas *c, const m_font *f, int x, int y, const char *s)
 {
     return m_text_ink(c, f, -1, x, y, s);

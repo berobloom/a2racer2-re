@@ -1,4 +1,4 @@
-# gdb Python script (session 13): count breakpoint hits in a running spel.dat
+# gdb Python script: count breakpoint hits in a running spel.dat
 # under winedbg --gdb without stopping.  Run as:
 #   gdb -q -batch -ex "python PORT='<port>'; OUT='counts.txt'; SECS=60" -x gdb_count.py
 # after starting `winedbg --gdb --no-start 0x<wpid>` (see runtime-wine.md).

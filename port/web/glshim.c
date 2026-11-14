@@ -149,7 +149,7 @@ void a2web_glPopAttrib(void)
         a2web_glColor4f(s->color[0], s->color[1], s->color[2], s->color[3]);
 }
 
-/* ------------------------------------------------------------ textures */
+/* Textures */
 
 enum { MAXTEX = 8192 };
 static struct { unsigned short w, h, W, H; } texsize[MAXTEX]; /* by name */
@@ -280,7 +280,7 @@ void a2web_glTexSubImage2D(GLenum target, GLint level, GLint x, GLint y, GLsizei
     free(o);
 }
 
-/* --------------------------------------------------------- indexed draws */
+/* Indexed draws */
 
 enum { A_VERTEX, A_TEXCOORD, A_COLOR, NARR };
 static struct {

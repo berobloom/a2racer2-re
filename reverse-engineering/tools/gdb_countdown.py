@@ -1,4 +1,4 @@
-# gdb Python script (session 15): log the start countdown's 3D text spawns.
+# gdb Python script: log the start countdown's 3D text spawns.
 # Breaks on 0x417140(text, pos[3], dir[3], style) and writes the arguments
 # and the player car's position (node +0x50) to OUT.  Run as gdb_count.py.
 import gdb, struct, threading, time

@@ -19,7 +19,7 @@ SPEL, CARSDAT, LIB = (sys.argv[1:4] + [None]*3)[:3] if len(sys.argv) > 3 else (N
 CASES = int(sys.argv[4]) if len(sys.argv) > 4 else 300
 
 
-# ------------------------------------------------------------ the port side
+# The port side
 class Car(C.Structure):
     _fields_ = [('f', C.c_float * 37), ('empty', C.c_int)]
 
@@ -70,7 +70,7 @@ def car_struct(i):
     return c
 
 
-# ------------------------------------------------------------ the original
+# The original
 class Orig:
     HEAP, STK, STUB = 0x10000000, 0x20000000, 0x30000000
 

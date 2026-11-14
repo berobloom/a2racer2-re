@@ -1,8 +1,7 @@
 /* The police, on the shipped game's AI (Game.ini ai_model = 0).
  *
- * Session 13 rebuilt this module: the earlier port followed HANDLE_COP_AI's
- * state machine (lookout, pursuit, "the catch is a block one chunk ahead"),
- * which only ai_model = 1 runs.  What the shipped game does, all from
+ * HANDLE_COP_AI's state machine (lookout, pursuit, "the catch is a block one
+ * chunk ahead") only runs under ai_model = 1.  What the shipped game does, from
  * research/discoveries.md "The new AI model, traced":
  *
  *  - The cops are the type-9 .omp placements.  A placed cop with no chase
@@ -15,7 +14,7 @@
  *    chance of about dt a frame (0x4034a0).
  *  - The chasing cop is a record 3-14 of the table at 0x4a55a0, run by the
  *    transition table at 0x4a5280 (0x409200): 3 drive the road flat out
- *    (+0.1 acceleration), 4 the target is behind -- move into its lane, brake
+ *    (+0.1 acceleration), 4 the target is behind: move into its lane, brake
  *    at 50 when it is slower and at 100 when it is right behind, 5 caught
  *    (the target has stopped within 71 units), 6 stand 4 s, 17 drive off
  *    at 10 m/s for 3 s, 8 coast and retire beyond 30 chunks, 14 / 16 the

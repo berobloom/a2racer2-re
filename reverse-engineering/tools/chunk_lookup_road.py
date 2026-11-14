@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The two position -> chunk lookups of chunk_lookup.py, off the waypoints
-(session 18, open question 60).  For every chunk i it samples 5 points along
+(open question 60).  For every chunk i it samples 5 points along
 i -> i+1 and 17 lateral offsets (-80..80 units along the chunk's right
 vector), takes the walk (0x445a10, hint i) and the port's nearest-chunk
 lookup, and counts the points where their planes (0x442f00) differ by more

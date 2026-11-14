@@ -19,10 +19,10 @@ Prefer evidence from binaries and runtime experiments over external documentatio
 
 ## Important files
 
-- `research/discoveries.md` — confirmed discoveries
-- `research/hypotheses.md` — current hypotheses
-- `research/open-questions.md` — unresolved questions
-- `reverse-engineering/` — technical documentation
+- `research/discoveries.md`: confirmed discoveries
+- `research/hypotheses.md`: current hypotheses
+- `research/open-questions.md`: unresolved questions
+- `reverse-engineering/`: technical documentation
 
 ## Workflow
 

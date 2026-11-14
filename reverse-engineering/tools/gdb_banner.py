@@ -1,4 +1,4 @@
-# gdb Python script (session 16): follow the banner slot against the game
+# gdb Python script: follow the banner slot against the game
 # mode in a running spel.dat under winedbg --gdb.  A breakpoint on 0x408ed0
 # (once a frame) logs every change of the game mode 0x4d9a7c, the HUD-off
 # flag 0x4d9aa0, the pending banner 0x4882c0, the latched banner 0x4882c4 and

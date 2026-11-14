@@ -3,9 +3,9 @@
 ## Launch / process flow
 
 1. **RESOLVED (session 9).** qrace.exe is the **Quick Race dialog** (window
-   class `3DS2N64`): it writes the chosen settings into **game.ini** --
+   class `3DS2N64`): it writes the chosen settings into **game.ini** (
    `[PLAYER] car`, `[ETAPPE] etappe` and the upgrades versnellingsbak / turbo /
-   abs / banden / motor, plus copland and damage -- then appends **`.dat`** to
+   abs / banden / motor, plus copland and damage) then appends **`.dat`** to
    text from dialog control 40 and launches that with CreateProcessA.
    **No game.ini key names the program to launch**; the premise of the question
    was wrong. See "The three executables" in discoveries.md.
@@ -16,7 +16,7 @@
 3. **RESOLVED (session 9).** **menu.dat exits and the shell relaunches it.**
    a2_II.exe waits for it, reads its exit code, and launches `spel.dat` only
    when that code is **40** (0x28 at 0x401292); after the race it loops back to
-   menu.dat. No tracing was needed -- the shell's own code says it.
+   menu.dat. No tracing was needed: the shell's own code says it.
 
 ## Rendering
 
@@ -24,15 +24,15 @@
    uses **real Direct3D 2**. The call at 0x455AB8 is
    `IDirect3DDevice2::DrawIndexedPrimitive` (vtable+0x78) with
    D3DPT_TRIANGLELIST / D3DVT_TLVERTEX and a WORD index buffer. There is no
-   in-binary fill loop to find — rasterization happens in the D3D driver. The
+   in-binary fill loop to find: rasterization happens in the D3D driver. The
    app-side pipeline (x87 transform/projection/lighting → D3DTLVERTEX, DRWORDER
    sort, hardware z-buffer) is confirmed. See research/discoveries.md.
-5. **RESOLVED (session 9).** It switches **nothing about rendering** -- it is
+5. **RESOLVED (session 9).** It switches **nothing about rendering**: it is
    device *selection*. (0x4650C0 is not it, incidentally: that is a
    DirectDraw HRESULT-to-string mapper.) The real detection is at **0x46d130**,
-   a chain of prefix comparisons against the enumerated driver's name --
-   **`3dfx`, `DD3Dfx`, `R3D`** (Righteous 3D) and **`mnstr2`** (Diamond
-   Monster 3D II) -- each logging "<name> driver found %d" and writing that
+   a chain of prefix comparisons against the enumerated driver's name
+   (**`3dfx`, `DD3Dfx`, `R3D`** (Righteous 3D) and **`mnstr2`** (Diamond
+   Monster 3D II)) each logging "<name> driver found %d" and writing that
    device's **index** into the single global **0x4a0ecc**.
    fcn.0046d290 then takes a selector 1..4 and hands back the matching driver
    record (216-byte stride) out of the array at 0x4f0000: selector 1 uses
@@ -54,7 +54,7 @@
    constant 16, and only textures ask for video memory; Raser.ini FOCUS is
    overridden in RESOLUTION 3 / 4, so the game renders to the back buffer.
    See discoveries.md "Surfaces, memory placement and the z-buffer depth".
-7. **RESOLVED (session 9).** They are not unnamed -- `handle_game()`
+7. **RESOLVED (session 9).** They are not unnamed: `handle_game()`
    (Gm_main.cpp) prints `calling -> X()` before each one, so the game labels its
    own frame loop. In order:
 
@@ -75,9 +75,9 @@
    | 14 | 0x41bdd0 | `draw_2d_display()` |
    | 15 | 0x420760 | `update_game_screen()` |
 
-   Conditional calls in between include **0x424d20** -- the **game-mode
+   Conditional calls in between include **0x424d20** (the **game-mode
    setter** resolved under question 18, which is how a race switches into the
-   arrest sequence -- and **0x4286a0**, the **SNDFX sample player** identified
+   arrest sequence) and **0x4286a0**, the **SNDFX sample player** identified
    with the radar bonus. 0x4214d0, 0x403340 and 0x408ed0 are still unlabelled.
    The loop ends with `end of handle_game()` and an assert,
    `(winmain) - Illegal renderfocus.`
@@ -87,7 +87,7 @@
 8. **RESOLVED (session 5).** `.rmp` is not "groups of vertices+triangles": it is
    `u32 hint; u32 chunkCount;` then per chunk four count-prefixed lists of
    fixed 104-byte planes (4 vertices + 2 triangles). `.pmp` is the chunk table
-   (position + rail/waypoint index lists), not "positions + variable records" —
+   (position + rail/waypoint index lists), not "positions + variable records":
    the `2` markers seen earlier were the waypoint counts. Both byte-exact on all
    7 tracks. See file-formats.md.
 9. **RESOLVED (session 5).** `.dmp` is the **AI waypoint graph**
@@ -99,8 +99,8 @@
    record's three coordinates are x, y, z in natural order. It equals the owning
    chunk's y for 28452 of the 28461 waypoints and follows bridges; the nine that
    differ sit off the chunk centre (two are the etappe1 fuel-station slip road).
-   See file-formats.md. **Still unidentified:** `.dmp` field 1 — though it is 0
-   in all but 4 waypoints, so there is little left to identify — and the bit-7
+   See file-formats.md. **Still unidentified:** `.dmp` field 1 (though it is 0
+   in all but 4 waypoints, so there is little left to identify) and the bit-7
    flag on `type`. On the flag, three hypotheses were **tested and rejected**
    (session 7): it is not a left/right carriageway marker (it appears on both
    sides), not a lane-count-change marker (only 7-9 of ~20 flagged chunks per
@@ -108,7 +108,7 @@
    the 1461 flagged waypoints lie more than 250 units off the centreline, while
    2011 off-road waypoints do **not** carry it). It is set on 1461 of the 28461
    waypoints, and the base type it accompanies varies by track (etappe2 is all
-   type 2, etappe3 mostly type 4, etappe0 mostly type 0). (`.pmp` f3/f4 were resolved in session 6 — they are the
+   type 2, etappe3 mostly type 4, etappe0 mostly type 0). (`.pmp` f3/f4 were resolved in session 6: they are the
    per-chunk AI trigger slots, see question 38.)
 11. **RESOLVED (sessions 7-12)**: the three header fields are f2 the path type, f3 the lap (session 12) and f4 the duration in ms (session 10). `.pth` is a list of
     **camera paths**: `i32 version(-1); u32 count;` then per path six dwords
@@ -121,21 +121,21 @@
     chunk falls inside the range; the rest overshoot an end by 1-4 chunks).
     **Session 10: `f4` is a time, and "camera paths" is the wrong name.**
     `pth_main.cpp` raises **"Time not set for path %d"** when the field is
-    missing, so f4 is a duration -- the authored 5000..50000 are **5 to 50
+    missing, so f4 is a duration: the authored 5000..50000 are **5 to 50
     seconds in milliseconds**. And at least three of the eight path types drive
     **objects, not cameras**: type 4 is the **helicopter** (`pth_heli.cpp`,
     loading C_HELI_ANIM / C_LBLADE_ANIM / C_SBLADE_ANIM and asserting
     "Helicopter paths only available in city tracks!"), type 6 the **aeroplane**
     (A_VLIEGT_ANIM) and type 1 a **police car** (MPOLIZEI_ANIM). So `.pth` is a
-    list of **scripted paths**, of which some may be camera paths -- the five
-    unnamed types leave that open -- but it is not a camera-only file.
+    list of **scripted paths**, of which some may be camera paths, the five
+    unnamed types leave that open, but it is not a camera-only file.
     **Session 12: RESOLVED.** `f3` is the **lap** a path plays on (1-based,
     0 = every lap; fcn.00434460). The type table starts at 0x4966F0, not F4,
     so the types are 2 police car, 3 a canal tour boat (STRONGLY SUPPORTED, seen in the port), 4 train, 5
     helicopter, 6 random traffic vehicle, 7 aeroplane. See "`.pth` f3 is the
     lap, and the path types re-read". (Earlier:) See "The `.pth` camera paths are not cameras"
     in discoveries.md, and reverse-engineering/file-formats.md.
-12. **RESOLVED (session 5).** The named IND format is a fixed layout —
+12. **RESOLVED (session 5).** The named IND format is a fixed layout:
     `u16 count;` then `{ char name[20]; u32 offset; }` per entry, an exact fit
     for both RCS.IND and Mrcs.ind. Nothing remains: the trailing "field bytes"
     this entry used to ask about are uninitialised leftovers of the writer's
@@ -169,7 +169,7 @@
     the **language** module. Its path string sits immediately before the
     language.ini strings (`Couldn't find text for index %d, language: %s`,
     `text_count`, `NEDERLANDS`/`ENGELS`/`DUITS`), and the text getter that
-    asserts against it, fcn.00431d30, has 24 call sites -- it is the most-used
+    asserts against it, fcn.00431d30, has 24 call sites: it is the most-used
     helper in the UI. There is **no multiplayer code**: spel.dat holds no IPX,
     no winsock and no network API at all. The only "network" strings are
     `%s = NETWORK` from Hwinfo.cpp's GetDriveType enumeration and a Windows
@@ -177,8 +177,8 @@
 17. **RESOLVED (session 9).** The DAMAGE_MESH/DAMAGE_VALUE 8-element lists are
     **the eight directions round the car**. `plr_car.cpp`'s collision handler
     dispatches a signed value in [-11,+11] through a case table at 0x42770c; the
-    only live values are **+/-1, +/-9, +/-10, +/-11** -- the eight neighbours of
-    a cell in a **10-wide grid** -- mapping to zones 0..7, and everything else
+    only live values are **+/-1, +/-9, +/-10, +/-11**, the eight neighbours of
+    a cell in a **10-wide grid**, mapping to zones 0..7, and everything else
     (0 included) raises `Impossible collision! (Center of object)`, which is
     what a zero difference means. Each hit adds the impact scaled by **0.5** to
     `0x4d9e74[zone]`, the array behind DAMAGE_VALUE, and DAMAGE_MESH[zone] is
@@ -193,7 +193,7 @@
     then sets **`frame = (int)(frame_count * DAMAGE_VALUE[zone])`**, where the
     count comes from the car model's own descriptor (0x43fc20, via
     `record[+0x98]` and the table at 0x4E6718). So the per-zone value is a
-    **0..1 fraction** mapped linearly onto however many frames that model has --
+    **0..1 fraction** mapped linearly onto however many frames that model has:
     no authored ladder exists. `DAMAGE_VALUE` is 8 floats at **0x4D9E74** and
     `DAMAGE_MESH` 8 ints at **0x4D9E94**; `Gm_ini.cpp`'s `load_player_info`
     round-trips both through `Game.ini [PLAYER]`, demanding exactly 8 values, so
@@ -203,12 +203,12 @@
     "l_width_zone = %d, l_height_zone = %d, l_zone = %d." gives the formula:
     three sign comparisons yield two components in {-1, 0, +1} and
     **`l_zone = l_height_zone + 10 * l_width_zone`** (0x4273ae). So the width
-    component carries the factor of 10 -- a pure +/-10 is a sideways hit, a pure
-    +/-1 an end-on one -- and the eight zones turn out to go **round the car in
+    component carries the factor of 10 (a pure +/-10 is a sideways hit, a pure
+    +/-1 an end-on one) and the eight zones turn out to go **round the car in
     order**: 0 (0,+1), 1 (+1,+1), 2 (+1,0), 3 (+1,-1), 4 (0,-1), 5 (-1,-1),
     6 (-1,0), 7 (-1,+1), a full rotation with 0 opposite 4 and 2 opposite 6.
     Every case applies the same 0.5 scale, so corners are not weighted.
-    **Session 11: moot for the visuals** -- no `.DMG` damage file ships, so
+    **Session 11: moot for the visuals**, no `.DMG` damage file ships, so
     no model has damage frames and nothing is ever drawn dented (see
     "Visible damage does not exist in the shipped game"). The phase only matters
     for the DAMAGE_VALUE bookkeeping now.
@@ -222,8 +222,8 @@
 18. **RESOLVED (session 9)**; the "two unread helpers" are named below (change_active_camera and a camera-parameter setter), in the old AI model the shipped game does not run. The structure is now documented (see
     "The police" in discoveries.md): `t_cop` is a 32-byte record in a T_ARRAY
     at 0x4a5238; each cop carries a **max speed** (+0x14) and **max lanes**
-    (+0x18) that the `.pmp` **speed and lane triggers set** -- trigger 4/5/6/8
-    gives 60 / 80 / 120 / 2x-default km/h (corrected session 12) and 18..21 gives 1..4 lanes -- so the
+    (+0x18) that the `.pmp` **speed and lane triggers set**: trigger 4/5/6/8
+    gives 60 / 80 / 120 / 2x-default km/h (corrected session 12) and 18..21 gives 1..4 lanes, so the
     per-chunk triggers are the law the police enforce. A cop judges three
     offences: speed, lanes, and side (`Ghost!`, wrong-way driving). The pursuit
     driving rule is known (more than 5 chunks behind -> run on the AI speed
@@ -240,7 +240,7 @@
     49/50 (`EERSTE`/`LAATSTE WAARSCHUWING`) and play a random police voice line,
     and the third takes a separate arm that ends the race.
     The **radar bonus** is answered: it is not a driving reward at all but a
-    collision one -- knocking a roadside object over (`field_0x10 == 0`,
+    collision one: knocking a roadside object over (`field_0x10 == 0`,
     `object_flyup_check_collision` with mass 10) sets its state to 18,
     increments a counter at 0x4dc964 and raises banner 51. (Session 13: the
     camera is `.omp` type 7, whose handler is 0x428d30; +0x10 is the prop's
@@ -251,14 +251,14 @@
     independent of the cops' 60/80/120 with x1.1.
     The **fines are answered, negatively**: there is no fine system in this
     build. `lan_main.cpp` has one text getter (fcn.00431d30) and exactly two
-    ways in -- a constant index, or the banner slot 0x4882c0/0x4882c4. The
+    ways in: a constant index, or the banner slot 0x4882c0/0x4882c4. The
     constant set is {17,24-28,32,34,36-39,42,43,52-55} and the banner set is
     {31,44-51}; **0 GEFLITST, 6/8/10 POLITIE and 1/7/9/11 BOETE are in neither**,
     nor are the fuel, breakdown and budget strings. menu.dat has no language
     subsystem at all, so it is not using them either. They are vestigial.
     The last two are answered as well: **0x4d9a7c is the game mode**, set by
     fcn.00424d20 through a 9-entry table at 0x424e00, and **mode 8 is the police
-    chase itself** -- its three callbacks are 0x415300 (the `g_times_caught`
+    chase itself**: its three callbacks are 0x415300 (the `g_times_caught`
     handler) and 0x415420 (the gate), so `== 8` only ever meant "while the chase
     sequence runs". The third catch calls fcn.00424d20(**6**), the **arrest**
     sequence, whose callbacks span the only two fetches of language.ini 42
@@ -266,28 +266,28 @@
     **Session 10 read mode 8 end to end** (see "The police do most of the
     talking" in discoveries.md). The module is **`ev_cops.cpp`**, named by its
     own asserts at lines 241 and 379. The warning routine 0x415300 switches on
-    `g_times_caught` **twice** -- once for the banner, once for a **voice line**
+    `g_times_caught` **twice**, once for the banner, once for a **voice line**
     drawn at random from one of three tables (0x486648 / 0x486660 / 0x486678,
-    six and five and five entries) -- and the catch number turns out to be
+    six and five and five entries), and the catch number turns out to be
     **the first digit of each sample's filename**, which the table layout
     proves rather than the name. Two further random pools play from the same
     module: thirteen `achter*` lines (0x486690) and five `opgev*` ones
     (0x4866c8), both gated on a shared channel at 0x4866DC. That accounts for
-    **34 of the 87 samples -- about 39% of the game's audio is the police
+    **34 of the 87 samples: about 39% of the game's audio is the police
     speaking.** The gate 0x415420 holds a warning for **4000 ms** off
     `GetTickCount`, and 0x415490 ends the sequence with
     `change_active_camera([0x4a70e0])` and a camera-parameter call, then
-    `set_game_mode(0)` -- so the chase **saves and restores the camera**, which
+    `set_game_mode(0)`, so the chase **saves and restores the camera**, which
     is why it is a mode at all. 0x4142b0 is `change_active_camera`, named by its
     own bounds message.
-    **The mode enum is now closed (session 10)** -- see "The complete game-mode
+    **The mode enum is now closed (session 10)**: see "The complete game-mode
     machine" in discoveries.md. `set_game_mode` jumps through a 9-entry table at
     0x424E00 and each arm registers a sequence with
     `0x416760(steps, begin, tick, end)`: **0** racing, **1** the start-camera
     fly-in (`ev_stcam.cpp`, by its own "Illegal mode start camera!" assert),
     **2** a bare mode, **3** LIKELY the victory sequence (it repositions a
     camera and plays sample 21 `juich.wav`), **4** teardown, **5** and **7**
-    nothing at all -- both table entries point at the same bare `ret` -- **6**
+    nothing at all, both table entries point at the same bare `ret`, **6**
     **game over** (`ev_g_ovr.cpp`, "No game over mode set!"), and **8** the
     police chase. So mode 6 is not the arrest as such: the arrest writes
     **0x4867A4 = 2** and calls `set_game_mode(6)`, and that sub-mode is what
@@ -301,11 +301,11 @@
     lane starting from the suspect's. See "RESET_COP,
     BACKTRACK_SPEED_TRIGGER and cop_lane" in discoveries.md.
     (Earlier note:) `RESET_COP` and
-    `cop_lane` are located but unread -- they are *not* the two helpers the
+    `cop_lane` are located but unread: they are *not* the two helpers the
     chase sequence calls at its end, which are `change_active_camera` and a
     camera-parameter setter. Note the debug trace is **not** the tool
     for this (question 25's suggestion): a full demo run logs over a million
-    lines and no police event at all -- **because demo mode never drives the
+    lines and no police event at all, **because demo mode never drives the
     player's car**, not because a demo driver stays lawful (see question 34).
     Original note: How do police/AI/pursuit mechanics work (fines, arrest, radar
     bonus)? Which functions drive them (ai_cops.cpp, ev_cops.cpp, gfx_radr.cpp)?
@@ -317,7 +317,7 @@
 
 19. **RESOLVED**: `reverse-engineering/tools/rizin` (0.9.1) is vendored and
    works on spel.dat/menu.dat. The game also runs under Wine, so runtime tracing
-   is available — see #20/#21 and `reverse-engineering/runtime-wine.md`.
+   is available: see #20/#21 and `reverse-engineering/runtime-wine.md`.
 
 ## Runtime (Wine)
 
@@ -327,7 +327,7 @@
     prefer the bare filename in the CWD. Both menu.dat and spel.dat now run.
 21. **RESOLVED (session 5). Screenshots work.** Run Wine against an Xvfb root
     window of exactly the wanted mode size at depth 24 (`Xvfb :98 -screen 0
-    640x480x24`) — Wine then offers the 8/16/32-bit variants of that size — and
+    640x480x24`), Wine then offers the 8/16/32-bit variants of that size, and
     capture with ImageMagick `import -window root`. No modeswitch grab, no
     virtual desktop needed. Caveat: use `RESOLUTION=3` (16-bit); 8-bit modes
     select the D3D Ramp device, which Wine does not implement.
@@ -355,7 +355,7 @@
 32. **RESOLVED (session 9).** etappe6 uses **etappe0's anim set**. The selector
     at 0x4236fa reads the stage from 0x4d9a74, bounds-checks it against 6 and
     jumps through a 7-entry table at **0x4238e8**, whose entries are
-    `0x42370f 0x42374d 0x42378b 0x4237c9 0x423807 0x42383f 0x42370f` -- the
+    `0x42370f 0x42374d 0x42378b 0x4237c9 0x423807 0x42383f 0x42370f`: the
     **last is identical to the first**, so playing etappe6 even logs "loading
     etappe 0 anims". That is why no `E06_ALGEMENE_TEXTURES_ANIM` exists.
     Each arm also branches on 0x4d9aac to pick an 8-bit or 16-bit loader, which
@@ -378,7 +378,7 @@
     settles the practical half: the HUD **sprites** come out as a **gamma of
     about 2.0** on the palette (fixed at black and white; index 73 measured
     (255,73,0) against a predicted (255,74,2); index 81, not fitted to, measured
-    (25,0,0) against a predicted (28,0,0)), while the **fonts do not** --
+    (25,0,0) against a predicted (28,0,0)), while the **fonts do not**:
     olfnt02's blue reads (140,158,214) against (143,165,206) in the file. That
     puts glyphs and sprites on different paths and makes index 147's teal into a
     (3,43,43) that reads as the dark edge both references show. Also CONFIRMED
@@ -391,8 +391,8 @@
 45. **RESOLVED (session 9), as a negative.** It is unused art. The
     `stuur_model` hypothesis is **disproved by experiment**: running the game
     under Wine with `Game.ini [GFX OPTIONS] stuur_model=1` ("Old (Autobahn
-    Raser I)") gives a **byte-for-byte identical HUD** -- the same digital
-    readouts and the same two bars, no dial anywhere -- and only adds a small
+    Raser I)") gives a **byte-for-byte identical HUD** (the same digital
+    readouts and the same two bars, no dial anywhere) and only adds a small
     numeric readout in the bottom-left corner. `stuur_model` selects the
     *steering* model, not a HUD. So sprite 1 and the 19 needle frames at 32..50
     are finished art that nothing draws, most plausibly inherited from the
@@ -408,17 +408,17 @@
     is applied, and the full bar at the start matches 13 (3.3). No anim lists
     11, 12 or 14..21. See discoveries.md "The TURBO bar is the orange ladder".
     Original text follows.
-    **PARTLY RESOLVED (session 9).** Not a lores/hires pair -- those are
+    **PARTLY RESOLVED (session 9).** Not a lores/hires pair: those are
     separate: RC.IMG holds **32 bar sprites at 91x8 and another 32 at 49x3**, a
     matched hires/lores set. Within each resolution there are **three**
     11-or-10 frame ladders, and the HUD draws only two of them (the gradient
     chevrons for TURBO, the solid bar for SCHADE, both documented above). The
-    third is a **plain-orange chevron ladder** -- at 91x8 that is
+    third is a **plain-orange chevron ladder**: at 91x8 that is
     432, 433, 439 and 445..451, with 449 empty.
     It was read as **LIKELY the fuel gauge**, on the grounds that the game
-    carries an unused fuel layer -- the language.ini strings GETANKT, KOSTEN,
+    carries an unused fuel layer: the language.ini strings GETANKT, KOSTEN,
     GEEN BENZINE MEER and WEGENWACHT are never fetched (see "There is no fine
-    system") -- while `TRIGGER_BENZINE_STATION` is value 2, *is* handled, and
+    system"), while `TRIGGER_BENZINE_STATION` is value 2, *is* handled, and
     the tracks carry eight of them.
     **DOWNGRADED to SPECULATIVE (session 10).** That last leg has gone: the
     trigger-2 handler has now been read end to end (0x42a4d0) and what it does
@@ -435,7 +435,7 @@
     (`TRIGGER_FINISH_POSITION`), gated by **trigger 15**
     (`TRIGGER_FINISH_VALID`): 15's handler sets an armed flag on the racer, and
     14's handler increments the lap counter only when that flag is set, then
-    compares it with Nrlaps. **Trigger 9 is not involved** -- its handler is
+    compares it with Nrlaps. **Trigger 9 is not involved**: its handler is
     chunk-index wrap bookkeeping (it sets a crossed flag and toggles three
     booleans), so the `TRIGGER_ZERO_CHUNK_MARKER` name was describing exactly
     what it does. The circuits place 14 and 15 one chunk apart, and the car
@@ -445,7 +445,7 @@
     discoveries.md.
 41. **RESOLVED (session 9).** Trigger 1 is the **speed camera**. Its chunks
     match the type-7 `.omp` objects (`A_FLTSRP`/`C_FLTSRP`, the *flitspaal*) one
-    for one on all seven tracks -- 37 of each, same counts per stage, the
+    for one on all seven tracks: 37 of each, same counts per stage, the
     trigger on the camera's chunk or one to two past it. That it is a one-shot,
     cleared by fcn.00428DE0 in the chunks around an object, is exactly what a
     camera that must flash once per pass needs. See "Trigger value 1 is the
@@ -460,22 +460,22 @@
     chunk for chunk are the two gantries, one per carriageway. See "Triggers
     22-25 and 31-34 are traffic signs" in discoveries.md.
     **RESOLVED (session 10): the trigger value is the sign face.** The signs are
-    not placed -- they are **blitted into a texture**. 0x42ae90 is
+    not placed: they are **blitted into a texture**. 0x42ae90 is
     `blit_anim_frame_to_texture(slot, frame)` from `txt_main.cpp`, named by its
     own two asserts ("Index in array incorrect" for `0 <= slot < 16`, and
     "Incorrect animation frame while trying to blit to texture! Texture index:
     %d, frame: %d" for the frame). `slot` indexes a **16-record, 88-byte table
     at VA 0x48C968** holding {lores texture, hires texture, blit x, blit y,
     source PCX filename}. Each of the 18 handlers switches on the etappe global
-    0x4d9a74 and calls it with the **slot from the etappe** -- 8/9/10 for
-    etappe 1/3/5 in the first group of nine, 11/12/13 in the second -- and the
+    0x4d9a74 and calls it with the **slot from the etappe** (8/9/10 for
+    etappe 1/3/5 in the first group of nine, 11/12/13 in the second) and the
     **frame from its own index, 0-8**. So **trigger 22+k blits frame k** into
     the etappe's texture at (9, 122) and **trigger 31+k blits frame k** at
     (9, 7); the data uses only 22-25 and 31-34, i.e. four sign faces per
     gantry. Both groups blit into **a_TRFFC1.PCX**, so the gantry geometry is
     static and only its texture changes.
     Picked up along the way: **0x4d9a70 is the lores flag**, set by
-    `set_game_display` (gm_init.cpp:568) from a jump table at 0x4243D4 --
+    `set_game_display` (gm_init.cpp:568) from a jump table at 0x4243D4,
     RESOLUTION 0 and 1 are the 320x200 modes, 2, 3 and 5 the 640x480 ones, and
     **4 is not a valid value**, per the binary's own "GAME supports only
     320x200 OR 640x480". See discoveries.md for the full table.
@@ -484,7 +484,7 @@
     `Not enough memory allocated for path points! Path nr: %d Path type: %d,
     Nr path points: %d`, and the "Path type" argument is read from
     **`[edi+0x04]`** of the runtime record. Tracing the loader's own field reads
-    -- it freads 4 bytes at a time starting at `[edi-0x04]` -- puts that at
+    -- it freads 4 bytes at a time starting at `[edi-0x04]`: puts that at
     record offset +8, i.e. the **third** field, which is exactly the port's
     `f2`. Its range of **3..7** is therefore five path types. That `f4 /
     arc_length` clusters by `f2` now has an explanation: different kinds of
@@ -495,13 +495,13 @@
     **f4 RESOLVED (session 10): it is a time, not a distance.** `pth_main.cpp`
     raises **"Time not set for path %d"** when the field is absent, so the round
     5000..50000 are **5 to 50 seconds in milliseconds**. The distance reading
-    (500..5000 m at 10 units per metre) is withdrawn -- the numbers fit either
+    (500..5000 m at 10 units per metre) is withdrawn: the numbers fit either
     way, which is what made it plausible; the message is what decides it.
     **The types are also partly named.** The suspicion about `pth_heli.cpp` was
     right and goes further: there are **eight** types, not five
     (`pth_main.cpp:440` bounds it `0 <= type < 8`), each with a three-function
     entry in a table at **0x4966F4**, and three are identified from the meshes
-    they load -- **4 the helicopter** (`pth_heli.cpp`, C_HELI_ANIM /
+    they load: **4 the helicopter** (`pth_heli.cpp`, C_HELI_ANIM /
     C_LBLADE_ANIM / C_SBLADE_ANIM, asserting "Helicopter paths only available in
     city tracks!"), **6 the aeroplane** (A_VLIEGT_ANIM) and **1 a police car**
     (MPOLIZEI_ANIM). The shipped tracks use only 3, 4, 5, 6 and 7, split exactly
@@ -536,18 +536,18 @@ phrasing may not be the original's.)*
     (0.74 0.78 0.83 0.87 0.91 0.96). And 0x4d9ab0 is set at 0x421e32 straight
     from `GetPrivateProfileInt("OPTIONS", "difficulty", GAME.INI)`.
     So **EASY (0) gives the slower ladder B and HARD gives the faster ladder
-    A** -- on HARD the opponents run nearer the full ladder speed. That matches
+    A**: on HARD the opponents run nearer the full ladder speed. That matches
     the same key already known to pick the 6-or-12 per-impact damage maximum.
     **Session 10 adds a second, separate knob.** There is also a **"difficulty
     modifier"** at **0x4d9b1c**, named by the binary's own error text (0x484aec,
     "Difficulty modifier has invalid value", printed at 0x41097e when it exceeds
-    9). It indexes a 10-entry table built on the stack at 0x4108dd --
-    0.60 0.70 0.80 0.90 1.00 1.10 1.20 1.30 1.40 1.50 -- and that factor scales
+    9). It indexes a 10-entry table built on the stack at 0x4108dd,
+    0.60 0.70 0.80 0.90 1.00 1.10 1.20 1.30 1.40 1.50, and that factor scales
     six per-gear floats at `0x4a5f28 + k*124` when the gearbox upgrade is owned
     or five at `0x4a5f10 + k*124` when it is not, for each of three 96-byte
     entries from 0x4a55d0 to 0x4a56f0. Each entry also gets
     `clamp(car_slot + drivetrain_upgrades - [0x4a55d0], 0, 3) * 4.0` at +0x2c,
-    so the opponents are scaled by the player's progress as well -- rubber-
+    so the opponents are scaled by the player's progress as well: rubber-
     banding by purchase. **Answered (session 13):**
     - 0x4d9b1c is Game.ini `[OPTIONS] dif_mod` (0x421f7a → 0x421f82). The
       shipped value 4 gives a factor of 1.00, so the scaling does nothing in
@@ -572,7 +572,7 @@ phrasing may not be the original's.)*
     | 6 | 25.0 m/s (90 km/h) |
     | 8 | 30.0 m/s (108 km/h) |
 
-    This is why the earlier trace showed traffic at **25.0** -- trigger 6, exactly.
+    This is why the earlier trace showed traffic at **25.0**: trigger 6, exactly.
     Note the two dispatchers **disagree about which values are live**: ai_cops
     treats 8 as `ILLEGAL SPEED TRIGGER` and uses 7 for 120 km/h, while this one
     skips 7 and uses 8. In the shipped tracks only 4, 5 and 6 ever appear, so
@@ -588,8 +588,8 @@ phrasing may not be the original's.)*
 ## New questions (session 6, continued)
 
 
-33. **RESOLVED (session 10) -- all 56 fields identified.** The 16 x 238-byte table at 0x484B18 is a
-    **full vehicle physics model in real-world units** -- mass in kg, length and
+33. **RESOLVED (session 10): all 56 fields identified.** The 16 x 238-byte table at 0x484B18 is a
+    **full vehicle physics model in real-world units**: mass in kg, length and
     width in metres, gravity 9.81, air density 1.2, drag coefficient, power,
     redline and peak-torque rpm, six gear ratios plus final drive, and an
     alternate (upgraded) gear set. See discoveries.md for the field map and the
@@ -602,12 +602,12 @@ phrasing may not be the original's.)*
     (see "The 0x484B18 table, second pass" in discoveries.md):
     **5 and 6 are the CoG-to-front and CoG-to-rear distances**, summing to the
     wheelbase (the game adds them; they differ for traffic; Trabant 2.02 against
-    a real 2.02) -- **not** the vehicle height; **9 is the frontal area** (1.80
+    a real 2.02), **not** the vehicle height; **9 is the frontal area** (1.80
     car, 9.00 bus); **22 is the wheel radius**, proved by the driveline formula
-    `gear * final * (60/2pi) / f22` -- **not** Cd; **8 is LIKELY Cd** (0.65 for
+    `gear * final * (60/2pi) / f22`, **not** Cd; **8 is LIKELY Cd** (0.65 for
     the bus); the **gear array is 1-based from field 27**; and 0, 14, 26, 27 and
     39 are constant 0 while 37 and 49 are constant 1, with 11 duplicating 10.
-    Also settled: **35 and 36 are the gearbox's shift points** -- fcn.0040e190
+    Also settled: **35 and 36 are the gearbox's shift points**, fcn.0040e190
     is the gear selector, clamping engine rpm to an 800 rpm idle and comparing
     it against a downshift threshold of `(f36 - 0.05) * rpm_torque` and an
     upshift threshold built from f35 and the redline, which is why the upgraded
@@ -615,14 +615,14 @@ phrasing may not be the original's.)*
     And **15-20 are two Pacejka tyre triples**, front and rear: the code runs
     `fpatan` then `fsin` then multiplies by the grip field, so 15/18 are the
     **B** stiffness factors, 16/19 the **C** shape factors and 17/20 the **D**
-    peak factors already known as grip -- with values in the textbook ranges
+    peak factors already known as grip, with values in the textbook ranges
     (B 8.43-16.00, C 1.11 and 1.70). **54** is a blanket grip multiplier in the
     same cluster, 1.20 for racers and 1.00 for traffic.
     **7 is LIKELY the CoG height**, loaded with gravity, mass and both axle
-    distances -- the exact set an axle-load calculation needs -- and 0.30 for
+    distances, the exact set an axle-load calculation needs, and 0.30 for
     the low-slung Porsche against 0.40 for everything else.
     **Third pass (session 10)** named four of the last five (see "The 0x484B18
-    table, third pass" in discoveries.md): **38 is the driven-axle split** --
+    table, third pass" in discoveries.md): **38 is the driven-axle split**,
     the drive function 0x40da90 stores `f38 * F` to one axle and `(1 - f38) * F`
     to the other, and f38 is 1.00 for exactly the Astra and the Golf, the
     fleet's two front-wheel-drive cars, so 1 = FWD and 0 = RWD (**50** is its
@@ -639,7 +639,7 @@ phrasing may not be the original's.)*
     indexes a table of **87 nineteen-byte filenames at VA 0x48BAF0** (bounds
     0-86, "SNDFX sample out of bounds" otherwise), and those six indices are
     `auto1.wav`, `auto2.wav`, `auto3.wav`, **`best_bus.wav`**, **`bus.wav`** and
-    **`vracht.wav`** -- the van, the bus and the lorry each getting the sample
+    **`vracht.wav`**: the van, the bus and the lorry each getting the sample
     named after them while the twelve cars share three generic engine notes.
     The same table independently confirms field 51: sample **84 is
     `turbo.wav`**, which is the sample the field-51 tick plays. The full table
@@ -648,12 +648,12 @@ phrasing may not be the original's.)*
     unconditionally**, so the Diablo's table value of 2.00 is dead; and the
     mirrored block is **27-36 <-> 39-48**, proved pair by pair in the copier at
     0x4284df (which emits `f46 -> f34` twice).
-    **Established negative:** the table carries **no torque curve** -- only
-    power, the peak-torque rpm and the redline -- so no model built from it
+    **Established negative:** the table carries **no torque curve** (only
+    power, the peak-torque rpm and the redline), so no model built from it
     alone can satisfy both the rated top speed and the rated 0-100, and a curve
     must be assumed either way.
     **Open hypothesis:** this may be the model `stuur_model` selects when set to
-    the Autobahn Raser I setting, with CARS.DAT being the other -- untraced,
+    the Autobahn Raser I setting, with CARS.DAT being the other: untraced,
     though session 9 showed `stuur_model=1` leaves the HUD identical and only
     adds a numeric readout.
 
@@ -663,7 +663,7 @@ phrasing may not be the original's.)*
         d3d_objects[obj.field_08].f_7c -= dt * A[29] * a
 
     where the array is the T_ARRAY its own constructor names **`_d3d_objects`**
-    with element type **`c_3dobject`** -- so it acts on the car's **renderable
+    with element type **`c_3dobject`**, so it acts on the car's **renderable
     model**, not on its physics object. See "CARS.DAT A[29] is a visual rate"
     in discoveries.md for the full reading, including the 20.0 threshold on `a`
     that also gates the ordinary speed drag.
@@ -671,7 +671,7 @@ phrasing may not be the original's.)*
     expose, and why two runtime experiments under Wine found nothing: patching
     it between 0.0 and 40.0 changed neither a coast-down nor straight-line
     acceleration.
-    **LIKELY** a per-car visual body-rotation rate, from the authored values --
+    **LIKELY** a per-car visual body-rotation rate, from the authored values:
     Trabant 1.6, Astra 0.9, four cars at 1.0, Diablo 0.1. **Answered (session
     13):** `c_3dobject+0x7c` is the body **roll**. The roll spring 0x40ebd0
     integrates the same field (port drive.c `roll`, checked against the
@@ -682,8 +682,8 @@ phrasing may not be the original's.)*
     are **not** collision physics. Both are written through C++ setters
     (fcn.00435B80, fcn.00436070) that flag a dirty mask at `+0x170`; the objects
     come from a pointer table at 0x4E47C8. With the sibling three-component
-    setter fcn.00435D80 — given `(0, 0, ±1.0)` on impact, sign from a compare
-    against 0.0 — they have the shape of **positional sound** parameters
+    setter fcn.00435D80 (given `(0, 0, ±1.0)` on impact, sign from a compare
+    against 0.0) they have the shape of **positional sound** parameters
     (frequency, volume, left/right pan), which matches Game.ini's `3dsound`.
     The earlier reading of the `fchs` at 0x427EB7 as a bump-back impulse is
     withdrawn: **no collision impulse has been found**. See discoveries.md.
@@ -695,13 +695,13 @@ phrasing may not be the original's.)*
     `Too many road-planes`, `land-planes`, **`extra-planes`**, **`rail-planes`**.
     So lists 2 and 3 are **extra** and **rail**, and the four line up with the
     Raser.ini `[MAPS]` texture suffixes **weg / gras / gra2 / vang** that the
-    port already loads them with -- rail being the *vangrail*, the guardrail.
+    port already loads them with: rail being the *vangrail*, the guardrail.
     The earlier entry saw only the first two messages.
 27. **PARTLY RESOLVED (session 6):** `.pmp` f3/f4 are the per-chunk trigger
     slots (see #38). **CONFIRMED from the engine side (session 10):** the
     dispatcher at 0x442607 reads exactly two trigger words per chunk, at
     **+0xEC and +0xF0** of the 388-byte runtime chunk record, and calls each
-    one's handler with the car index. It also settles the stray data values --
+    one's handler with the car index. It also settles the stray data values:
     **86, 94, 107, 130, 150 and 196 are inert**, because the engine's 257-slot
     handler array at 0x4E5928 is zeroed at startup, the game registers handlers
     only for 0..48, and the dispatcher skips a null slot. Editor leftovers, not
@@ -713,39 +713,39 @@ phrasing may not be the original's.)*
     or a distance-along-track key.
 28. **RESOLVED (session 9).** The engine does **not** use it. `rd_chunk.cpp`
     reads each chunk's list count from the file and checks it against a
-    **compile-time maximum** -- 16 road-planes (line 355), 24 land, 12 extra,
-    12 rail -- logging `Too many <kind>-planes (%d) of max (%d)` and reading
+    **compile-time maximum** (16 road-planes (line 355), 24 land, 12 extra,
+    12 rail) logging `Too many <kind>-planes (%d) of max (%d)` and reading
     into a fixed stack buffer. Nothing is sized from the header hint, so it is
     a stale exporter field; whether the two tracks where it happens to be right
     were re-exported cannot be told from the data, and does not matter.
 29. **RESOLVED (session 9).** It is not the `.dmp` loader renaming its own
     file: fcn.00448ba0 overwrites the last three characters of the name with
     `D`,`M`,`G` and then tries to open **`etappeN.DMG` as a separate, optional
-    companion**. If the open fails it returns 0 immediately and silently --
+    companion**. If the open fails it returns 0 immediately and silently:
     no assert, no log. Since no `.dmg` ships, the path is simply never taken.
     A development-only format, dead at runtime in the retail build.
 
 ## New questions (session 5)
 
 22. **RESOLVED (session 5).** `.d3d` vertex = `float x,y,z,nx,ny,nz,tu,tv; u8 pad`
-    (33 B); triangle = `u16 a,b,c; u8 pad[3]` (9 B). The padding is dead — the
+    (33 B); triangle = `u16 a,b,c; u8 pad[3]` (9 B). The padding is dead: the
     loader reads it and discards it. Reader + OBJ exporter in
     `port/a2tools/d3d.py`. See file-formats.md.
 23. **RESOLVED (session 9).** Neither a stale entry nor a mis-padded record in
     the index's eyes: the index is **self-consistent**. The entry gives
     off=11186209 size=4826, and the first **24 bytes there are all zero**; the
     real header starts at +24 with 118 vertices and 100 triangles, whose record
-    is 4802 bytes -- and **24 + 4802 = 4826 exactly**. So the record carries a
+    is 4802 bytes, and **24 + 4802 = 4826 exactly**. So the record carries a
     24-byte zero prefix that the size accounts for.
     The consequence is that any loader reading the header at the stated offset
-    sees **0 vertices and 0 triangles and builds an empty mesh** -- the game
+    sees **0 vertices and 0 triangles and builds an empty mesh**: the game
     included, and the port, which reports it among its 448 parsed without
     complaint. E04_koor is scenery on etappe4, so an invisible one goes
     unnoticed. A build-tool slip, not an index bug.
 24. **RESOLVED (session 9).** Each binary has one of each, and the split is by
     how the art is addressed: the **named** archives are looked up by file name
     (`olfnt01.fnt`, `e02_pl16.pcx`, `WIEL.d3d`) and the **binary** ones purely
-    by number -- the HUD reads RC.IMG sprites 425 and 426 and the 11..21 and
+    by number: the HUD reads RC.IMG sprites 425 and 426 and the 11..21 and
     123..133 ladders, and nothing ever names them. A name table would be dead
     weight for art the code indexes numerically.
 25. **RESOLVED (session 9), as a negative on the method.** The suggestion was
@@ -753,7 +753,7 @@ phrasing may not be the original's.)*
     of waypoint and lane internals and **not one police event**, because
     **demo mode never drives the player's car** (see question 34). Question 18
     was answered instead by reading ai_cops.cpp and ev_cops.cpp and confirming
-    with *targeted* runtime capture -- screenshots plus `xdotool` input, which
+    with *targeted* runtime capture: screenshots plus `xdotool` input, which
     is the runtime technique that did pay off (see "Driving the original under
     Wine"). The trace remains useful for waypoint and lane work, which is what
     it actually contains.
@@ -938,7 +938,7 @@ phrasing may not be the original's.)*
     (patch_wp_guard.py); see discoveries.md "The waypoint -1 read in
     0x40b650". Still open: what the read returned on Windows 9x (hypotheses).
 
-56. **Answered (session 15): `dif_mod` is dead** -- see discoveries.md "What
+56. **Answered (session 15): `dif_mod` is dead**, see discoveries.md "What
     Difficulty changes". Original question: **Does `dif_mod` reach the racers' driving?** 0x4108dd..0x4109de scale
     CARS.DAT max-speed rows by 0.6..1.5 (dif_mod 0..9; 4 = x1.00, the shipped
     value) for the three entries' car types (session 13). The port follows

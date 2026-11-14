@@ -79,8 +79,8 @@ int m_career_take_results(m_career *c, const char *datadir, int mark_taken);
 /* What 0x401cc0 writes before the menu exits with 40 to start a race:
  * [PLAYER] MOTOR BANDEN DAMAGE TURBO ABS VERSNELLINGSBAK, Car, COPLAND (1
  * when the player's name is "COPLAND", 0x4019ee), money, the [INPUT] keys
- * and sensitivity, [etappe] etappe, and menu.ini save_game.  (The options --
- * resolution, volumes, difficulty -- are the options screen's to write.) */
+ * and sensitivity, [etappe] etappe, and menu.ini save_game.  (The options
+ * (resolution, volumes, difficulty) are the options screen's to write.) */
 void m_career_write_race(const m_career *c, const char *datadir);
 
 #endif /* A2_MCAREER_H */

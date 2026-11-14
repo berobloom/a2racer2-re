@@ -6,7 +6,7 @@
  * - Top panel: the player's car as in the garage (bars with owned parts,
  *   frame 5, name, "Waarde").  Bottom panel at (186, 270): the candidate's
  *   bars (no parts), its turntable running, and "naam" / "Prijs : Fl %d" in
- *   ink 0x8f at (434, 278) / (434, 290) -- animated text in the original
+ *   ink 0x8f at (434, 278) / (434, 290): animated text in the original
  *   (init_anim_text 0x40c250), drawn finished here.
  * - The cost is the candidate's price less the player's car value; KOPEN
  *   (id 25) is disabled when the budget cannot cover it (0x4060c5).  The
@@ -139,7 +139,7 @@ void m_showroom_draw(menu *m, m_canvas *c)
     int cand = candidate(m);
     m_draw_bars(m, c, 186, 270, cand, 0);
     /* turntable (init_anim_data 0x405e71): box anim 26 (sprite 266, 181x110) at
-     * (432, 311), frames centred on its middle (522, 366) by their anchor --
+     * (432, 311), frames centred on its middle (522, 366) by their anchor:
      * measured: frame 221 at (494, 324), anchor (28, 42) */
     m_draw_sprite(m, c, m_anim_frame(m, 26, 0), 432, 311);
     if (m->show_slide >= 0) {

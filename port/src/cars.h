@@ -1,4 +1,4 @@
-/* CARS.DAT -- the player-car performance table.
+/* CARS.DAT: the player-car performance table.
  *
  * `init_player_car` (plr_car.cpp, fcn.004256A0) reads exactly two blocks and
  * then closes the file:
@@ -9,7 +9,7 @@
  * So there are 10 car slots; the 7 buyable cars from garage.ini are populated
  * and slots 7-9 are zero.  Block A is 31 floats: four per-gear arrays plus 7
  * handling values.  Speeds are metres/second (x3.6 = km/h) and read as real
- * gear ratios -- the Trabant tops out at 41.889 (151 km/h) stock and 45.889
+ * gear ratios: the Trabant tops out at 41.889 (151 km/h) stock and 45.889
  * (165 km/h) upgraded, the Diablo at 66.667 (240) and 70.944 (255).  A stock
  * car has 0 in the 6th slot (a 5-speed box) and the upgraded array fills it in,
  * matching the VERSNELLINGSBAK item in garage.ini.
@@ -38,12 +38,12 @@
  *                       neither acceleration nor coasting. The tweak menu
  *                       names it "Rolhoek versterking". It is the **body roll
  *                       rate into a turn**: +0x7c is the roll that the roll
- *                       spring 0x40ebd0 integrates (session 13). Trabant 1.6,
+ *                       spring 0x40ebd0 integrates. Trabant 1.6,
  *                       Astra 0.9, four cars at 1.0, Diablo 0.1. drive.c
  *                       applies it.
  *   field 30  0x4A5F58  Stuursnelheid          (steering speed)
  *
- * Block B is three (damping, factor) pairs -- roll, pitch and ride height --
+ * Block B is three (damping, factor) pairs (roll, pitch and ride height)
  * matching tweak menu items 7, 8 and 9.
  *
  * The record is indexed by car slot with a 124-byte stride, which the code
@@ -90,7 +90,7 @@ int a2_car_gear_for_speed(const a2_car *car, float speed, int upgraded);
 /* The anim name for a slot, e.g. "RACER_1_ANIM" for slot 0. */
 const char *a2_car_anim_name(int slot);
 
-/* Half the slot's mesh extent across (X) and along (Z), in world units --
+/* Half the slot's mesh extent across (X) and along (Z), in world units:
  * measured from the `.d3d` bounding boxes, since CARS.DAT carries performance
  * figures but no dimensions.  Used for collision, so the car you are driving
  * has its own size rather than the Trabant's. */

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tools for menu.dat's art and layout (session 12).  Needs .work/venv
+"""Tools for menu.dat's art and layout.  Needs .work/venv
 (numpy, pillow, opencv-python-headless).
 
   menutools.py sheet <datadir> <out.png> [lo hi]

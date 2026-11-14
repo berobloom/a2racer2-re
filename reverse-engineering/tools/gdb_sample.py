@@ -1,4 +1,4 @@
-# gdb Python script (session 13): sample the new AI model's records in a
+# gdb Python script: sample the new AI model's records in a
 # running spel.dat under winedbg --gdb, without stopping the game.  A
 # breakpoint on 0x408ed0 (once a frame) dumps, every EVERY-th frame, the
 # fifteen 96-byte records at 0x4a55a0 (object, state, target, timer, the

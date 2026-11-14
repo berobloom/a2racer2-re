@@ -250,7 +250,7 @@ int a2_aiw_with_lane(const a2_aiw *w, int wp, const a2_drive *d)
     return (b >= 0x400 && b <= 0xc00) ? -1 : 1;
 }
 
-/* --------------------------------------------------------- obstacle lists */
+/* Obstacle lists */
 
 void a2_aiw_occ_clear(a2_aiw *w)
 {
@@ -294,7 +294,7 @@ int a2_aiw_blocked(const a2_aiw *w, int wp, int self_id, const a2_drive *d)
     return 0;
 }
 
-/* ---------------------------------------------------------------- ScanPath */
+/* ScanPath */
 
 int a2_aiw_scan_path(const a2_aiw *w, int wp, const int order[3], float near[3], float far[3])
 {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Concrete runs of the accelerated sky's per-frame tint 0x418f00 (session 16).
+"""Concrete runs of the accelerated sky's per-frame tint 0x418f00.
 
 0x418f00 reads the player's chunk [0x4d9e44], the start chunk [0x4a7c58],
 the track's chunk count [[0x4e6670] + 8] and game timer 0 (0x4214d0, ms),

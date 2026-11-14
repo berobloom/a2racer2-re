@@ -10,11 +10,11 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
 
 ## Rendering
 
-- **RESOLVED (CONFIRMED, session 5) — and the session-3 conclusion was WRONG:**
+- **RESOLVED (CONFIRMED, session 5), and the session-3 conclusion was WRONG:**
   the game uses **real Direct3D 2 immediate mode** (DirectX 5), obtained via
   `IDirectDraw2::QueryInterface(IID_IDirect3D2)` at 0x44C760. The earlier
   "pure software 3D" verdict rested on "only one LoadLibraryA, loading
-  user32.dll" — but D3D 1-5 needs no `LoadLibraryA`, because `ddraw.dll` loads
+  user32.dll", but D3D 1-5 needs no `LoadLibraryA`, because `ddraw.dll` loads
   `d3dim.dll` itself. Confirmed statically (embedded `IID_IDirect3D2`,
   `IID_IDirect3DHALDevice`, `IID_IDirect3DRGBDevice`, `IID_IDirect3DRampDevice`)
   and at runtime (the game enumerates and creates a D3D HAL device and calls
@@ -33,7 +33,7 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
   Diamond "Righteous 3D" board); picking that device and then querying
   `IID_IDirect3D2` from it yields a hardware D3D HAL. This reading only became
   available once real-D3D use was established; previously the check looked
-  purposeless. Not yet proven — needs the consumer of 0x4650C0's return value.
+  purposeless. Not yet proven: needs the consumer of 0x4650C0's return value.
   **Settled (session 15):** the record 0x46d290 returns is passed as the GUID
   to the only DirectDrawCreate (0x466271, via 0x47d416), and the selector
   comes from Raser.ini RESOLUTION. See discoveries.md "Which DirectDraw
@@ -55,7 +55,7 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
 ## Track data
 
 - **CONFIRMED (session 18, data):** etappe0 and etappe6 are **the same circuit, driven the same way**. Their 778 chunk positions in .pmp are identical in the same order (the reversed order is up to 25,000 units off), the .pth files are byte-identical, and the start line (trigger 13), finish (14) and finish-valid (15) sit at the same chunks, 524 / 524 / 525. The .rmp differs only in **texture coordinates**: 1,150 u/v words (638 u, 512 v) of road planes in 68 chunks (24..621), and no x, y, z or triangle. The .cmp moves a few rail points by 2 units. What really differs is the .dmp waypoints (3,310 against 3,167 references), the lane triggers (18-21 / 40-42: 53 on etappe0, 82 on etappe6) and the .omp scenery. The "opposite directions" idea is disproven. ~~STRONGLY SUPPORTED: same road geometry with different scenery/draw data. Possibly the same stretch driven in opposite directions.~~
-- **CONFIRMED (session 5):** `.pmp` is the per-chunk table — position plus index
+- **CONFIRMED (session 5):** `.pmp` is the per-chunk table, position plus index
   lists into `.cmp` (rails) and `.dmp` (left/right waypoints). Its chunk count
   matches `.rmp`'s second header word and the runtime `m_chunks alloc`.
 - **RESOLVED (session 5, and the guess was wrong):** `.dmp` is the **AI waypoint
@@ -84,7 +84,7 @@ Unproven but plausible claims, with the evidence that suggests them. Confidence 
 
 - **DISPROVEN (session 5):** the char-range string after names in the named IND
   format was guessed to be a per-entry type/attribute marker. It is nothing of
-  the kind — the name field is a fixed 20-byte buffer and those bytes are simply
+  the kind: the name field is a fixed 20-byte buffer and those bytes are simply
   uninitialised leftovers of the writer's shared buffer. It "shrinks toward 23"
   only because later names are longer and overwrite more of the leftover text.
   See research/discoveries.md.

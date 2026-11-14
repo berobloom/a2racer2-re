@@ -1,11 +1,11 @@
-/* a2menu -- the A2 Racer II front end (menu.dat), rebuilt.
+/* a2menu: the A2 Racer II front end (menu.dat), rebuilt.
  *
  *   a2menu <datadir> [--race <a2view>] [--no-intro]
  *          [--shot <screen> <out.ppm> [--click x y]...]
  *
  * It mirrors the original's split.  The menu runs; START saves the slot,
- * writes Game.ini (0x401cc0) and runs the race -- a2view standing in for
- * spel.dat, as a2_II.exe runs it after the menu exits with 40 -- and then
+ * writes Game.ini (0x401cc0) and runs the race (a2view standing in for
+ * spel.dat, as a2_II.exe runs it after the menu exits with 40) and then
  * reads the race's results back exactly as menu.dat does on start-up
  * (0x409b87).  Layouts come from menu.dat's own form tables (mdata.c); art and
  * fonts from Mrcs.img / MENURC.IMG (massets.c).  See
@@ -374,7 +374,7 @@ int main(int argc, char **argv)
         int start = career_end ? SCR_STANDINGS : SCR_MAIN;
         /* Port choice: no player in the active slot.  The original opens
          * HOOFDMENU with an empty name and lets START race as nobody (Wine,
-         * session 18).  Here the most recently played player takes over (the
+         *).  Here the most recently played player takes over (the
          * slot is only written to menu.ini on START, 0x401cc0 -> 0x401aa0, so
          * a player made and then left with Einde would be lost); with no
          * player at all (a fresh SLOTS.RAS has all nine empty) the player list

@@ -1,4 +1,4 @@
-/* The tweak menu, after spel.dat's 0x412e90 (session 14).
+/* The tweak menu, after spel.dat's 0x412e90.
  *
  * With Raser.ini TWEAK_MODE=1 (the shipped setting) the player's step polls
  * Tab (0x40fe6c) and runs one screen of this menu, modally: the race stands

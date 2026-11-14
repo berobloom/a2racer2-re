@@ -23,8 +23,8 @@ void a2_gfx_delete_texture(unsigned tex);
 
 /* Game.ini [GFX OPTIONS] gamma ("0=light, 1 = dark", shipped 1).  winlib's
  * colour conversion to the 16-bit screen format (0x468230, and the flag's
- * second reader at 0x468436) squares each channel first when it is set --
- * c = c*c >> 8 -- and every texture and sprite loader converts through it
+ * second reader at 0x468436) squares each channel first when it is set,
+ * c = c*c >> 8, and every texture and sprite loader converts through it
  * (Rcpcx.cpp, Sprite.cpp).  Set it before any texture is loaded. */
 void a2_gfx_set_gamma(int dark);
 /* Apply it in place to n RGBA pixels (alpha untouched); no-op when light. */

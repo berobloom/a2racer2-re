@@ -1,4 +1,4 @@
-# gdb Python script (session 14): log the player's brake-light inputs and the
+# gdb Python script: log the player's brake-light inputs and the
 # object-light table each time the brake-light check 0x425f0b runs.
 # Run like gdb_sample.py (runtime-wine.md section F) with PORT, OUT, SECS.
 import gdb, struct, threading, time

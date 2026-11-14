@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Disassemble spel.dat / menu.dat from <start> for <len> bytes, annotating
-absolute operands with the string or float stored there (session 13).
+absolute operands with the string or float stored there.
 
 Usage: adis.py <exe> <start_hex> <len_hex>"""
 import re

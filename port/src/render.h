@@ -14,7 +14,7 @@
 typedef struct a2_scene a2_scene;
 
 /* `plane_tex`, when non-NULL, names the four `.rmp` plane-list textures in list
- * order -- exactly Raser.ini [MAPS] args 2-5, which is where the caller should
+ * order: exactly Raser.ini [MAPS] args 2-5, which is where the caller should
  * get them.  Each may carry an extension or not.  When it is NULL the loader
  * falls back to `prefix` (the track's texture prefix, e.g. "e00") plus the
  * candidate suffixes in render.c.
@@ -67,8 +67,8 @@ int a2_scene_prop_sounds(const a2_scene *s, a2_prop_sound *out, int max);
 void a2_scene_prop_sound_done(a2_scene *s, int key);
 /* Collide a car at (x, z) against solid scenery near `chunk`.  Solid are the
  * .omp types the original registers as collision candidates: 5 columns, 8
- * arrows, 10 police placements (0x4454a7); everything else -- lamp posts,
- * trees, the knock-over props -- never blocks.  The `.cmp` rails remain the
+ * arrows, 10 police placements (0x4454a7); everything else (lamp posts,
+ * trees, the knock-over props) never blocks.  The `.cmp` rails remain the
  * game's main collision data.
  * Returns 1 on a hit, pushing (x, z) clear and writing the outward normal. */
 /* Stop drawing the .omp objects of `type` (the cops module draws type 9). */
@@ -88,7 +88,7 @@ int a2_scene_camera_down(const a2_scene *s, int chunk);
  * police cars x0.9 (0x4293a0). */
 void a2_scene_objects_step(a2_scene *s, int lo, int hi, float dt);
 
-/* Clock for the animated props -- the two traffic lights and three roadworks
+/* Clock for the animated props: the two traffic lights and three roadworks
  * arrows, the only anims in the game with more than one frame that are placed
  * as objects.  Pass the race or wall clock in seconds. */
 void a2_scene_set_anim_time(a2_scene *s, float seconds);
@@ -124,7 +124,7 @@ void a2_scene_draw_model(const a2_scene *s, int handle, float x, float y, float 
 int a2_scene_set_glow_texture(a2_scene *s, const a2_archive *rcs, int handle, const char *tex_name);
 void a2_scene_draw_model_tinted(const a2_scene *s, int handle, uint8_t r, uint8_t g, uint8_t b,
                                 uint8_t a);
-/* As above, plus body pitch and roll -- for the suspension lean driven by
+/* As above, plus body pitch and roll: for the suspension lean driven by
  * CARS.DAT's roll/pitch damping and factor pairs. */
 void a2_scene_draw_model_rpy(const a2_scene *s, int handle, float x, float y, float z,
                              float yaw_deg, float pitch_deg, float roll_deg);
@@ -149,7 +149,7 @@ unsigned a2_scene_texture(a2_scene *s, const a2_archive *rcs, const char *name);
 int a2_scene_blit(const a2_scene *s, const char *tex_name, int x, int y, int w, int h,
                   const uint8_t *rgba);
 /* Car shadows (gfx_shdw.cpp): load S_SHADOW_ANIM's texture once, then draw a
- * car's shadow -- its mesh footprint, flat on the road under (x, z), shifted by
+ * car's shadow: its mesh footprint, flat on the road under (x, z), shifted by
  * the original's fixed (2, 2) and turned by the same yaw the model is drawn
  * with.  Call before drawing the car. */
 int a2_scene_load_shadow(a2_scene *s, const a2_archive *rcs, const a2_anims *anims);
@@ -179,8 +179,8 @@ int a2_scene_object_type(const a2_scene *s, int inst);
 int a2_scene_chunk_delta(const a2_scene *s, int from, int to);
 int a2_scene_road_height(const a2_scene *s, int chunk, float x, float z, float *y);
 /* 0x445a10: the chunk (x, z) is in, walked along the chunk order from `hint`
- * (an object's previous chunk, 0x442020): the last chunk whose start line --
- * through its position, across its forward direction -- the point is past.
+ * (an object's previous chunk, 0x442020): the last chunk whose start line
+ * (through its position, across its forward direction) the point is past.
  * Off either end it scans from chunk 0. */
 int a2_scene_track_chunk(const a2_scene *s, int hint, float x, float z);
 /* 0x442f00: the height of `chunk`'s own plane at (x, z), with no step to a

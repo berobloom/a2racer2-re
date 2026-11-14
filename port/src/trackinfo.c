@@ -254,8 +254,8 @@ int a2_ini_string(const char *datadir, const char *file, const char *section, co
 
 /* WritePrivateProfileString's behaviour, as far as the game relies on it: an
  * existing key keeps its line and gets the new value; a missing key goes after
- * the section's last key; a missing section is appended.  Everything else --
- * the developers' comments, blank lines, CRLF line ends -- is left alone. */
+ * the section's last key; a missing section is appended.  Everything else
+ * (the developers' comments, blank lines, CRLF line ends) is left alone. */
 int a2_ini_write(const char *datadir, const char *file, const char *section, const char *key,
                  const char *value)
 {

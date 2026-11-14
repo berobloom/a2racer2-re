@@ -58,7 +58,7 @@ int a2_audio_sfx_volume(const a2_audio *a);
 void a2_audio_objects(a2_audio *a, const a2_sound_src *src, int count, float lx, float lz,
                       float fx, float fz);
 /* Is the source with this key sounding in a slot?  0 once a one-shot has
- * ended, when it was out of range or when every slot was busy -- the moments
+ * ended, when it was out of range or when every slot was busy: the moments
  * the original clears an object's pending sample (0x428b85, 0x428b43). */
 int a2_audio_object_playing(const a2_audio *a, int key);
 

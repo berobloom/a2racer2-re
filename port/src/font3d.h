@@ -1,7 +1,7 @@
 /* The game's 3D font.
  *
  * `FONT3D_ANIM` has 49 frames, each a `LTR_*.d3d` mesh textured with
- * `s_letter.pcx` -- the numbers and text drawn over the track (speed, lap and
+ * `s_letter.pcx`: the numbers and text drawn over the track (speed, lap and
  * checkpoint times, position) are extruded 3D glyphs, not sprites.  The frame
  * order is:
  *

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Original under Wine (session 13): gas past the cops at etappe1 chunk 440,
+# Original under Wine: gas past the cops at etappe1 chunk 440,
 # brake to a stop, and sample the AI records with gdb_sample.py.
 #   wine_chase_run.sh <outdir>
 # Before: in .work/menutest set Game.ini `startchunk=430` (uncomment it) and

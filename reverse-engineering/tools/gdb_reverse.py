@@ -1,4 +1,4 @@
-# gdb Python script (session 15): what the drive function 0x40f0d0 does with
+# gdb Python script: what the drive function 0x40f0d0 does with
 # the brake held at a standstill.  Logs, for the player's object ([0x4d9e28]),
 # the arguments at entry (obj, throttle, brake), its forward speed
 # (object +0x74 in the 160-byte array at [0x4e48e0]) before and after, the

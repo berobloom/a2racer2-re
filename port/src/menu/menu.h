@@ -136,7 +136,7 @@ struct menu {
     int prev_screen;
     int tile_hover;                   /* garage tile under the mouse, -1 */
     int show_cand;                    /* showroom: index into the other six cars */
-    /* showroom: the car slide (scroll_special_animation 0x40be30) -- step
+    /* showroom: the car slide (scroll_special_animation 0x40be30), step
      * 0..19, -1 when idle; the candidate it moves to and the direction */
     int show_slide, show_slide_to, show_slide_dir;
     uint32_t show_slide_last;

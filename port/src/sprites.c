@@ -95,16 +95,16 @@ a2_sprites *a2_sprites_load(const char *datadir, const uint8_t palette[768])
      *     81      (85,0,0)         (25,0,0)       the dark damage bar
      *
      * which is a gamma of about 2.0 on each channel: it fixes black and white,
-     * predicts 73 as (255,74,2) and -- on a sample it was not fitted to -- 81
+     * predicts 73 as (255,74,2) and, on a sample it was not fitted to, 81
      * as (28,0,0). The **fonts do not follow it**: olfnt02's blue reads
      * (140,158,214) on screen against (143,165,206) in the file, so the two
      * take different paths and only the sprites are adjusted here.
      *
-     * Untransformed, index 147 -- the brackets' one-pixel anti-alias edge --
+     * Untransformed, index 147, the brackets' one-pixel anti-alias edge,
      * is a (28,105,105) teal that appears in neither the running game nor the
      * reference screenshot; through this it becomes (3,43,43) and reads as the
      * dark edge both of them show.  It is the game's own doing (open question
-     * 44, settled session 14): Game.ini gamma=1 makes winlib's conversion to
+     * 44): Game.ini gamma=1 makes winlib's conversion to
      * 16 bits square each channel (0x468230, c*c >> 8), and Sprite.cpp's
      * loader converts through it.  The 3D textures get the same in render.c
      * (a2_gfx_gamma_rgba). */

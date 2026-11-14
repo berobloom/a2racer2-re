@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run the finish flag's mesh builder (0x41ad40) and wave (0x41ac00) under
-Unicorn and print the vertex grid (session 15).  The mesh is 16 triangle
+Unicorn and print the vertex grid.  The mesh is 16 triangle
 strips of 34 D3DLVERTEX (x, y, z, reserved, colour, specular, u, v) from
 0x4a7dd0, 0x440 bytes apart.
 

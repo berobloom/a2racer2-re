@@ -1,13 +1,13 @@
 /* The engine's contact test between two boxes, after spel.dat's collision
- * code (session 14; open question 53).
+ * code (open question 53).
  *
  * A collision entry is a box: the mesh's bottom-face corners in its own
  * frame, a position and a heading (4096 a turn).  0x44a520 sweeps the four
  * corners of one box B along a move, in the frame of another box A, and
  * returns the earliest time (0..1 of the move) at which a corner enters A,
  * with that corner and the side of A it crossed.  0x44a0f0 runs it twice per
- * pair -- the moving object's corners into the other box, and the other's
- * corners into the moving box against the move -- and keeps the earlier hit;
+ * pair: the moving object's corners into the other box, and the other's
+ * corners into the moving box against the move, and keeps the earlier hit;
  * 0x44b860 gives the crossed side's outward normal.  Checked against the
  * original under Unicorn (reverse-engineering/tools/fit_contact.py).
  */
@@ -31,7 +31,7 @@ int a2_contact_sweep(const a2_cbox *a, const a2_cbox *b, float mx, float mz, flo
  * `other` held still.  On a hit returns 1 and gives the time, the contact
  * point in the world and the normal pointing from `self` into `other` (the
  * direction `self` is pushed back against).  Against a fixed box the
- * second pass keeps the original's slip (session 16): the point is the
+ * second pass keeps the original's slip: the point is the
  * other's raw corner taken in `self`'s frame, so the lever arm the impulse
  * gets is the slab's local corner (0x44a628, read by 0x449570). */
 int a2_contact(const a2_cbox *self, float dx, float dz, const a2_cbox *other, float *t,

@@ -1,4 +1,4 @@
-/* a2_dump -- prints what the C parsers see, so their output can be diffed
+/* a2_dump: prints what the C parsers see, so their output can be diffed
  * against the Python tools in a2tools/ (which were validated against the game's
  * own runtime logs). */
 #include "archive.h"

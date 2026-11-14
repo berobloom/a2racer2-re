@@ -1,4 +1,4 @@
-/* smkdump -- decode a Smacker file with msmacker.c, for checking it against
+/* smkdump: decode a Smacker file with msmacker.c, for checking it against
  * another decoder (ffmpeg's): every frame as <outdir>/NNN.ppm and track 0's
  * audio, raw, to <audio.raw>.
  *

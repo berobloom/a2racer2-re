@@ -1,4 +1,4 @@
-# gdb Python script (session 16): dump the accelerated sky's two screen quads.
+# gdb Python script: dump the accelerated sky's two screen quads.
 # A breakpoint on the per-frame draw 0x4190d0 waits FRAMES hits, then writes
 # the eight D3DTLVERTEX at 0x4a7c68 (sx sy sz rhw colour specular tu tv), the
 # texture anim [0x4a7d68], the back.pcx anim [0x49b028] and the player's

@@ -172,7 +172,7 @@ void a2_cops_register(const a2_cops *c, a2_aiw *w)
     }
 }
 
-/* ------------------------------------------------------------- targets */
+/* Targets */
 
 typedef struct {
     a2_ai_target t;
@@ -282,7 +282,7 @@ static void watch(a2_cops *c, int i, const a2_ai_player *p, a2_racers *racers, f
         start_chase(c, i, T_PLAYER, dt);
 }
 
-/* ------------------------------------------------- the transition table */
+/* The transition table */
 
 static float dist2(const cop_car *k, float x, float z)
 {
@@ -409,7 +409,7 @@ static void transitions(a2_cops *c, record *R, const a2_ai_player *p, a2_racers 
         }
         /* 0x401ff0: more than 2 s in the chunk while the target does > 10;
          * at 2 s or less it clears the timer, so it can never fire after
-         * one frame -- kept */
+         * one frame: kept */
         if (R->chunk_time > 2.0f) {
             if (v.t.d->v_fwd > 10.0f) {
                 R->state = CS_UNSTICK;
@@ -431,7 +431,7 @@ static void transitions(a2_cops *c, record *R, const a2_ai_player *p, a2_racers 
     }
 }
 
-/* ------------------------------------------------------------- the states */
+/* The states */
 
 static const int ORDER[3] = {A2_AIW_STRAIGHT, A2_AIW_LANE_DOWN, A2_AIW_LANE_UP};
 
@@ -461,7 +461,7 @@ static void st_drive(a2_cops *c, record *R, cop_car *k, float dt)
     a2_ai_drive(&k->c, &c->env, R->near, 1.0f, R->state == CS_CHASE ? 0.1f : 0.0f, 1, dt);
 }
 
-/* 0x409f60: in front of the target -- toward its lane, then block */
+/* 0x409f60: in front of the target, toward its lane, then block */
 static void st_ahead(a2_cops *c, record *R, cop_car *k, const target_view *v, float dt)
 {
     int order[3] = {A2_AIW_STRAIGHT, A2_AIW_LANE_DOWN, A2_AIW_LANE_UP};

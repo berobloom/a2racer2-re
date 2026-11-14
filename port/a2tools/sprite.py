@@ -15,7 +15,7 @@ CONFIRMED: `8 + width*height` equals the entry size for **all** 453 RC.IMG and
 respectively, so it is a hotspot rather than a derived value.
 
 Index 0xFF is the transparent key (long 0xFF runs pad the corners of rotated
-car sprites).  The palette is external -- the game loads a per-track palette
+car sprites).  The palette is external: the game loads a per-track palette
 (Raser.ini [PALET] ETAPPE0..6 -> e0x_pal.pcx) or a menu palette, so a sprite
 must be paired with one to be displayed.
 """

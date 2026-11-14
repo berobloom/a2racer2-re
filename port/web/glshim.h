@@ -5,7 +5,7 @@
  * fixed-function capabilities (GL_TEXTURE_2D, GL_ALPHA_TEST) that WebGL itself
  * does not know, and glPushAttrib / glPopAttrib restore the enables, the
  * depth mask, the blend function, the alpha function and the current colour
- * -- everything the port's three push/pop pairs change between them. */
+ *: everything the port's three push/pop pairs change between them. */
 #ifndef A2_WEB_GLSHIM_H
 #define A2_WEB_GLSHIM_H
 
@@ -27,7 +27,7 @@ void a2web_gl_reset(void);
 /* WebGL 1 limits the emulation works under (seen with web/gltest.c):
  * a texture whose sides are not powers of two samples black with GL_REPEAT,
  * so such textures are scaled up to the next powers of two on upload (the
- * port's coordinates are 0..1, so they do not change) -- unless both axes are
+ * port's coordinates are 0..1, so they do not change), unless both axes are
  * GL_CLAMP_TO_EDGE, which WebGL 1 allows at any size; and glDrawElements
  * from client memory draws nothing with GL_UNSIGNED_INT indices, so those are
  * turned into GL_UNSIGNED_SHORT batches, the vertex pointers moved along so

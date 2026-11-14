@@ -1,4 +1,4 @@
-# menu.dat — the front end
+# menu.dat: the front end
 
 Session 12. menu.dat (v1.01, PE timestamp 0x363DD150) is the game's front end.
 The shell a2_II.exe runs it, it exits with **40** to start a race (the shell then

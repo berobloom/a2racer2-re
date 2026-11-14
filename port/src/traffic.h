@@ -66,7 +66,7 @@ int a2_traffic_count(const a2_traffic *t);
 /* World position of car `i`, for the radar.  Returns 0 if it is not alive. */
 int a2_traffic_car_xz(const a2_traffic *t, int i, float out[2]);
 float a2_traffic_car_speed(const a2_traffic *t, int i); /* m/s, 0 if none */
-/* How many lane changes the traffic has made -- a diagnostic, since the
+/* How many lane changes the traffic has made: a diagnostic, since the
  * behaviour is otherwise hard to see from outside. */
 int a2_traffic_lane_changes(const a2_traffic *t);
 

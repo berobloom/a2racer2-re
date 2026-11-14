@@ -25,7 +25,7 @@
  *  12 lo_fnt4 / olfnt04   13 lo_fnt1 / olfnt06  14 lo_fnt8 / olfnt08
  *  15 lo_fnt9 / olfnt09   16 lo_fnt1
  *
- * `LoKMTel.fnt` / `HiKMTel.fnt` -- *km-teller*, the speedometer digits -- are
+ * `LoKMTel.fnt` / `HiKMTel.fnt` (*km-teller*, the speedometer digits) are
  * not in that table and are loaded separately; they hold only '0'..'9'.
  */
 #ifndef A2_FONT_H
@@ -53,8 +53,8 @@ float a2_font_height(const a2_font *f, float scale);
 /* Draw `text` with its top-left at (x, y).  Call inside a2_sprites_begin/end:
  * it uses the same 2D overlay state.
  *
- * The glyph art is **greyscale** in every palette the game ships -- the
- * km-teller's busiest index is a near-white (191,183,183) -- yet the speed
+ * The glyph art is **greyscale** in every palette the game ships: the
+ * km-teller's busiest index is a near-white (191,183,183), yet the speed
  * readout is blue on screen, so the colour is applied when drawing, not baked
  * in. `a2_font_draw` keeps the art as-is; the `_tinted` form multiplies it. */
 void a2_font_draw(const a2_font *f, const char *text, float x, float y, float scale);
