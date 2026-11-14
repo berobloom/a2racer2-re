@@ -95,8 +95,14 @@ unanswered questions are in `research/open-questions.md`.
 
 ## License
 
-This software is released under the [BOLA License](LICENSE). It covers this
-project's own code and notes, not the game.
+Copyright (C) 2026 Berobloom
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It comes WITHOUT ANY WARRANTY. The full text is in [LICENSE](LICENSE).
+
+It covers this project's own code and notes, not the game.
 
 ## Legal
 
