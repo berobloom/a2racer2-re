@@ -24,6 +24,32 @@ Evidence-backed findings from the A2 Racer II (Netherlands, v1.01) CD. Confidenc
 
 Hashes (MD5): a2_II.exe 4f411290…, qrace.exe aa5fec96…, spel.dat 556416bf…, menu.dat 4cb67aa2…, SMACKW32.DLL d71d47e9….
 
+## Build toolchain, from the PE headers (session 20)
+
+Evidence for a matching decompilation. Read from the optional header and the
+DOS stub of each file (`.work/game`).
+
+- CONFIRMED: `spel.dat` and `menu.dat` carry linker version 5.00 and have no
+  Rich header (PE header at 0x80, straight after the stub).
+- CONFIRMED: `a2_II.exe`, `qrace.exe` and `instlng.exe` carry linker version
+  5.10 and a Rich header at 0xA0: product id 0 (count 112-140) and product id 6,
+  build 1668, count 1 (the resource entry; these three have .rsrc).
+- STRONGLY SUPPORTED: the two games were linked with Visual C++ 5.0 as
+  released (LINK 5.00.7022), the launchers with a later 5.0 service pack
+  (LINK 5.10). A matching build of `spel.dat` needs the VC 5.0 RTM `cl.exe`
+  (C/C++ 11.00.7022) and its `LIBCMT`. A 5.10 linker would most likely add a
+  Rich header that `spel.dat` lacks.
+- STRONGLY SUPPORTED: static multithreaded CRT (`LIBCMT`): the R6016 and R6017
+  messages (thread data, multithread lock) are in both games.
+- CONFIRMED: no RTTI type names (`.?AV`) in either game, so no `/GR`.
+- LIKELY: built with frame-pointer omission (`/O2` or `/Ox`): of the 1388
+  functions in analysis/funcs2.txt, 36 start with `push ebp; mov ebp,esp`.
+  12 start with an `fs:` access (SEH frames: CRT, or C++ unwinding).
+- CONFIRMED (strings): the sources are C++ (`.cpp`), in four trees:
+  `C:\work\A2racII\Game\`, `C:\work\winlib\` (shared with `menu.dat`), the
+  3D library (`c:\visual~1\dplib\`, `n:\libraries\a2racerii\win3ddp\`), and
+  `c:\libraries\inputlib\`. analysis/spel_src.txt and menu_src.txt list them.
+
 ## The game is split into two programs that communicate via game.ini
 
 - CONFIRMED: `menu.dat` and `spel.dat` both read/write the same keys in `game.ini` (`etappe`, `finished`, `money`, `damage`, `position`, `tracktime`, `MOTOR`, `BANDEN`, `ABS`, `TURBO`, racer results, best times).

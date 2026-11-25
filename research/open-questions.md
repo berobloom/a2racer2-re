@@ -1001,3 +1001,13 @@ phrasing may not be the original's.)*
     captured, or it is called with empty strings, or it is not called on
     these screens at all. Next: break on DrawTextA under Wine on the main
     screen and log the strings.
+
+## New questions (session 20)
+
+62. **Which compiler options built spel.dat, and does VC 5.0 RTM reproduce
+    it?** Discoveries "Build toolchain" pins the linker to 5.00 and the CRT to
+    LIBCMT. Unknown: `/O2` vs `/Ox` vs `/Ot`, `/G5` vs `/G4`/`/GB`, `/Gz`/`/Gr`,
+    `/Zp`, `/GX`, inlining level, and whether `winlib` and the 3D library came
+    from prebuilt `.lib` files with other options. Next: get VC 5.0 RTM running
+    under Wine, compile a small leaf function (a `winlib` one that appears in
+    both games) with each candidate set and compare the bytes.
