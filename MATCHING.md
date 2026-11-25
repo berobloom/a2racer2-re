@@ -37,7 +37,7 @@ comes later; it shares `C:\work\winlib\` with spel.dat.
   111 instructions (discoveries "Build toolchain").
 - **C library: `LIBC.LIB` (`/ML`)**, CONFIRMED by the same start-up code (LIBCMT's has an extra
   `_mtinit` check).
-- **Options: `/Ox /Ob2`** (with `/ML`). Each part has its evidence:
+- **Options: `/Ox /Ob2 /Gy`** (with `/ML`). Each part has its evidence:
   - optimised for speed, frame pointers omitted, `__cdecl`: CONFIRMED. `CalculateStearing`
     (0x401230) does not match with `/O1`, `/Od`, `/Oy-` or `/Gr`.
   - intrinsics on (`/Oi`), no `/Op`: CONFIRMED by `ai_speed_control` (0x4012c0, `abs` inline).
@@ -48,6 +48,9 @@ comes later; it shares `C:\work\winlib\` with spel.dat.
     `CalculateStearing` inlined, which other files call out of line (0x40a30a, 0x40a7cb,
     0x40abdb), so it is not an `inline` function; `/Ob1` does not inline it, `/Ob2` matches.
     So a function is inlined into the ones after it in its file: keep the address order.
+  - `/Gy` (a section per function): CONFIRMED by where the linker put the compiler's vector
+    constructor iterator, between `ai_fsm.cpp`'s two initialisers (discoveries). It changes no
+    function's bytes, only the layout, which the per-function check does not see.
   - not told apart yet: `/G3` `/G4` `/G5` `/GB`, `/Zp`, `/GX` (open question 62).
 - **Set-up and Wine:** `reverse-engineering/msvc5.md`.
 - **Driver:** `reverse-engineering/tools/msvc5.sh cl|link|dumpbin|lib ...` runs a VC 5.0 tool under
@@ -87,7 +90,7 @@ src/check.sh        # compile src/spel/*.cpp (one object per file), compare ever
 src/check.sh -v     # also the differing offsets, the reference problems and the inferred addresses
 ```
 
-Each `src/spel/*.cpp` is compiled with `cl /nologo /c /Ox /Ob2 /ML` into `.work/src/spel/`, and
+Each `src/spel/*.cpp` is compiled with `cl /nologo /c /Ox /Ob2 /Gy /ML` into `.work/src/spel/`, and
 `tools/msvc/objmatch.py` compares each function the objects define with the game at the address
 its annotation gives. Annotations are comments in the style of reccmp (isledecomp):
 
@@ -176,6 +179,11 @@ What the next nine taught (0x401000-0x4019ef, `src/spel/unplaced.cpp`):
 - Compiler-made functions are annotated `// SYNTHETIC: SPEL 0xADDR` with their symbol on the
   next line as a comment: `$E4` (the file's dynamic initialiser), `$E2` (the destructor it
   hands to `atexit`). They are compared like the others; their names are per file.
+- A base pointer kept across several stores or a call (`lea ecx, [...]` then `[ecx]`,
+  `[ecx+4]`, ...) where plain `a.b[i].x = ...` lines give `[reg + disp]` each time: an inline
+  member function or inline helper (its `this` or reference): `AIRecord::clear` in
+  `ai_free_cop` 0x4035b0, `cop_state()` in `cop_pursuit` 0x402b40. A local pointer variable
+  does not do it; the compiler folds it.
 - A member function is reached with `this` in `ecx`: `0x401200` is `AIControl::reset` on the
   record's +0x30, which made the second half of `AIRecord` a nested struct.
 

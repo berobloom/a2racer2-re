@@ -1007,7 +1007,8 @@ phrasing may not be the original's.)*
 62. **Which compiler options built spel.dat, and does VC 5.0 RTM reproduce
     it?** Discoveries "Build toolchain" pins the compiler to VC 5.0 RTM and the
     CRT to LIBC (`/ML`). Settled since (discoveries "Link order, compiler options"):
-    `/Ox /Ob2`, no `/Op`, no `/Gr`, frame pointers omitted. Unknown: `/G3`-`/G5`/`/GB`, `/Zp`,
+    `/Ox /Ob2`, no `/Op`, no `/Gr`, frame pointers omitted, and `/Gy` (discoveries, the
+    `ai_fsm.cpp` link experiment). Unknown: `/G3`-`/G5`/`/GB`, `/Zp`,
     `/GX`, and whether `winlib` and the 3D library came
     from prebuilt `.lib` files with other options. Next: with the toolchain from
     reverse-engineering/msvc5.md, compile a small leaf function (a `winlib` one that appears in

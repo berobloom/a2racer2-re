@@ -52,6 +52,16 @@ public:
             state = 0;
         }
     }
+    // The highest index in use, -1 when none is. Inline in the game (0x402d6a); the name is
+    // ours.
+    int last_used()
+    {
+        int last = -1;
+        for (int i = 0; i < count; i++)
+            if (used[i] == 1)
+                last = i;
+        return last;
+    }
     int get_new()
     {
         int i;

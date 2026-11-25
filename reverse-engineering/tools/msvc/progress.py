@@ -191,7 +191,7 @@ def main():
       'byte-identical C library code.' % (num(code_end - tva), num(c_bytes + lib_bytes),
                                           pct(c_bytes + lib_bytes, code_end - tva)))
     w('')
-    w('A function counts only when our build of `src/spel/` (Visual C++ 5.0, `cl /O2 /ML`) gives')
+    w('A function counts only when our build of `src/spel/` (Visual C++ 5.0, `cl /Ox /Ob2 /Gy /ML`) gives')
     w('the same bytes as the game at the same address, with the target of every relocation checked')
     w('too: calls and globals against their annotations, string literals and float constants')
     w('against the game\'s bytes. A near miss compiles but its code still differs: the number is how')

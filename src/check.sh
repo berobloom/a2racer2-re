@@ -1,6 +1,6 @@
 #!/bin/sh
 # Compile each module of src/spel/ (src/spel/*.cpp, sharing src/spel/spel.h) with the game's
-# compiler and options (Visual C++ 5.0, cl /Ox /Ob2 /ML; reverse-engineering/msvc5.md) into
+# compiler and options (Visual C++ 5.0, cl /Ox /Ob2 /Gy /ML; reverse-engineering/msvc5.md) into
 # .work/src/spel/<module>.obj, and compare every annotated function with spel.dat
 # (reverse-engineering/tools/msvc/objmatch.py).     src/check.sh [-v]
 #
@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 # The 3D library's headers come from its directory on the original machine (array.hpp's
 # __FILE__ is n:\libraries\a2racerii\win3ddp\versie_1\include\array.hpp): drive n: in the Wine
 # prefix holds that path, linked to .work/src/win3ddp.
-CFLAGS="/nologo /c /Ox /Ob2 /ML /In:\\libraries\\a2racerii\\win3ddp\\versie_1\\include"
+CFLAGS="/nologo /c /Ox /Ob2 /Gy /ML /In:\\libraries\\a2racerii\\win3ddp\\versie_1\\include"
 top=$(pwd)
 w=.work/src/spel; mkdir -p $w; rm -f $w/*
 cp src/spel/*.h src/spel/*.cpp $w/

@@ -106,6 +106,21 @@ DOS stub of each file (`.work/game`).
   RESET_COP 0x402200, 0x402520 (which carriageway of a chunk a waypoint is on: its asserts
   name ai_cops.cpp line 163), init_cop_ai_states 0x4025c0, new_cop 0x4026c0 and HANDLE_COP_AI
   0x402790 (line 241 "Cop state %d corrupted!"). All byte-identical (src/spel/ai_cops.cpp).
+- CONFIRMED: the game was compiled with **`/Gy`** (one COMDAT section per function). The
+  compiler's vector constructor iterator `??_H@YGXPAXIHP6EX0@Z@Z` sits at 0x4032d0, between
+  ai_fsm.cpp's two dynamic initialisers (0x4032b0 racer rules, 0x403300 cop rules); other files
+  call it (0x41aba6, 0x41d839, 0x41eb46, 0x41f686, 0x447280, 0x449a16). Without `/Gy` the two
+  initialisers share one section and the COMDAT can only follow the whole file. Linked with
+  `/Gy` (LINK 5.00 `/OPT:NOREF`), ai_cops.obj + ai_fsm.obj put all 21 functions, `??_H`
+  included, at the game's addresses (0x4020d0-0x403652). `/Gy` changes no function's bytes.
+- CONFIRMED: ai_fsm.cpp is 0x4032b0-0x403652: the racer and cop rule tables (`{from, to,
+  result, test}`, 25 each, 0x4a5410 and 0x4a5280) with their initialisers, `??_H`, the AI
+  record's `set_state` (0x403320, thiscall: target -1, state, timers and laps 0), the frame
+  update 0x403340, the step 0x403380, the two rule setters 0x403420/0x403460, the chase opener
+  0x4034a0, the cop freer 0x4035b0 (line 396 "Illegal cop, this is a racer") and 0x403630
+  (is the object an AI record's). The chase opener's free-slot search can run off the end:
+  with all 12 cop records busy it reads record 15 (0x4a5b40, the ai_instances array) as a
+  record; it only opens a chase if that word is -1.
 - CONFIRMED: the vehicle record's +0x6c is the sideways velocity, not a heading: the cop rules
   add |+0x74| and |+0x6c| (0x4019f0), and 0x401ef0 zeroes +0x74, +0x6c and +0x7c together.
 - CONFIRMED: its out-of-range path (index 15 or more) calls 0x464e50 with "Out of FSM array

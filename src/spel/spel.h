@@ -45,6 +45,22 @@ struct AIRecord {
     int finish_flags;        // +0x28
     float cop_speed_limit;   // +0x2c
     AIControl control;       // +0x30
+
+    // A fresh state: no target, timers and laps cleared (called at 0x4093cf). The name is
+    // ours.
+    // FUNCTION: SPEL 0x403320
+    void set_state(int s);
+
+    // Frees the record (inline in ai_free_cop 0x4035b0). The name is ours.
+    void clear()
+    {
+        object = -1;
+        state = -1;
+        target = -1;
+        timer = 0;
+        chunk_time = 0;
+        laps = 0;
+    }
 };
 
 // GLOBAL: SPEL 0x4a55a0
@@ -66,14 +82,16 @@ extern RacerSlot racer_slots[3];
 
 // The AI instance records, 108 bytes each (discoveries "The AI instance records").
 struct AIInstance {
-    char pad00[0x18];
+    char pad00[0x14];
+    int lane;                // +0x14 the lane it drives in (cop_pursuit moves it down by one)
     float max_speed;         // +0x18 ai_max_speed_allowed
     float chosen_speed;      // +0x1c ai_chosen_speed
     char pad20[4];
     int behaviour;           // +0x24 index into ai_behaviours
     char pad28[4];
     int f2c;                 // +0x2c 0: "No collision" (the ADAC handler's log)
-    char pad30[0x14];
+    float f30;               // +0x30 how long f2c has been 1; cleared after 0.5 s
+    char pad34[0x10];
     int cop;                 // +0x44 a police car's index into cop_states
     char pad48[4];
     int sample_loop;         // +0x4c passed to sndfx_play_object_sample
@@ -139,12 +157,12 @@ void trace(const char *fmt, ...);
 struct t_cop {
     int state;               // +0x00
     int suspect;             // +0x04
-    char pad08[4];
+    int target_lane;         // +0x08 the suspect's lane, written while ahead of it
     float f0c;               // +0x0c
     float timer;             // +0x10 pursuit timer
     float max_speed;         // +0x14 the limit it enforces
     float max_lanes;         // +0x18
-    int f1c;                 // +0x1c set by new_cop
+    int object;              // +0x1c the police car, given to new_cop
 };
 
 // GLOBAL: SPEL 0x4a5238
@@ -181,6 +199,25 @@ int cop_lookout(int object, int cop);
 // FUNCTION: SPEL 0x402b40
 int cop_pursuit(int object, int cop);
 
+// The offence check: does the suspect break the cop's rules (side, lanes, speed)?
+// 1 when it does (discoveries "the offence check 0x403130"). The name is ours.
+// FUNCTION: SPEL 0x403130
+int cop_offence(int object, int cop, int suspect);
+
+// Moves the AI car's waypoint to the next lane on the left; 1 when it did (discoveries,
+// "The switch retargets the waypoint"). The name is ours.
+// FUNCTION: SPEL 0x406d90
+int lane_left(int ai);
+
+// Sets the game mode and starts its sequence (discoveries, 0x424d20). The name is ours.
+// FUNCTION: SPEL 0x424d20
+void set_game_mode(int mode);
+
+// After a catch: gives the player's car an AI driver (discoveries, "a catch pulls the player
+// over"). The name is ours.
+// FUNCTION: SPEL 0x4258f0
+void pull_over_player();
+
 // change_lane (discoveries "Traffic lane choice and following").
 // FUNCTION: SPEL 0x403660
 void change_lane(int object, int lanes, int x);
@@ -196,10 +233,41 @@ void police_light_update();
 // The old model's cop: called by HANDLE_COP_AI when ai_model is 0; not known yet.
 // FUNCTION: SPEL 0x409060
 void fn_409060(int object);
-// FUNCTION: SPEL 0x403630
-int fn_403630(int object);
 // FUNCTION: SPEL 0x40fba0
 void fn_40fba0(int object);
+
+// A row of the track table (Game.ini's track list, 137 bytes each; discoveries "the array
+// base is 0x4D8E9C").
+#pragma pack(push, 1)
+struct Track {
+    int city;                // +0x00 1 on the city stages
+    char pad04[133];
+};
+#pragma pack(pop)
+
+// GLOBAL: SPEL 0x4d8e9c
+extern Track tracks[20];
+
+// The player's car type, 0..6 (discoveries).
+// GLOBAL: SPEL 0x4d9e2c
+extern int player_car;
+
+// The objects of the cops whose siren is on, -1 for a free entry; the radar shows them
+// (discoveries, "the siren list 0x4a5ce0").
+// GLOBAL: SPEL 0x4a5ce0
+extern int siren_list[20];
+
+// The police radio's "achter" line, as a pursuit starts (discoveries, session 12).
+// FUNCTION: SPEL 0x4150f0
+void radio_pursuit(int target);
+
+// Is the object one of the AI records'? (ai_fsm.cpp)
+// FUNCTION: SPEL 0x403630
+int is_ai_object(int object);
+
+// One step of a record's state machine (ai_fsm.cpp).
+// FUNCTION: SPEL 0x403380
+void ai_fsm_step(int idx);
 
 // The game mode, set by 0x424d20 (discoveries): 0 racing, 8 the police sequence, ...
 // GLOBAL: SPEL 0x4d9a7c
@@ -229,7 +297,10 @@ struct Vehicle {
     int waypoint;            // +0x20 its waypoint this frame (port/src/racers.c)
     char pad24[4];
     int side;                // +0x28 its carriageway, 1 or 0 (RESET_COP, discoveries)
-    char pad2c[0x40];
+    char pad2c[0xc];
+    int f38;                 // +0x38 set again 0.5 s after AIInstance f2c (cop_pursuit)
+    int f3c;                 // +0x3c 1 sets AIInstance f2c (cop_pursuit)
+    char pad40[0x2c];
     float lateral;           // +0x6c sideways velocity (the cop rules: |v_fwd| + |v_lat|)
     char pad70[4];
     float speed;             // +0x74 forward velocity

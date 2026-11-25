@@ -62,7 +62,7 @@ in the browser's storage.
 
 Next to the port, the original's C++ is being rebuilt function by function so
 that it compiles to the same bytes, with the game's own compiler: Visual C++
-5.0, `cl /Ox /Ob2 /ML`, under Wine. It starts with `spel.dat`, the race.
+5.0, `cl /Ox /Ob2 /Gy /ML`, under Wine. It starts with `spel.dat`, the race.
 [`docs/SPELPROGRESS.HTML`](docs/SPELPROGRESS.HTML) lists every function: search
 it, filter it by source file, and click a near miss to see its instruction
 diff against the game. [`PROGRESS.md`](PROGRESS.md) has the same numbers as

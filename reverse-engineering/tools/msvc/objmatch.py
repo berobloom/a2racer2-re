@@ -8,8 +8,9 @@ Addresses come from the annotations in SRCDIR's .cpp and .h files:
     // GLOBAL: SPEL 0x4a55a0        the next variable is at that address
     // SYNTHETIC: SPEL 0x4020d0     a function the compiler made, named on the next line as a
     // $E4                          comment: its symbol in this file's object (`$E4`, the
-                                    dynamic initialiser of the file's globals, or `$E2`, the
-                                    destructor it registers with atexit)
+                                    dynamic initialiser of one of the file's globals, or the
+                                    destructor one registers with atexit; or a COMDAT such as
+                                    `??_H@YGXPAXIHP6EX0@Z@Z`, the vector constructor iterator)
 Each function the .obj defines and the annotations place is compared with the game:
 
   bytes    equal everywhere except the 4 bytes of each relocation; the game must also have
@@ -108,8 +109,12 @@ def annotations(srcdir, prog):
 
 
 def synthetic(path, sym):
-    """The key of a compiler-made function: '$E4@ai_cops' for _$E4 in ai_cops.cpp/.obj."""
-    return '%s@%s' % (sym.lstrip('_'), os.path.splitext(os.path.basename(path))[0])
+    """The key of a compiler-made function: '$E4@ai_cops' for _$E4 in ai_cops.cpp/.obj (the
+    $E functions are local to their file); others, like the COMDAT vector constructor
+    iterator ??_H@..., are global and keep their symbol."""
+    if sym.lstrip('_').startswith('$E'):
+        return '%s@%s' % (sym.lstrip('_'), os.path.splitext(os.path.basename(path))[0])
+    return plain(sym)
 
 
 def key(path, mname):
