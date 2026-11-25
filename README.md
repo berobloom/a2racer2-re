@@ -58,12 +58,12 @@ in the browser's storage.
 
 ## Matching decompilation
 
-<a href="docs/SPELPROGRESS.HTML"><img src="docs/SPELPROGRESS.SVG" width="40%" alt="spel.dat: the share of the game's own functions that compile to the original's bytes"></a>
+<a href="https://berobloom.github.io/a2racer2-re/SPELPROGRESS.HTML"><img src="docs/SPELPROGRESS.SVG" width="40%" alt="spel.dat: the share of the game's own functions that compile to the original's bytes"></a>
 
 Next to the port, the original's C++ is being rebuilt function by function so
 that it compiles to the same bytes, with the game's own compiler: Visual C++
 5.0, `cl /Ox /Ob2 /Gy /ML`, under Wine. It starts with `spel.dat`, the race.
-[`docs/SPELPROGRESS.HTML`](docs/SPELPROGRESS.HTML) lists every function: search
+[`docs/SPELPROGRESS.HTML`](https://berobloom.github.io/a2racer2-re/SPELPROGRESS.HTML) lists every function: search
 it, filter it by source file, and click a near miss to see its instruction
 diff against the game. [`PROGRESS.md`](PROGRESS.md) has the same numbers as
 tables. `reverse-engineering/tools/msvc/progress.py` writes all three from a
