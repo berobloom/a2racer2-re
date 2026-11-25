@@ -70,6 +70,18 @@ DOS stub of each file (`.work/game`).
   (src/spel/unplaced.cpp), every reference checked. It matches with `/O2`, `/Ox`, `/G3`-`/G5`,
   `/GB`, and with `/Zp1`, `/GX`, `/MT` added; not with `/O1`, `/Od`, `/Oy-` or `/Gr`. So the game
   is optimised for speed, without frame pointers, `__cdecl`.
+- CONFIRMED: the options are `/Ox` (or `/O2 /GF-`), not `/O2`: the game's string literals are not
+  pooled ("MESH.CPP" 81 times, "cam_main.cpp" 11 times in .data), and VC 5.0's `/O2` pools them.
+- CONFIRMED: `/Oi` (intrinsics; `abs` inline in 0x4012c0), no `/Op`.
+- STRONGLY SUPPORTED: `/Ob2`. 0x4013c0 has CalculateStearing inlined while 0x40a30a, 0x40a7cb
+  and 0x40abdb (other files) call it, so it is an ordinary function; `/Ob1` does not inline it
+  and `/Ob2` gives 0x4013c0 byte for byte.
+- CONFIRMED: all ten functions before ai_cfun.cpp (0x401000-0x4019ef) compile to the game's bytes
+  with `/Ox /Ob2 /ML` (src/spel/unplaced.cpp): the ADAC handler (0x401000, its first trace
+  line "Handling Adac AI."), the record's AIControl::reset (0x401200, `this` = record + 0x30),
+  CalculateStearing, speed control, the drive step, the rubber band (0x4014e0), the bearing
+  (0x401690) and three FSM tests (0x401780, 0x4018b0, 0x401960). Their source file is not
+  named by any string; it sorts before ai_cfun.cpp.
 - CONFIRMED: its out-of-range path (index 15 or more) calls 0x464e50 with "Out of FSM array
   index. Function: CalculateStearing" and then uses an uninitialised object index: the C++ that
   matches leaves the local unset on that path.

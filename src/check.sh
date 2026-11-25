@@ -1,11 +1,11 @@
 #!/bin/sh
 # Compile each module of src/spel/ (src/spel/*.cpp, sharing src/spel/spel.h) with the game's
-# compiler and options (Visual C++ 5.0, cl /O2 /ML; reverse-engineering/msvc5.md) into
+# compiler and options (Visual C++ 5.0, cl /Ox /Ob2 /ML; reverse-engineering/msvc5.md) into
 # .work/src/spel/<module>.obj, and compare every annotated function with spel.dat
 # (reverse-engineering/tools/msvc/objmatch.py).     src/check.sh [-v]
 set -eu
 cd "$(dirname "$0")/.."
-CFLAGS="/nologo /c /O2 /ML"
+CFLAGS="/nologo /c /Ox /Ob2 /ML"
 w=.work/src/spel; mkdir -p $w; rm -f $w/*
 cp src/spel/*.h src/spel/*.cpp $w/
 cd $w

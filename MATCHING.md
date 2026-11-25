@@ -37,12 +37,18 @@ comes later; it shares `C:\work\winlib\` with spel.dat.
   111 instructions (discoveries "Build toolchain").
 - **C library: `LIBC.LIB` (`/ML`)**, CONFIRMED by the same start-up code (LIBCMT's has an extra
   `_mtinit` check).
-- **Options: `/O2`** for now. `CalculateStearing` (0x401230) matches with `/O2`, `/Ox` and `/Ox /Ob2`,
-  with any of `/G3` `/G4` `/G5` `/GB`, and with `/Zp1`, `/GX` or `/MT` added; it does not
-  match with `/O1`, `/Od`, `/Oy-` (frame pointers) or `/Gr` (fastcall). So: optimised for speed,
-  frame pointers omitted, `__cdecl` (CONFIRMED). Which of the rest is open question 62: it needs
-  functions that tell them apart (an inlined call, a structure copy, integer division by a
-  constant, an exception frame).
+- **Options: `/Ox /Ob2`** (with `/ML`). Each part has its evidence:
+  - optimised for speed, frame pointers omitted, `__cdecl`: CONFIRMED. `CalculateStearing`
+    (0x401230) does not match with `/O1`, `/Od`, `/Oy-` or `/Gr`.
+  - intrinsics on (`/Oi`), no `/Op`: CONFIRMED by `ai_speed_control` (0x4012c0, `abs` inline).
+  - no string pooling, so `/Ox` and not `/O2` (which adds `/GF`): CONFIRMED. spel.dat keeps
+    duplicate literals ("MESH.CPP" 81 times, "cam_main.cpp" 11), and VC 5.0's `/O2` pools two
+    `__FILE__` uses into one where `/Ox` keeps two. `/O2 /GF-` would give the same code.
+  - `/Ob2` (inline any suitable function): STRONGLY SUPPORTED. `ai_drive` (0x4013c0) has
+    `CalculateStearing` inlined, which other files call out of line (0x40a30a, 0x40a7cb,
+    0x40abdb), so it is not an `inline` function; `/Ob1` does not inline it, `/Ob2` matches.
+    So a function is inlined into the ones after it in its file: keep the address order.
+  - not told apart yet: `/G3` `/G4` `/G5` `/GB`, `/Zp`, `/GX` (open question 62).
 - **Set-up and Wine:** `reverse-engineering/msvc5.md`.
 - **Driver:** `reverse-engineering/tools/msvc5.sh cl|link|dumpbin|lib ...` runs a VC 5.0 tool under
   Wine in the current directory, with `INCLUDE` and `LIB` set.
@@ -81,7 +87,7 @@ src/check.sh        # compile src/spel/*.cpp (one object per file), compare ever
 src/check.sh -v     # also the differing offsets, the reference problems and the inferred addresses
 ```
 
-Each `src/spel/*.cpp` is compiled with `cl /nologo /c /O2 /ML` into `.work/src/spel/`, and
+Each `src/spel/*.cpp` is compiled with `cl /nologo /c /Ox /Ob2 /ML` into `.work/src/spel/`, and
 `tools/msvc/objmatch.py` compares each function the objects define with the game at the address
 its annotation gives. Annotations are comments in the style of reccmp (isledecomp):
 
@@ -118,6 +124,17 @@ Tested both ways: a wrong string, a wrong call target and a wrong float constant
    aligns the game's instructions (left) with ours (right).
 4. When it matches, rerun `reverse-engineering/tools/msvc/progress.py`.
 
+The other tools:
+
+- `tools/msvc/show.py spel 0xADDR...` (or `--module FILE.cpp`): the game's function with its
+  strings, float constants and annotated names resolved.
+- `tools/msvc/variants.py spel FILE.cpp NAME VARIANTS.txt`: compile several spellings of one
+  piece of the file and count the differing rows of each (blocks separated by `====` lines;
+  the first is the text to replace).
+- `tools/msvc/optvar.sh spel FILE.cpp "/Ox" "/O2" ...`: the check under other options.
+- `src/check.sh` also warns when an object defines functions in another order than the game
+  has them: within one file the linker keeps the source order.
+
 What the first match taught (`CalculateStearing`, 0x401230):
 
 - An uninitialised local can be part of the original. On an index of 15 or more the game reports
@@ -126,7 +143,22 @@ What the first match taught (`CalculateStearing`, 0x401230):
 - `x > a ? c1 : x < b ? c2 : expr` loads the float constants with `fld`/`fstp`; the same choice as
   `if`/`else if`/`else` stores them as integer immediates (`mov dword ptr [...], 42C80000h`). Both
   are plausible C; only the bytes decide.
-- `/O2` pools string literals (`/GF`), so they are COMDAT symbols named `??_C@...`.
+- `/O2` pools string literals (`/GF`) into COMDAT symbols named `??_C@...`; the game was not
+  built that way (`/Ox`, literals are `$SG...`).
+
+What the next nine taught (0x401000-0x4019ef, `src/spel/unplaced.cpp`):
+
+- A pointer formed before a call keeps its place: `C3dObject *o = &...; o->y = f(x);` computes
+  the address before the call, `d3d_objects.data[...].y = f(x);` after it.
+- Where a pointer is formed matters in other places too: `bearing` (0x401690) needs it after
+  the two subtractions that index the array themselves.
+- `a *= 4096` as its own statement keeps two multiplies; in one expression the compiler folds
+  the constants.
+- `fld x; fcomp st(1)` and `fcompp` compares, and a `fld`/`fstp` copy, come from values
+  computed in double (`handle_adac_ai` 0x401000). Plain float source gives `fcom [mem]` and
+  an integer `mov` copy.
+- A member function is reached with `this` in `ecx`: `0x401200` is `AIControl::reset` on the
+  record's +0x30, which made the second half of `AIRecord` a nested struct.
 
 ## 6. Names, after the match, with their evidence
 
@@ -137,6 +169,6 @@ that is ours, not the original's, says so in a comment.
 
 ## 7. What is left
 
-All but one function of spel.dat; all of menu.dat. Next: pin the remaining options (open
-question 62) with functions that tell them apart, then a source file at a time, starting with
-the small files the module map already places.
+Most of spel.dat and all of menu.dat; the numbers are in PROGRESS.md. Next: a source file at a
+time in address order, starting with the files the module map already places (`ai_cfun.cpp`,
+`ai_cops.cpp`, ...), and the options still open (question 62).

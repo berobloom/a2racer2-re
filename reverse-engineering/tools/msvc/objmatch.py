@@ -34,6 +34,25 @@ FNAME = re.compile(r'([A-Za-z_~][\w:~]*)\s*\(')
 VNAME = re.compile(r'([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*(?:=|;)')
 
 
+CLASS = re.compile(r'^\s*(?:struct|class)\s+(\w+)[^;]*$')
+
+
+def enclosing(lines, i):
+    """The struct/class whose body line i is in ('' at file level): the nearest struct/class
+    line above it whose body has not been closed by a '};' line in between."""
+    depth = 0
+    for j in range(i - 1, -1, -1):
+        t = lines[j].strip()
+        if t.startswith('};'):
+            depth += 1
+        m = CLASS.match(lines[j])
+        if m and (t.endswith('{') or (j + 1 < len(lines) and lines[j + 1].strip() == '{')):
+            if depth == 0:
+                return m.group(1)
+            depth -= 1
+    return ''
+
+
 def annotations(srcdir, prog):
     """{qualified name: address} from every .cpp/.h in srcdir, and {address: (file, name)} of
     the definitions (functions with a body)."""
@@ -56,11 +75,14 @@ def annotations(srcdir, prog):
                 if decl.rstrip().endswith((';', '{', ')')) or '{' in decl:
                     break
                 j += 1
+            scope = enclosing(lines, i)
             if kind == 'FUNCTION':
                 n = FNAME.search(decl)
                 if not n:
                     continue
                 name = n.group(1)
+                if scope and '::' not in name:
+                    name = scope + '::' + name
                 where[name] = addr
                 rest = decl[decl.index(')'):] if ')' in decl else ''
                 k = j + 1
@@ -71,6 +93,21 @@ def annotations(srcdir, prog):
                 if n:
                     where[n.group(1)] = addr
     return where, defs
+
+
+def libnames(prog):
+    """{source name: address} of the C library functions found in the game
+    (reverse-engineering/analysis/PROG_libc.tsv, libmatch.py): calls to them are checked too."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'analysis', prog + '_libc.tsv')
+    out = {}
+    if os.path.exists(path):
+        for line in open(path):
+            f = line.rstrip('\n').split('\t')
+            if len(f) >= 4 and f[0].startswith('0x'):
+                names = f[3].split()
+                if len(names) == 1:
+                    out[plain(names[0])] = int(f[0], 16)
+    return out
 
 
 def plain(mangled):
@@ -164,10 +201,18 @@ def main():
     verbose = '-v' in sys.argv
     img = Image(prog)
     where, defs = annotations(srcdir, prog)
+    for k, v in libnames(prog).items():
+        where.setdefault(k, v)
     inferred = {}
     seen = set()
     for path in objs:
         ob = coff.Obj(open(path, 'rb').read())
+        placed = [where[plain(f[0])] for f in ob.functions()
+                  if where.get(plain(f[0])) in defs]
+        for x, y in zip(placed, placed[1:]):
+            if y < x:
+                print('order: %s defines 0x%06x after 0x%06x; the game has them the other way round'
+                      % (os.path.basename(path), y, x))
         for mname, sec, start, end in ob.functions():
             name = plain(mname)
             addr = where.get(name)
