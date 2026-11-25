@@ -8,7 +8,8 @@ our compiled bytes equal the game's (relocation bytes masked, every relocation's
 checked). Near misses get their differing instruction rows from fndiff.py. The functions not
 written yet are the rest of reverse-engineering/analysis/spel_funcs.tsv (funcs.py), named from
 the FUNCTION annotations in src/spel when a prototype has one. Each function's source file is
-from reverse-engineering/analysis/spel_modules.tsv (modules.py). The C library row comes from
+the src/spel file that defines it (unplaced.cpp excepted), else the one
+reverse-engineering/analysis/spel_modules.tsv gives (modules.py). The C library row comes from
 libmatch.py against VC 5.0's LIBC.LIB.
 
 It also writes docs/SPELPROGRESS.HTML (every function, searchable and filterable, with its
@@ -130,7 +131,9 @@ def main():
     fl = F.load(PROG)
     sizes = {a: n for a, n, _ in fl}
     mods = MOD.load(PROG)
-    where, _defs = M.annotations(SRC, PROG)
+    where, defs = M.annotations(SRC, PROG)
+    written_in = {a: fn for a, (fn, _) in defs.items() if fn.lower().endswith('.cpp')
+                  and fn.lower() != 'unplaced.cpp'}
     named = {v: k for k, v in where.items()}
     code_start, lib_start = fl[0][0], fl[-1][0] + fl[-1][1]
     tva, text = img.text
@@ -138,7 +141,7 @@ def main():
 
     allf = []
     for a, n, _ in fl:
-        sub = module_label(mods, a)
+        sub = written_in.get(a) or module_label(mods, a)
         if a in done_map:
             nm, _, ok = done_map[a]
             allf.append((a, nm, 'match' if ok else 'near', sub))
@@ -223,7 +226,9 @@ def main():
     w('')
     w('The objects are linked in alphabetical order of their file names. A function is placed in a')
     w('file when it uses that file\'s `__FILE__` string, or lies between two functions that do;')
-    w('`reverse-engineering/analysis/spel_modules.tsv` (`modules.py`). The others are "%s".' % UNPLACED)
+    w('`reverse-engineering/analysis/spel_modules.tsv` (`modules.py`). A function written in')
+    w('`src/spel/<file>.cpp` is counted in that file (`unplaced.cpp` excepted). The others are')
+    w('"%s".' % UNPLACED)
     w('')
     w('| Source file | Functions | Byte-identical | Near misses | Not written | Done |')
     w('|---|---:|---:|---:|---:|---:|')

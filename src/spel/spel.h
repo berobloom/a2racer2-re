@@ -4,6 +4,7 @@
 //                              a prototype only tells the check where the function is)
 //   // GLOBAL: SPEL 0xADDR     before a global variable
 // The evidence for names and layouts is in research/discoveries.md.
+#include <array.hpp>
 #ifndef SPEL_H
 #define SPEL_H
 
@@ -72,7 +73,9 @@ struct AIInstance {
     int behaviour;           // +0x24 index into ai_behaviours
     char pad28[4];
     int f2c;                 // +0x2c 0: "No collision" (the ADAC handler's log)
-    char pad30[0x1c];
+    char pad30[0x14];
+    int cop;                 // +0x44 a police car's index into cop_states
+    char pad48[4];
     int sample_loop;         // +0x4c passed to sndfx_play_object_sample
     char pad50[0x10];
     int progress;            // +0x60 chunks travelled
@@ -128,6 +131,76 @@ extern int etappe;
 // GLOBAL: SPEL 0x4d9e70
 extern int player_progress;
 
+// The debug trace: printf-style, to debug.txt when Raser.ini DEBUGON=1.
+// FUNCTION: SPEL 0x464ca0
+void trace(const char *fmt, ...);
+
+// A cop's state (discoveries "the active cops live in a T_ARRAY").
+struct t_cop {
+    int state;               // +0x00
+    int suspect;             // +0x04
+    char pad08[4];
+    float f0c;               // +0x0c
+    float timer;             // +0x10 pursuit timer
+    float max_speed;         // +0x14 the limit it enforces
+    float max_lanes;         // +0x18
+    int f1c;                 // +0x1c set by new_cop
+};
+
+// GLOBAL: SPEL 0x4a5238
+extern T_ARRAY<t_cop> cop_states;
+
+// The engine's runtime road chunk, 388 bytes (discoveries, the trigger dispatcher).
+struct Chunk {
+    char pad00[0xe4];
+    int n_waypoints[2];      // +0xe4 waypoints on each carriageway
+    int trigger[2];          // +0xec the .pmp trigger slots
+    char padf4[0x30];
+    int waypoints[2][12];    // +0x124 their numbers
+};
+
+struct ChunkArray {
+    Chunk *data;
+};
+
+// GLOBAL: SPEL 0x4e65e0
+extern ChunkArray chunks;
+
+// The last speed and lane signs behind the vehicle (discoveries "BACKTRACK_SPEED_TRIGGER").
+// FUNCTION: SPEL 0x408080
+void backtrack_speed_trigger(int object, int *speed, int *lane);
+
+// Game.ini [OPTIONS] ai_model: 1 the old (Autobahn Raser I) AI, 0 the new; shipped 0
+// (discoveries "Two AI models").
+// GLOBAL: SPEL 0x4d9b10
+extern int ai_model;
+
+// The cop states' lookout and pursuit (discoveries, HANDLE_COP_AI). The names are ours.
+// FUNCTION: SPEL 0x402a10
+int cop_lookout(int object, int cop);
+// FUNCTION: SPEL 0x402b40
+int cop_pursuit(int object, int cop);
+
+// change_lane (discoveries "Traffic lane choice and following").
+// FUNCTION: SPEL 0x403660
+void change_lane(int object, int lanes, int x);
+
+// Gives the player's car back after a catch (discoveries, "a catch pulls the player over").
+// FUNCTION: SPEL 0x425980
+void release_player();
+
+// Flashes the police light on the dashboard while a siren is on (discoveries, 0x40c860).
+// FUNCTION: SPEL 0x40c860
+void police_light_update();
+
+// The old model's cop: called by HANDLE_COP_AI when ai_model is 0; not known yet.
+// FUNCTION: SPEL 0x409060
+void fn_409060(int object);
+// FUNCTION: SPEL 0x403630
+int fn_403630(int object);
+// FUNCTION: SPEL 0x40fba0
+void fn_40fba0(int object);
+
 // The game mode, set by 0x424d20 (discoveries): 0 racing, 8 the police sequence, ...
 // GLOBAL: SPEL 0x4d9a7c
 extern int game_mode;
@@ -135,6 +208,11 @@ extern int game_mode;
 // The player's race position (0x408c00, discoveries "results").
 // GLOBAL: SPEL 0x4d9e60
 extern int player_position;
+
+// Twice this is a cop's limit before the first speed sign; LIKELY the player car's top
+// speed (discoveries "What trigger 8's \"2x default\" is").
+// GLOBAL: SPEL 0x4d9e68
+extern float player_top_speed;
 
 // The player's object index.
 // GLOBAL: SPEL 0x4d9e28
@@ -149,7 +227,9 @@ struct Vehicle {
     int chunk;               // +0x18 the road chunk it is on
     char pad1c[4];
     int waypoint;            // +0x20 its waypoint this frame (port/src/racers.c)
-    char pad24[0x48];
+    char pad24[4];
+    int side;                // +0x28 its carriageway, 1 or 0 (RESET_COP, discoveries)
+    char pad2c[0x40];
     float lateral;           // +0x6c sideways velocity (the cop rules: |v_fwd| + |v_lat|)
     char pad70[4];
     float speed;             // +0x74 forward velocity
@@ -223,17 +303,13 @@ extern int race_running;
 // GLOBAL: SPEL 0x4d9a78
 extern int flag_4d9a78;
 
-// The debug trace: printf-style, to debug.txt when Raser.ini DEBUGON=1.
-// FUNCTION: SPEL 0x464ca0
-void trace(const char *fmt, ...);
-
 // HANDLE_TRAFFIC_AI, named by its own trace lines (discoveries).
 // FUNCTION: SPEL 0x40b770
 int handle_traffic_ai(int object);
 
 // handle_basic_ai, named by the trace line before its calls.
 // FUNCTION: SPEL 0x4076b0
-void handle_basic_ai(int object);
+int handle_basic_ai(int object);
 
 // sndfx_play_object_sample(obj, loop), named by the trace line before its calls.
 // FUNCTION: SPEL 0x428bc0

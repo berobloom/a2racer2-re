@@ -166,6 +166,16 @@ What the next nine taught (0x401000-0x4019ef, `src/spel/unplaced.cpp`):
 - Functions reached only from tables filled in code (`mov [...], offset fn`) and placed right
   after a `ret` were missing from the function list; `funcs.py` now also takes code addresses
   from immediate operands.
+- Headers keep their own `__FILE__` too. The 3D library's `array.hpp` (T_ARRAY, all inline)
+  is in `src/win3ddp/include/`; `src/check.sh` links it to drive `n:` in the Wine prefix
+  and compiles with `/In:\libraries\a2racerii\win3ddp\versie_1\include`, the original path.
+- A float copied with `fld`/`fstp` where plain `a = b` gives an integer `mov`: the value came
+  back from an inline function (`HANDLE_COP_AI` 0x40292b). `1.0 * x` and casts are folded.
+- Which variable gets the argument's stack slot, and which register a load goes through,
+  follow the order of the statements: `ret = 1` after `cop = ...` in `HANDLE_COP_AI`.
+- Compiler-made functions are annotated `// SYNTHETIC: SPEL 0xADDR` with their symbol on the
+  next line as a comment: `$E4` (the file's dynamic initialiser), `$E2` (the destructor it
+  hands to `atexit`). They are compared like the others; their names are per file.
 - A member function is reached with `this` in `ecx`: `0x401200` is `AIControl::reset` on the
   record's +0x30, which made the second half of `AIRecord` a nested struct.
 

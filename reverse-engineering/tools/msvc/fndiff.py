@@ -3,7 +3,8 @@
 
 usage: fndiff.py PROG OBJ NAME [0xADDR]
 
-NAME is the source name ('CalculateStearing', 'Class::method'); the address comes from the
+NAME is the source name ('CalculateStearing', 'Class::method', '$E4' for a compiler-made
+function of this object); the address comes from the
 annotations in the .obj's source directory (src/spel for spel) unless given. Relocation bytes
 are masked on our side (shown as '@'), and 32-bit constants of 4+ hex digits read as '@' on
 both sides, so only instruction shapes count. Columns: the GAME on the left, OURS on the right.
@@ -67,10 +68,21 @@ def game_len(prog, addr):
 
 
 def diff(img, ob, sec, start, end, addr, glen=None):
-    """(game rows, our rows, opcodes): GAME is the first sequence, OURS the second."""
+    """(game rows, our rows, opcodes): GAME is the first sequence, OURS the second. The game's
+    bytes are masked where ours have a jump table (a run of relocations 4 bytes apart), so
+    those read alike; elsewhere the game is left as it is (a mask there would cut its
+    instructions wherever the two differ in length)."""
     ours = ours_masked(ob, sec, start, end)
     A = dis(ours, addr)
-    B = dis(img.read(addr, glen or len(ours)), addr)
+    game = bytearray(img.read(addr, glen or len(ours)))
+    offs = sorted(off for off, _typ, _sym in ob.relocs_in(sec, start, start + len(ours)))
+    table = {o for i, o in enumerate(offs)
+             if (i + 1 < len(offs) and offs[i + 1] == o + 4) or (i and offs[i - 1] == o - 4)}
+    for off in table:
+        for j in range(4):
+            if 0 <= off - start + j < len(game):
+                game[off - start + j] = 0x90
+    B = dis(bytes(game), addr)
     return B, A, align([t[2] for t in B], [t[2] for t in A])
 
 
@@ -113,7 +125,7 @@ def main():
         addr = int(sys.argv[4], 16)
     else:
         where, _ = M.annotations(os.path.join(ROOT, 'src', prog), prog)
-        addr = where.get(name)
+        addr = where.get(M.synthetic(obj, name) if name.startswith('$E') else name)
         if addr is None:
             print('%s: no FUNCTION annotation in src/%s' % (name, prog))
             return 1

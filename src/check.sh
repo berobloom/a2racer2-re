@@ -10,13 +10,21 @@
 # "// COMPILED AS: <path>" (e.g. MESH.CPP for the 3D library, compiled from its own directory).
 set -eu
 cd "$(dirname "$0")/.."
-CFLAGS="/nologo /c /Ox /Ob2 /ML"
+# The 3D library's headers come from its directory on the original machine (array.hpp's
+# __FILE__ is n:\libraries\a2racerii\win3ddp\versie_1\include\array.hpp): drive n: in the Wine
+# prefix holds that path, linked to .work/src/win3ddp.
+CFLAGS="/nologo /c /Ox /Ob2 /ML /In:\\libraries\\a2racerii\\win3ddp\\versie_1\\include"
 top=$(pwd)
 w=.work/src/spel; mkdir -p $w; rm -f $w/*
 cp src/spel/*.h src/spel/*.cpp $w/
+w3=.work/src/win3ddp; rm -rf $w3; mkdir -p $w3; cp -r src/win3ddp/include $w3/
 game=.work/toolchains/wineprefix-vc50/drive_c/work/A2racII
 mkdir -p $game
 [ -L $game/Game ] || ln -sfn "$top/$w" $game/Game
+pfx=.work/toolchains/wineprefix-vc50
+mkdir -p $pfx/drive_n/libraries/a2racerii/win3ddp
+[ -L $pfx/dosdevices/n: ] || ln -sfn ../drive_n $pfx/dosdevices/n:
+[ -L $pfx/drive_n/libraries/a2racerii/win3ddp/versie_1 ] || ln -sfn "$top/$w3" $pfx/drive_n/libraries/a2racerii/win3ddp/versie_1
 cd $w
 for f in *.cpp; do
     m=${f%.cpp}

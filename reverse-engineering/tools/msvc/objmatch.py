@@ -6,6 +6,10 @@ usage: objmatch.py PROG SRCDIR OBJ... [-v]
 Addresses come from the annotations in SRCDIR's .cpp and .h files:
     // FUNCTION: SPEL 0x401230      the next declaration or definition is at that address
     // GLOBAL: SPEL 0x4a55a0        the next variable is at that address
+    // SYNTHETIC: SPEL 0x4020d0     a function the compiler made, named on the next line as a
+    // $E4                          comment: its symbol in this file's object (`$E4`, the
+                                    dynamic initialiser of the file's globals, or `$E2`, the
+                                    destructor it registers with atexit)
 Each function the .obj defines and the annotations place is compared with the game:
 
   bytes    equal everywhere except the 4 bytes of each relocation; the game must also have
@@ -29,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import coff                  # noqa: E402
 from pe import Image         # noqa: E402
 
-ANN = re.compile(r'//\s*(FUNCTION|GLOBAL):\s*(\w+)\s+(0x[0-9a-fA-F]+)\b')
+ANN = re.compile(r'//\s*(FUNCTION|GLOBAL|SYNTHETIC):\s*(\w+)\s+(0x[0-9a-fA-F]+)\b')
 FNAME = re.compile(r'([A-Za-z_~][\w:~]*)\s*\(')
 VNAME = re.compile(r'([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*(?:=|;)')
 
@@ -66,6 +70,14 @@ def annotations(srcdir, prog):
             if not m or m.group(2).upper() != prog.upper():
                 continue
             kind, addr = m.group(1), int(m.group(3), 16)
+            if kind == 'SYNTHETIC':
+                # the symbol is the next line's comment; it is local to this file's object
+                n = re.match(r'\s*//\s*(\S+)', lines[i + 1]) if i + 1 < len(lines) else None
+                if n:
+                    name = synthetic(fn, n.group(1))
+                    where[name] = addr
+                    defs[addr] = (fn, name)
+                continue
             j = i + 1
             while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith('//')):
                 j += 1
@@ -93,6 +105,18 @@ def annotations(srcdir, prog):
                 if n:
                     where[n.group(1)] = addr
     return where, defs
+
+
+def synthetic(path, sym):
+    """The key of a compiler-made function: '$E4@ai_cops' for _$E4 in ai_cops.cpp/.obj."""
+    return '%s@%s' % (sym.lstrip('_'), os.path.splitext(os.path.basename(path))[0])
+
+
+def key(path, mname):
+    """The annotation key of an object's function symbol."""
+    if mname.lstrip('_').startswith('$E'):
+        return synthetic(path, mname)
+    return plain(mname)
 
 
 def libnames(prog):
@@ -147,7 +171,7 @@ def const_bytes(ob, sym, addend, n=None):
     return None
 
 
-def compare(img, ob, sec, start, end, addr, where, inferred):
+def compare(img, ob, sec, start, end, addr, where, inferred, path=''):
     data = ob.sections[sec].data
     ours = coff.body(data, start, end)
     n = len(ours)
@@ -176,7 +200,7 @@ def compare(img, ob, sec, start, end, addr, where, inferred):
         else:
             probs.append('%s: relocation type 0x%x not handled' % (sym.name, typ))
             continue
-        name = plain(sym.name)
+        name = key(path, sym.name) if path else plain(sym.name)
         lit = const_bytes(ob, sym, addend if typ == coff.REL_DIR32 else 0)
         if name in where:
             if where[name] != target:
@@ -207,21 +231,21 @@ def main():
     seen = set()
     for path in objs:
         ob = coff.Obj(open(path, 'rb').read())
-        placed = [where[plain(f[0])] for f in ob.functions()
-                  if where.get(plain(f[0])) in defs]
+        placed = [where[key(path, f[0])] for f in ob.functions()
+                  if where.get(key(path, f[0])) in defs]
         for x, y in zip(placed, placed[1:]):
             if y < x:
                 print('order: %s defines 0x%06x after 0x%06x; the game has them the other way round'
                       % (os.path.basename(path), y, x))
         for mname, sec, start, end in ob.functions():
-            name = plain(mname)
+            name = key(path, mname)
             addr = where.get(name)
             if addr is None or addr not in defs:
                 if verbose:
                     print('%-36s (no FUNCTION annotation: not compared)' % name)
                 continue
             seen.add(addr)
-            n, bad, probs = compare(img, ob, sec, start, end, addr, where, inferred)
+            n, bad, probs = compare(img, ob, sec, start, end, addr, where, inferred, path)
             if not bad and not probs:
                 print('%-36s %5d bytes  MATCH at 0x%06x' % (name, n, addr))
             else:
