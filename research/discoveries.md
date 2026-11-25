@@ -121,6 +121,12 @@ DOS stub of each file (`.work/game`).
   (is the object an AI record's). The chase opener's free-slot search can run off the end:
   with all 12 cop records busy it reads record 15 (0x4a5b40, the ai_instances array) as a
   record; it only opens a chase if that word is -1.
+- CONFIRMED: ai_lane.cpp's small one-caller functions (find_dead_end 0x4040b0, 151 bytes,
+  called only from scan_lane 0x403f80; also 0x404510, 0x404600, 0x404720) are called, not
+  inlined, although VC 5.0 `/Ob2` inlines find_dead_end into scan_lane when both are compiled
+  together. Other files need `/Ob2` (`/Ob1` breaks ai_drive, HANDLE_COP_AI, cop_pursuit, ...).
+  So automatic inlining is off for ai_lane.cpp at least. SPECULATIVE how: `#pragma
+  auto_inline(off)` gives scan_lane's bytes exactly (src/spel/ai_lane.cpp).
 - CONFIRMED: the vehicle record's +0x6c is the sideways velocity, not a heading: the cop rules
   add |+0x74| and |+0x6c| (0x4019f0), and 0x401ef0 zeroes +0x74, +0x6c and +0x7c together.
 - CONFIRMED: its out-of-range path (index 15 or more) calls 0x464e50 with "Out of FSM array

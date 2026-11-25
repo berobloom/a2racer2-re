@@ -269,6 +269,36 @@ int is_ai_object(int object);
 // FUNCTION: SPEL 0x403380
 void ai_fsm_step(int idx);
 
+// A runtime waypoint, 80 bytes (discoveries "the runtime waypoint"): its .dmp links.
+struct Waypoint {
+    char pad00[0x14];
+    int next;                // +0x14 L0: the same lane, next chunk
+    int lane_up;             // +0x18 L2: lane + 1
+    int lane_down;           // +0x1c L1: lane - 1
+    int prev;                // +0x20 L3: the previous chunk
+    char pad24[0x2c];
+};
+
+struct WaypointArray {
+    Waypoint *data;
+};
+
+// GLOBAL: SPEL 0x4e6628
+extern WaypointArray waypoints;
+
+// What change_lane learns about one lane; the field names are the game's own (its trace at
+// 0x403a84, discoveries "cop_lane").
+struct t_lane_info {
+    int m_dead_end;          // +0x00
+    int m_dead_range;        // +0x04
+    int m_front_obstacle;    // +0x08 vehicle, -1 none
+    float m_front_range;     // +0x0c
+    int m_front_status;      // +0x10
+    int m_rear_obstacle;     // +0x14
+    float m_rear_range;      // +0x18
+    int m_rear_status;       // +0x1c
+};
+
 // The game mode, set by 0x424d20 (discoveries): 0 racing, 8 the police sequence, ...
 // GLOBAL: SPEL 0x4d9a7c
 extern int game_mode;
