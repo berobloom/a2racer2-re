@@ -128,6 +128,14 @@ extern int etappe;
 // GLOBAL: SPEL 0x4d9e70
 extern int player_progress;
 
+// The game mode, set by 0x424d20 (discoveries): 0 racing, 8 the police sequence, ...
+// GLOBAL: SPEL 0x4d9a7c
+extern int game_mode;
+
+// The player's race position (0x408c00, discoveries "results").
+// GLOBAL: SPEL 0x4d9e60
+extern int player_position;
+
 // The player's object index.
 // GLOBAL: SPEL 0x4d9e28
 extern int player_object;
@@ -139,10 +147,12 @@ struct Vehicle {
     int ai;                  // +0x0c index into ai_instances
     char pad10[8];
     int chunk;               // +0x18 the road chunk it is on
-    char pad1c[0x50];
-    float heading;           // +0x6c
+    char pad1c[4];
+    int waypoint;            // +0x20 its waypoint this frame (port/src/racers.c)
+    char pad24[0x48];
+    float lateral;           // +0x6c sideways velocity (the cop rules: |v_fwd| + |v_lat|)
     char pad70[4];
-    float speed;             // +0x74
+    float speed;             // +0x74 forward velocity
     char pad78[4];
     float yaw_rate;          // +0x7c
     char pad80[0x20];
@@ -240,6 +250,27 @@ void fn_4084b0(int object);
 // Returns a float the ADAC handler stores as the car's height (c_3dobject +0x54).
 // FUNCTION: SPEL 0x40ede0
 float fn_40ede0(int object);
+
+// A police car's light on or off; it also swaps its sample to psirene1.wav (discoveries).
+// FUNCTION: SPEL 0x40c640
+void siren(int object, int on);
+
+// "Faces along the road" (discoveries, the cop rules): 0 when the object does not.
+// FUNCTION: SPEL 0x410a10
+int faces_road(int object);
+
+// The lane of the object's waypoint it drives with, -1 when it drives against it
+// (discoveries, the cop rules).
+// FUNCTION: SPEL 0x40a100
+int waypoint_lane(int object, int waypoint);
+
+// The distance from one chunk to another, signed (discoveries, 0x409540).
+// FUNCTION: SPEL 0x442700
+int chunk_distance(int from, int to);
+
+// The police radio's "opgev" (give up) line (discoveries, session 12).
+// FUNCTION: SPEL 0x415170
+void radio_give_up(int object);
 
 // Called by ai_drive for the record or the object; not known yet.
 // FUNCTION: SPEL 0x40ff90

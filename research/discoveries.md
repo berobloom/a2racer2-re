@@ -82,6 +82,16 @@ DOS stub of each file (`.work/game`).
   CalculateStearing, speed control, the drive step, the rubber band (0x4014e0), the bearing
   (0x401690) and three FSM tests (0x401780, 0x4018b0, 0x401960). Their source file is not
   named by any string; it sorts before ai_cfun.cpp.
+- CONFIRMED: ai_cfun.cpp is 0x4019f0-0x4020cf, 16 functions, all compiled to the game's bytes
+  (src/spel/ai_cfun.cpp): the AI state machine's tests (discoveries "The state machine is
+  table-driven"). Its asserts carry `__FILE__` = "C:\\work\\A2racII\\Game\\ai_cfun.cpp" and
+  `__LINE__` 308 (0x4019f0) and 418 (0x401b60), so it is compiled under that path and the two
+  uses are put on those lines with `#line`.
+- CONFIRMED: ai_cops.cpp starts at 0x4020d0 with the dynamic initialiser of a global
+  `T_ARRAY<t_cop>` named "Cop States" (strncpy of the name and the type, T_ARRAY's static_init,
+  `atexit(0x4021a0)`), and 0x4021a0 is its destructor. So the file defines that array at the top.
+- CONFIRMED: the vehicle record's +0x6c is the sideways velocity, not a heading: the cop rules
+  add |+0x74| and |+0x6c| (0x4019f0), and 0x401ef0 zeroes +0x74, +0x6c and +0x7c together.
 - CONFIRMED: its out-of-range path (index 15 or more) calls 0x464e50 with "Out of FSM array
   index. Function: CalculateStearing" and then uses an uninitialised object index: the C++ that
   matches leaves the local unset on that path.

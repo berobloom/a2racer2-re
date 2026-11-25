@@ -157,6 +157,15 @@ What the next nine taught (0x401000-0x4019ef, `src/spel/unplaced.cpp`):
 - `fld x; fcomp st(1)` and `fcompp` compares, and a `fld`/`fstp` copy, come from values
   computed in double (`handle_adac_ai` 0x401000). Plain float source gives `fcom [mem]` and
   an integer `mov` copy.
+- `__FILE__` is the path the compiler is given. `src/check.sh` compiles each file as
+  `C:\work\A2racII\Game\<file>` (a link in the Wine prefix) unless the file names another
+  path in a `// COMPILED AS:` line. `__LINE__` uses are put on the game's lines with `#line`.
+- `fabs(a) + fabs(b) < 7` compares in double; the game's float compare came from summing into
+  a `float` local, which stays unrounded on the FPU stack. Which field the compiler loads first
+  depended on reading both into locals first (ai_target_caught 0x4019f0).
+- Functions reached only from tables filled in code (`mov [...], offset fn`) and placed right
+  after a `ret` were missing from the function list; `funcs.py` now also takes code addresses
+  from immediate operands.
 - A member function is reached with `this` in `ecx`: `0x401200` is `AIControl::reset` on the
   record's +0x30, which made the second half of `AIRecord` a nested struct.
 

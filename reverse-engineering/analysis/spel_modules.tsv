@@ -13,9 +13,12 @@
 0x401b00	ai_cfun.cpp	between
 0x401b60	ai_cfun.cpp	string
 0x401cf0	?	
+0x401d70	?	
 0x401d90	?	
 0x401e20	?	
 0x401ef0	?	
+0x401f60	?	
+0x401fb0	?	
 0x401ff0	?	
 0x402050	?	
 0x402080	?	
@@ -195,6 +198,7 @@
 0x4149b0	?	
 0x414b60	?	
 0x414b70	?	
+0x4150b0	?	
 0x4150d0	?	
 0x4150e0	?	
 0x4150f0	?	
@@ -208,6 +212,7 @@
 0x4155d0	?	
 0x415690	?	
 0x4156d0	?	
+0x415710	?	
 0x415750	?	
 0x4157e0	?	
 0x415990	?	
@@ -216,6 +221,7 @@
 0x415c50	ev_g_ovr.cpp	string
 0x415e80	ev_g_ovr.cpp	string
 0x416060	ev_g_ovr.cpp	string
+0x4162e0	ev_g_ovr.cpp	string
 0x416440	ev_g_ovr.cpp	string
 0x4164c0	ev_main.cpp	string
 0x416590	ev_main.cpp	string
@@ -721,6 +727,7 @@
 0x43a2f0	?	
 0x43a390	?	
 0x43a420	?	
+0x43a5a0	?	
 0x43a610	?	
 0x43a660	?	
 0x43a690	?	
@@ -807,6 +814,9 @@
 0x43de30	?	
 0x43e150	?	
 0x43e1c0	?	
+0x43f1d0	?	
+0x43f260	?	
+0x43f540	?	
 0x43f560	?	
 0x43f570	?	
 0x43f650	?	
@@ -816,6 +826,7 @@
 0x43f8a0	?	
 0x43f900	?	
 0x43f950	?	
+0x43f990	?	
 0x43fa30	?	
 0x43fa40	?	
 0x43fb90	?	
@@ -914,6 +925,7 @@
 0x443c30	?	
 0x443c40	rd_drmap.cpp	string
 0x443da0	rd_drmap.cpp	string
+0x444210	rd_drmap.cpp	between
 0x444250	rd_drmap.cpp	between
 0x444260	rd_drmap.cpp	string
 0x4442a0	?	
@@ -1061,6 +1073,7 @@
 0x44bcb0	?	
 0x44bd70	?	
 0x44bd80	?	
+0x44bda0	?	
 0x44bdb0	?	
 0x44be60	?	
 0x44be70	?	
@@ -1242,6 +1255,7 @@
 0x458340	object3d.cpp	string
 0x458690	object3d.cpp	string
 0x458ae0	object3d.cpp	string
+0x458fc0	object3d.cpp	between
 0x458fd0	object3d.cpp	string
 0x459250	object3d.cpp	between
 0x459340	object3d.cpp	between
@@ -1419,6 +1433,7 @@
 0x460450	d3dev.cpp	between
 0x460480	d3dev.cpp	string
 0x460520	?	
+0x4607b0	?	
 0x460820	?	
 0x460880	d3dinfo.cpp	string
 0x460a30	d3dinfo.cpp	between
@@ -1470,6 +1485,7 @@
 0x462d90	?	
 0x463000	?	
 0x463270	drworder.cpp	string
+0x463390	drworder.cpp	string
 0x463530	drworder.cpp	string
 0x4636d0	?	
 0x463a50	?	
@@ -1618,6 +1634,7 @@
 0x46d090	hwinfo.cpp	between
 0x46d270	hwinfo.cpp	between
 0x46d290	hwinfo.cpp	between
+0x46d3a0	hwinfo.cpp	between
 0x46d3f0	hwinfo.cpp	string
 0x46d450	hwinfo.cpp	string
 0x46d490	fileio.cpp	string
