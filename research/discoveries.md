@@ -56,6 +56,24 @@ DOS stub of each file (`.work/game`).
   3D library (`c:\visual~1\dplib\`, `n:\libraries\a2racerii\win3ddp\`), and
   `c:\libraries\inputlib\`. analysis/spel_src.txt and menu_src.txt list them.
 
+## Link order, compiler options, the first matched function (session 20)
+
+- STRONGLY SUPPORTED: spel.dat's objects are linked in alphabetical order of their file names.
+  The functions that use a `__FILE__` string run `ai_cfun`, `ai_cops`, `ai_fsm`, `ai_lane`,
+  `ai_main`, `ai_path`, `ai_racer`, `ai_wmap`, `car_cops`, `car_main`, `car_whl`, `ev_*`,
+  `gfx_*`, `gm_*`, ... in address order (reverse-engineering/analysis/spel_modules.tsv,
+  tools/msvc/modules.py).
+- CONFIRMED: spel.dat's own code is 0x401000-0x47007F. VC 5.0's LIBC.LIB follows from 0x470080
+  (253 functions, 54,629 bytes byte-identical, tools/msvc/libmatch.py). menu.dat: own code
+  0x401000-0x411C8F, LIBC from 0x411C90 (186 functions).
+- CONFIRMED: `CalculateStearing` 0x401230 compiles to the game's bytes from C++
+  (src/spel/unplaced.cpp), every reference checked. It matches with `/O2`, `/Ox`, `/G3`-`/G5`,
+  `/GB`, and with `/Zp1`, `/GX`, `/MT` added; not with `/O1`, `/Od`, `/Oy-` or `/Gr`. So the game
+  is optimised for speed, without frame pointers, `__cdecl`.
+- CONFIRMED: its out-of-range path (index 15 or more) calls 0x464e50 with "Out of FSM array
+  index. Function: CalculateStearing" and then uses an uninitialised object index: the C++ that
+  matches leaves the local unset on that path.
+
 ## The game is split into two programs that communicate via game.ini
 
 - CONFIRMED: `menu.dat` and `spel.dat` both read/write the same keys in `game.ini` (`etappe`, `finished`, `money`, `damage`, `position`, `tracktime`, `MOTOR`, `BANDEN`, `ABS`, `TURBO`, racer results, best times).

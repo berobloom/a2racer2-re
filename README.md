@@ -56,6 +56,25 @@ port/web/serve.sh    # then open http://localhost:8080/a2racer2.html
 The page asks for your A2 Racer II folder once and keeps the files it needs
 in the browser's storage.
 
+## Matching decompilation
+
+<a href="docs/SPELPROGRESS.HTML"><img src="docs/SPELPROGRESS.SVG" width="40%" alt="spel.dat: the share of the game's own functions that compile to the original's bytes"></a>
+
+Next to the port, the original's C++ is being rebuilt function by function so
+that it compiles to the same bytes, with the game's own compiler: Visual C++
+5.0, `cl /O2 /ML`, under Wine. It starts with `spel.dat`, the race.
+[`docs/SPELPROGRESS.HTML`](docs/SPELPROGRESS.HTML) lists every function: search
+it, filter it by source file, and click a near miss to see its instruction
+diff against the game. [`PROGRESS.md`](PROGRESS.md) has the same numbers as
+tables. `reverse-engineering/tools/msvc/progress.py` writes all three from a
+fresh build. The workflow is in [`MATCHING.md`](MATCHING.md), the compiler
+set-up in [`reverse-engineering/msvc5.md`](reverse-engineering/msvc5.md).
+
+```sh
+src/check.sh                                                 # compile src/spel/*.cpp, compare every annotated function
+.work/venv/bin/python reverse-engineering/tools/msvc/progress.py   # rewrite PROGRESS.md and docs/SPELPROGRESS.*
+```
+
 ## Layout
 
 | Path | Contents |
@@ -66,6 +85,8 @@ in the browser's storage.
 | `reverse-engineering/` | Reference docs: executables, file formats, game and menu architecture, running the original under Wine |
 | `reverse-engineering/tools/` | Disassembly helpers, Unicorn emulation harnesses and gdb scripts used to check findings |
 | `reverse-engineering/analysis/` | Function lists, source-file map and annotations taken from the binaries |
+| `src/spel/` | The matching decompilation of spel.dat (C++, one file per original source file) |
+| `reverse-engineering/tools/msvc/` | The matching tools: COFF reader, function finder, library matcher, compare, diff, progress report |
 | `port/` | The C port; [`port/README.md`](port/README.md) is its detailed manual |
 | `port/web/` | The WebAssembly build |
 | `port/a2tools/` | Python tools for the game's archives, images, sprites and car data |

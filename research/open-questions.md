@@ -1006,7 +1006,8 @@ phrasing may not be the original's.)*
 
 62. **Which compiler options built spel.dat, and does VC 5.0 RTM reproduce
     it?** Discoveries "Build toolchain" pins the compiler to VC 5.0 RTM and the
-    CRT to LIBC (`/ML`). Unknown: `/O2` vs `/Ox` vs `/Ot`, `/G5` vs `/G4`/`/GB`, `/Gz`/`/Gr`,
+    CRT to LIBC (`/ML`). CalculateStearing 0x401230 rules out `/O1`, `/Od`, `/Oy-` and `/Gr`
+    (discoveries "Link order, compiler options"). Unknown: `/O2` vs `/Ox`, `/G3`-`/G5`/`/GB`,
     `/Zp`, `/GX`, inlining level, and whether `winlib` and the 3D library came
     from prebuilt `.lib` files with other options. Next: with the toolchain from
     reverse-engineering/msvc5.md, compile a small leaf function (a `winlib` one that appears in

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spel.dat progress</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,/*ICON*/">
+<style>
+  /* colours from the game's main menu (HOOFDMENU): the dark red backdrop, the steel panels,
+     the red of the A2 road sign; the bar is the blue of a motorway sign */
+  :root {
+    --bg: #160809;
+    --check: #210c0e;
+    --panel: #2c2f35;
+    --row: #24262b;
+    --row-alt: #2d3036;
+    --row-hover: #3d424b;
+    --line: #5a606b;
+    --text: #eef0f4;
+    --muted: #b4bac4;
+    --gold: #ff6a4d;
+    --bar: #3d6ee0;
+    --match: #9ad24a;
+    --near: #e8c030;
+    --none: #ff8a80;
+    --del: #ff9a90;
+    --ins: #8fe89a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(45deg, var(--check) 25%, transparent 25%, transparent 75%, var(--check) 75%),
+      linear-gradient(45deg, var(--check) 25%, transparent 25%, transparent 75%, var(--check) 75%);
+    background-size: 64px 64px;
+    background-position: 0 0, 32px 32px;
+    color: var(--text);
+    font: 15px/1.45 system-ui, sans-serif;
+  }
+  .main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  header img { width: 120px; height: auto; border-radius: 6px; }
+  header h1 { margin: 0; font-size: 1.5rem; color: var(--gold); letter-spacing: 0.04em; }
+  header p { margin: 2px 0 0; color: var(--muted); }
+  .bar { height: 14px; background: #000; border: 1px solid var(--text); margin: 6px 0 2px; max-width: 420px; }
+  .bar > div { height: 100%; background: var(--bar); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+  #search { width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: var(--bg);
+            border: 1px solid var(--line); border-radius: 6px; }
+  #search::placeholder { color: var(--muted); }
+  #search:focus, select:focus, button:focus-visible, input:focus-visible, td.name:focus-visible {
+    outline: 2px solid var(--gold); outline-offset: 1px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px; align-items: center; }
+  fieldset { min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; margin: 0; padding: 4px 10px 6px;
+             display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+  legend { color: var(--muted); font-size: 0.85rem; padding: 0 4px; }
+  label { cursor: pointer; user-select: none; display: inline-flex; gap: 5px; align-items: center; }
+  select { max-width: 100%; }
+  select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+                   border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .pager { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font: 13px/1.4 ui-monospace, monospace; }
+  table.list { table-layout: fixed; }
+  th.c-addr { width: 11ch; } th.c-pct { width: 13ch; } th.sub { width: 34%; }
+  .wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+  .list thead th { background: var(--panel); text-align: left; padding: 8px; cursor: pointer; user-select: none;
+             white-space: nowrap; border-bottom: 1px solid var(--line); }
+  .list thead th[aria-sort="ascending"]::after { content: " \25B2"; color: var(--gold); }
+  .list thead th[aria-sort="descending"]::after { content: " \25BC"; color: var(--gold); }
+  tbody tr.fn:nth-child(4n+1) { background: var(--row); }
+  tbody tr.fn:nth-child(4n+3) { background: var(--row-alt); }
+  tbody tr.fn:hover { background: var(--row-hover); }
+  td { padding: 6px 8px; vertical-align: top; }
+  td.name { cursor: pointer; word-break: break-all; }
+  td.name:hover { text-decoration: underline dotted; }
+  td.pct { text-align: right; white-space: nowrap; }
+  td.addr { white-space: nowrap; color: var(--muted); }
+  .s-match { color: var(--match); }
+  .s-near { color: var(--near); }
+  .s-none { color: var(--none); }
+  tr.diff > td { background: #010f20; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px; }
+  .diffnote { color: var(--muted); margin: 0 0 8px; font-family: system-ui, sans-serif; }
+  .hunk { margin: 0 0 14px; }
+  .hunk:last-child { margin: 0; }
+  .hunk { border-collapse: collapse; table-layout: fixed; width: auto; }
+  .hunk th { color: var(--muted); font-weight: normal; text-align: left; padding: 0 0 4px; background: none; border: 0; cursor: default; }
+  .hunk td:nth-child(-n+2), .hunk th:nth-child(-n+2) { width: 9ch; }
+  .hunk td { padding: 0 12px 0 0; white-space: pre; }
+  .hunk .del { color: var(--del); }
+  .hunk .ins { color: var(--ins); }
+  .hunk .ctx { color: var(--muted); }
+  footer { color: var(--muted); font-size: 0.85rem; margin: 12px 0 24px; }
+  footer a { color: var(--gold); }
+  @media (max-width: 600px) { td.sub, th.sub { display: none; } }
+</style>
+</head>
+<body>
+<div class="main">
+  <header>
+    <img src="data:image/png;base64,/*ICON*/" alt="The red A2 road sign from the game's box cover">
+    <div>
+      <h1>spel.dat</h1>
+      <p id="headline"></p>
+      <div class="bar" role="img" id="barwrap"><div id="bar"></div></div>
+      <p id="sub"></p>
+    </div>
+  </header>
+
+  <div class="card">
+    <input id="search" type="search" placeholder="Search functions (name, address or source file)" aria-label="Search functions">
+    <div class="filters">
+      <fieldset>
+        <legend>Options</legend>
+        <label><input type="checkbox" id="hideMatch"> Hide byte-identical</label>
+        <label><input type="checkbox" id="hideNone"> Hide not written</label>
+      </fieldset>
+      <fieldset>
+        <legend>Search on</legend>
+        <label><input type="radio" name="on" value="all" checked> All</label>
+        <label><input type="radio" name="on" value="name"> Name</label>
+        <label><input type="radio" name="on" value="addr"> Address</label>
+      </fieldset>
+      <fieldset>
+        <legend>Source file</legend>
+        <select id="subsys" aria-label="Source file"><option value="">All source files</option></select>
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="pager">
+    <span>Results: <b id="count"></b></span>
+    <span>
+      <button id="prev" type="button">Previous</button>
+      <select id="page" aria-label="Page"></select>
+      <button id="next" type="button">Next</button>
+    </span>
+  </div>
+
+  <div class="wrap">
+    <table class="list">
+      <thead><tr>
+        <th data-k="addr" class="c-addr" aria-sort="ascending">Address</th>
+        <th data-k="name">Name</th>
+        <th data-k="sub" class="sub">Source file</th>
+        <th data-k="pct" class="c-pct" style="text-align:right">Matching</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    Generated by <code>reverse-engineering/tools/msvc/progress.py</code> at commit <code id="commit"></code>.
+    Matching is the share of instructions that line up with the game's (addresses masked);
+    only byte-identical functions count as done. Click a name to see where it differs:
+    <span class="del">- the game</span>, <span class="ins">+ our build of src/spel</span>.
+  </footer>
+</div>
+
+<script>
+const REPORT = /*DATA*/;
+const PAGE = 100;
+const $ = id => document.getElementById(id);
+const st = { q: '', on: 'all', sub: '', hideMatch: false, hideNone: false, key: 'addr', dir: 1, page: 0, open: new Set() };
+const hex = a => '0x' + a.toString(16).toUpperCase().padStart(6, '0');
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function pctText(f) {
+  if (f.s === 'none') return '<span class="s-none">not written</span>';
+  if (f.s === 'asm') return '<span class="s-none">assembly</span>';
+  if (f.s === 'match') return '<span class="s-match">100%</span>';
+  return '<span class="s-near">' + (Math.min(f.r, 0.999) * 100).toFixed(1) + '%</span>';
+}
+
+function rows() {
+  const q = st.q.trim().toLowerCase();
+  let r = REPORT.functions.filter(f => {
+    if (st.hideMatch && f.s === 'match') return false;
+    if (st.hideNone && f.s === 'none') return false;
+    if (st.sub && f.sub !== st.sub) return false;
+    if (!q) return true;
+    const a = hex(f.a).toLowerCase(), n = f.n.toLowerCase(), s = f.sub.toLowerCase();
+    if (st.on === 'name') return n.includes(q);
+    if (st.on === 'addr') return a.includes(q.replace(/^0x/, '')) || a.includes(q);
+    return n.includes(q) || a.includes(q) || s.includes(q);
+  });
+  const k = st.key, d = st.dir;
+  const val = f => k === 'pct' ? (f.s === 'match' ? 2 : (f.s === 'none' || f.s === 'asm') ? -1 : f.r) : k === 'addr' ? f.a : f[k === 'name' ? 'n' : 'sub'];
+  r.sort((x, y) => (val(x) < val(y) ? -1 : val(x) > val(y) ? 1 : x.a - y.a) * d);
+  return r;
+}
+
+function diffHtml(f) {
+  if (f.s === 'none') return '<p class="diffnote">Not in src/spel yet.</p>';
+  if (f.s === 'asm') return '<p class="diffnote">' + esc(f.t || 'Assembly module in the game, not C to match (src/nearmiss.txt).') + '</p>';
+  if (f.s === 'match') return '<p class="diffnote">Byte-identical to the game.</p>';
+  let h = '<p class="diffnote">' + f.d + ' of ' + f.i + ' aligned instruction rows differ' +
+    (f.d === 0 ? ': the code lines up, but an address it uses does not' : '') + '.</p>';
+  for (const hk of f.h) {
+    h += '<table class="hunk"><thead><tr><th>game</th><th>ours</th><th></th></tr></thead><tbody>';
+    for (const [t, ga, oa, txt] of hk) {
+      const c = t === '-' ? 'del' : t === '+' ? 'ins' : 'ctx';
+      h += '<tr class="' + c + '"><td>' + (ga ? ga.toString(16) : '') + '</td><td>' + (oa ? oa.toString(16) : '') +
+           '</td><td>' + (t === ' ' ? '  ' : t + ' ') + esc(txt) + '</td></tr>';
+    }
+    h += '</tbody></table>';
+  }
+  return h;
+}
+
+function render() {
+  const r = rows();
+  const pages = Math.max(1, Math.ceil(r.length / PAGE));
+  st.page = Math.min(st.page, pages - 1);
+  $('count').textContent = r.length;
+  $('page').innerHTML = Array.from({ length: pages }, (_, i) =>
+    '<option value="' + i + '"' + (i === st.page ? ' selected' : '') + '>Page ' + (i + 1) + ' of ' + pages + '</option>').join('');
+  $('prev').disabled = st.page === 0;
+  $('next').disabled = st.page >= pages - 1;
+  let h = '';
+  for (const f of r.slice(st.page * PAGE, st.page * PAGE + PAGE)) {
+    h += '<tr class="fn"><td class="addr">' + hex(f.a) + '</td><td class="name" tabindex="0" data-a="' + f.a + '">' + esc(f.n) +
+         '</td><td class="sub">' + esc(f.sub) + '</td><td class="pct">' + pctText(f) + '</td></tr>';
+    h += st.open.has(f.a) ? '<tr class="diff"><td colspan="4">' + diffHtml(f) + '</td></tr>' : '<tr hidden></tr>';
+  }
+  $('rows').innerHTML = h;
+  document.querySelectorAll('table.list thead th').forEach(th =>
+    th.setAttribute('aria-sort', th.dataset.k === st.key ? (st.dir > 0 ? 'ascending' : 'descending') : 'none'));
+}
+
+function init() {
+  const fs = REPORT.functions, done = fs.filter(f => f.s === 'match').length;
+  const near = fs.filter(f => f.s === 'near').length, pct = (100 * done / fs.length).toFixed(1);
+  const asm = fs.filter(f => f.s === 'asm').length;
+  $('headline').textContent = done + ' of ' + fs.length + ' functions byte-identical (' + pct + '%)';
+  $('sub').textContent = near + ' near misses, ' + (fs.length - done - near - asm) + ' not written' + (asm ? ', ' + asm + ' assembly' : '');
+  $('bar').style.width = pct + '%';
+  $('barwrap').setAttribute('aria-label', pct + '% byte-identical');
+  $('commit').textContent = REPORT.commit;
+  for (const s of REPORT.subsystems) $('subsys').insertAdjacentHTML('beforeend', '<option>' + esc(s) + '</option>');
+  $('search').addEventListener('input', e => { st.q = e.target.value; st.page = 0; render(); });
+  document.querySelectorAll('input[name=on]').forEach(i => i.addEventListener('change', e => { st.on = e.target.value; render(); }));
+  $('subsys').addEventListener('change', e => { st.sub = e.target.value; st.page = 0; render(); });
+  $('hideMatch').addEventListener('change', e => { st.hideMatch = e.target.checked; st.page = 0; render(); });
+  $('hideNone').addEventListener('change', e => { st.hideNone = e.target.checked; st.page = 0; render(); });
+  $('prev').addEventListener('click', () => { st.page--; render(); });
+  $('next').addEventListener('click', () => { st.page++; render(); });
+  $('page').addEventListener('change', e => { st.page = +e.target.value; render(); });
+  document.querySelectorAll('table.list thead th').forEach(th => th.addEventListener('click', () => {
+    if (st.key === th.dataset.k) st.dir = -st.dir; else { st.key = th.dataset.k; st.dir = 1; }
+    render();
+  }));
+  const toggle = el => {
+    const a = +el.dataset.a;
+    st.open.has(a) ? st.open.delete(a) : st.open.add(a);
+    render();
+    const again = document.querySelector('td.name[data-a="' + a + '"]');
+    if (again) again.focus();
+  };
+  $('rows').addEventListener('click', e => { const el = e.target.closest('td.name'); if (el) toggle(el); });
+  $('rows').addEventListener('keydown', e => {
+    const el = e.target.closest('td.name');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(el); }
+  });
+  render();
+}
+init();
+</script>
+</body>
+</html>

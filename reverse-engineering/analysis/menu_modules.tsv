@@ -1,0 +1,307 @@
+# address	module	how (reverse-engineering/tools/msvc/modules.py menu)
+0x401000	a2menu.cpp	string
+0x4011c0	?	
+0x401220	?	
+0x4012d0	bestand.cpp	string
+0x401320	bestand.cpp	string
+0x4013d0	bestand.cpp	string
+0x401480	?	
+0x4014c0	?	
+0x401610	ini_io.cpp	string
+0x401820	ini_io.cpp	between
+0x4018f0	ini_io.cpp	string
+0x401a50	ini_io.cpp	string
+0x401aa0	ini_io.cpp	between
+0x401ad0	ini_io.cpp	string
+0x401b20	ini_io.cpp	string
+0x401c70	ini_io.cpp	string
+0x401cc0	ini_io.cpp	between
+0x401ce0	ini_io.cpp	string
+0x401d30	ini_io.cpp	string
+0x401ff0	ini_io.cpp	string
+0x402330	ini_io.cpp	between
+0x402390	ini_io.cpp	between
+0x4023a0	ini_io.cpp	between
+0x4023c0	ini_io.cpp	string
+0x402410	?	
+0x402430	janeereq.cpp	string
+0x402570	?	
+0x4025a0	?	
+0x402670	?	
+0x402680	?	
+0x402750	m_bediening.cpp	string
+0x4027c0	m_bediening.cpp	between
+0x402840	m_bediening.cpp	string
+0x402990	m_bediening.cpp	string
+0x402a00	m_bediening.cpp	between
+0x402ac0	m_bediening.cpp	string
+0x402ba0	m_bediening.cpp	string
+0x402d90	m_bediening.cpp	string
+0x402e10	m_bediening.cpp	string
+0x402e40	m_bediening.cpp	between
+0x402e70	m_bediening.cpp	between
+0x402f00	m_bediening.cpp	between
+0x402fa0	m_bediening.cpp	string
+0x403200	m_bediening.cpp	between
+0x403260	m_bediening.cpp	string
+0x403390	m_bediening.cpp	string
+0x4034c0	m_bediening.cpp	between
+0x403560	m_bediening.cpp	between
+0x403590	m_bediening.cpp	between
+0x4035f0	m_bediening.cpp	string
+0x403a30	?	
+0x403a60	?	
+0x403a90	m_garage.cpp	string
+0x403b10	m_garage.cpp	between
+0x403ba0	m_garage.cpp	string
+0x403da0	m_garage.cpp	string
+0x403fc0	m_garage.cpp	string
+0x404280	m_garage.cpp	between
+0x4042b0	m_garage.cpp	between
+0x404330	m_garage.cpp	between
+0x404370	m_garage.cpp	between
+0x4043e0	m_garage.cpp	string
+0x404550	m_garage.cpp	between
+0x4045b0	m_garage.cpp	string
+0x4046f0	m_garage.cpp	string
+0x404e70	?	
+0x404e80	?	
+0x404f50	?	
+0x404f80	m_highscore.cpp	string
+0x405220	m_highscore.cpp	string
+0x4054f0	m_highscore.cpp	between
+0x405530	m_highscore.cpp	string
+0x4055e0	m_highscore.cpp	between
+0x405610	m_highscore.cpp	between
+0x405630	m_highscore.cpp	string
+0x405880	m_kopen.cpp	string
+0x4058f0	m_kopen.cpp	between
+0x405950	m_kopen.cpp	between
+0x4059c0	m_kopen.cpp	string
+0x405ac0	m_kopen.cpp	string
+0x405c20	m_kopen.cpp	string
+0x405cc0	m_kopen.cpp	string
+0x405ed0	m_kopen.cpp	between
+0x405f00	m_kopen.cpp	between
+0x405f10	m_kopen.cpp	string
+0x406840	?	
+0x406850	?	
+0x406920	?	
+0x406950	?	
+0x406980	m_main.cpp	string
+0x406a20	m_main.cpp	between
+0x406ad0	m_main.cpp	string
+0x406c20	m_main.cpp	string
+0x406ca0	m_main.cpp	string
+0x406e20	m_main.cpp	string
+0x406fd0	m_main.cpp	string
+0x407130	m_main.cpp	between
+0x407190	m_main.cpp	between
+0x4072c0	m_main.cpp	between
+0x407320	m_main.cpp	string
+0x4074e0	m_main.cpp	between
+0x407500	m_main.cpp	string
+0x407580	m_main.cpp	string
+0x4076a0	m_main.cpp	string
+0x407b90	?	
+0x407ba0	?	
+0x407c70	?	
+0x407cd0	m_nspeler.cpp	string
+0x407d80	m_nspeler.cpp	between
+0x407e50	m_nspeler.cpp	between
+0x407e80	m_nspeler.cpp	string
+0x408180	m_nspeler.cpp	between
+0x4081b0	m_nspeler.cpp	string
+0x408850	?	
+0x408860	?	
+0x408960	?	
+0x408970	?	
+0x408a40	m_opties.cpp	string
+0x408ab0	m_opties.cpp	string
+0x408b00	m_opties.cpp	string
+0x408b70	m_opties.cpp	between
+0x408c00	m_opties.cpp	between
+0x408c60	m_opties.cpp	string
+0x408d70	m_opties.cpp	string
+0x408e00	m_opties.cpp	string
+0x408e50	m_opties.cpp	between
+0x409160	m_opties.cpp	between
+0x409190	m_opties.cpp	string
+0x409660	?	
+0x4096c0	?	
+0x409730	main.cpp	string
+0x409870	main.cpp	string
+0x4098f0	main.cpp	string
+0x409c80	?	
+0x409cd0	?	
+0x409d00	?	
+0x409de0	?	
+0x409e00	?	
+0x409e10	?	
+0x409e80	menuanim.cpp	string
+0x409f20	menuanim.cpp	string
+0x409f70	?	
+0x40a080	?	
+0x40a090	?	
+0x40a0a0	?	
+0x40a0b0	?	
+0x40a0c0	?	
+0x40a0e0	?	
+0x40a150	?	
+0x40a170	?	
+0x40a1c0	?	
+0x40a210	?	
+0x40a250	?	
+0x40a280	req_nsp.cpp	string
+0x40a3e0	?	
+0x40a430	?	
+0x40a490	?	
+0x40a590	?	
+0x40a5a0	?	
+0x40a6a0	?	
+0x40a6e0	?	
+0x40a970	?	
+0x40aeb0	?	
+0x40b060	?	
+0x40b090	?	
+0x40b0c0	?	
+0x40b0f0	?	
+0x40b120	?	
+0x40b170	?	
+0x40b1f0	?	
+0x40b6c0	?	
+0x40b710	?	
+0x40b780	?	
+0x40b7f0	?	
+0x40b820	?	
+0x40b880	special_anim.cpp	string
+0x40b9c0	special_anim.cpp	string
+0x40bae0	special_anim.cpp	between
+0x40bb10	special_anim.cpp	between
+0x40bb20	special_anim.cpp	between
+0x40bb60	special_anim.cpp	string
+0x40bba0	special_anim.cpp	between
+0x40bc10	special_anim.cpp	between
+0x40bc20	special_anim.cpp	string
+0x40bd00	special_anim.cpp	string
+0x40bd90	special_anim.cpp	string
+0x40be30	special_anim.cpp	string
+0x40c020	special_anim.cpp	string
+0x40c110	special_anim.cpp	string
+0x40c250	special_anim.cpp	string
+0x40c320	special_anim.cpp	string
+0x40c3b0	special_anim.cpp	string
+0x40c430	special_anim.cpp	between
+0x40c470	special_anim.cpp	string
+0x40c660	special_anim.cpp	string
+0x40c890	special_anim.cpp	between
+0x40c8f0	special_anim.cpp	string
+0x40c960	special_anim.cpp	string
+0x40cc80	special_anim.cpp	string
+0x40cef0	special_anim.cpp	string
+0x40cfc0	?	
+0x40d040	?	
+0x40d0f0	?	
+0x40d110	?	
+0x40d130	?	
+0x40d2a0	?	
+0x40d330	?	
+0x40d3a0	?	
+0x40d400	?	
+0x40d490	?	
+0x40d4b0	?	
+0x40d540	?	
+0x40d650	?	
+0x40d6f0	initlib.cpp	string
+0x40d7f0	initlib.cpp	string
+0x40d8c0	surface.cpp	string
+0x40dc20	surface.cpp	string
+0x40dd00	surface.cpp	string
+0x40ddf0	surface.cpp	string
+0x40de70	surface.cpp	string
+0x40df10	surface.cpp	string
+0x40df60	surface.cpp	between
+0x40df80	surface.cpp	string
+0x40e000	surface.cpp	string
+0x40e090	surface.cpp	string
+0x40e150	initlib.cpp	string
+0x40e200	initlib.cpp	string
+0x40e2b0	initlib.cpp	string
+0x40e420	initlib.cpp	between
+0x40e450	initlib.cpp	string
+0x40e9a0	initlib.cpp	string
+0x40ecb0	ascii.cpp	string
+0x40ece0	ascii.cpp	between
+0x40ecf0	ascii.cpp	between
+0x40ed40	ascii.cpp	string
+0x40ee00	ascii.cpp	string
+0x40eec0	ascii.cpp	string
+0x40f4f0	?	
+0x40f520	?	
+0x40f550	?	
+0x40f580	?	
+0x40f670	?	
+0x40f6d0	?	
+0x40f830	?	
+0x40f890	?	
+0x40f8f0	?	
+0x40f900	?	
+0x40f920	?	
+0x40fa70	?	
+0x40fcb0	?	
+0x40fde0	?	
+0x40fe50	?	
+0x40fe70	?	
+0x40fe90	mouse.cpp	string
+0x40fef0	mouse.cpp	string
+0x40ff40	mouse.cpp	string
+0x410060	mouse.cpp	between
+0x4100a0	mouse.cpp	between
+0x4100c0	mouse.cpp	between
+0x410120	mouse.cpp	string
+0x410160	mouse.cpp	string
+0x4101a0	mouse.cpp	string
+0x4102e0	mouse.cpp	string
+0x410360	mouse.cpp	string
+0x4105e0	mouse.cpp	string
+0x410830	mouse.cpp	string
+0x4108c0	mouse.cpp	string
+0x410970	mouse.cpp	string
+0x410a10	inifile.cpp	string
+0x410ae0	inifile.cpp	string
+0x410b40	inifile.cpp	string
+0x410b80	inifile.cpp	string
+0x410bd0	inifile.cpp	string
+0x410d30	inifile.cpp	string
+0x410d80	inifile.cpp	string
+0x410dd0	forms.cpp	string
+0x410e40	forms.cpp	between
+0x410e80	forms.cpp	between
+0x410ec0	forms.cpp	string
+0x410fe0	forms.cpp	string
+0x411060	forms.cpp	string
+0x4110e0	forms.cpp	between
+0x4110f0	forms.cpp	string
+0x411170	forms.cpp	string
+0x411280	forms.cpp	string
+0x411490	forms.cpp	string
+0x411520	forms.cpp	string
+0x411590	forms.cpp	string
+0x4115e0	forms.cpp	string
+0x4116a0	forms.cpp	string
+0x411710	forms.cpp	string
+0x411780	forms.cpp	between
+0x411790	forms.cpp	string
+0x4117e0	forms.cpp	string
+0x411830	forms.cpp	string
+0x411880	forms.cpp	string
+0x4118d0	forms.cpp	string
+0x411920	forms.cpp	string
+0x411970	forms.cpp	string
+0x4119c0	forms.cpp	string
+0x411a20	forms.cpp	string
+0x411a60	forms.cpp	string
+0x411b00	forms.cpp	string
+0x411b90	forms.cpp	between
+0x411ba0	forms.cpp	string
+0x411c50	?	
