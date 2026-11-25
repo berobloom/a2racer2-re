@@ -34,13 +34,19 @@ DOS stub of each file (`.work/game`).
 - CONFIRMED: `a2_II.exe`, `qrace.exe` and `instlng.exe` carry linker version
   5.10 and a Rich header at 0xA0: product id 0 (count 112-140) and product id 6,
   build 1668, count 1 (the resource entry; these three have .rsrc).
-- STRONGLY SUPPORTED: the two games were linked with Visual C++ 5.0 as
-  released (LINK 5.00.7022), the launchers with a later 5.0 service pack
-  (LINK 5.10). A matching build of `spel.dat` needs the VC 5.0 RTM `cl.exe`
-  (C/C++ 11.00.7022) and its `LIBCMT`. A 5.10 linker would most likely add a
-  Rich header that `spel.dat` lacks.
-- STRONGLY SUPPORTED: static multithreaded CRT (`LIBCMT`): the R6016 and R6017
-  messages (thread data, multithread lock) are in both games.
+- CONFIRMED: the two games were linked with Visual C++ 5.0 as released
+  (LINK 5.00.7022). A test program linked with that LINK under Wine has
+  linker version 5.00, no Rich header and the same 0x80-byte DOS stub as
+  `spel.dat`. Set-up: reverse-engineering/msvc5.md.
+- CONFIRMED: the CRT is the single-threaded static `LIBC.LIB` (`/ML`), not
+  `LIBCMT`. VC 5.0's `WinMainCRTStartup` built with `/ML` equals the entry of
+  `spel.dat` (0x471400) and `menu.dat` (0x41C430) in all 111 instructions,
+  addresses masked. With `/MT` it has an extra `_mtinit` check
+  (`push 0x10; call fast_error_exit`) that both games lack. The R6016/R6017
+  strings are in the CRT's message table either way, so they were not
+  evidence for LIBCMT.
+- CONFIRMED: the game's entry is `WinMain`, reached from `WinMainCRTStartup`
+  (the command-line parse and `GetStartupInfoA` above).
 - CONFIRMED: no RTTI type names (`.?AV`) in either game, so no `/GR`.
 - LIKELY: built with frame-pointer omission (`/O2` or `/Ox`): of the 1388
   functions in analysis/funcs2.txt, 36 start with `push ebp; mov ebp,esp`.
